@@ -41,7 +41,7 @@ const OrdersPage = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-[#EAEDED]">
         <Header />
         <div className="max-w-4xl mx-auto p-8 text-center text-gray-500">Loading your orders...</div>
       </div>
@@ -49,17 +49,17 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#EAEDED]">
       <Header />
       <main className="max-w-4xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Your Orders</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#0F1111] mb-4 sm:mb-6">Your Orders</h1>
 
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm mb-4">{error}</div>
         )}
 
         {orders.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-white rounded-lg border border-[#D5D9D9] shadow-sm p-12 text-center">
             <div className="text-5xl mb-4">📦</div>
             <h2 className="text-lg font-semibold text-gray-700 mb-2">No orders yet</h2>
             <p className="text-gray-400 text-sm mb-6">Your Revive purchases will appear here.</p>
@@ -73,9 +73,9 @@ const OrdersPage = () => {
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div key={order.id} className="bg-white rounded-lg border border-[#D5D9D9] shadow-sm overflow-hidden">
                 {/* Order header */}
-                <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="bg-gray-50 border-b border-[#D5D9D9] px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex gap-3 sm:gap-6 text-xs text-gray-500">
                     <div>
                       <p className="uppercase font-semibold">Order Placed</p>
@@ -117,7 +117,7 @@ const OrdersPage = () => {
                     )}
                   </div>
                   <div className="flex-grow min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm line-clamp-2">{order.listing_title}</p>
+                    <p className="font-semibold text-[#0F1111] text-sm line-clamp-2">{order.listing_title}</p>
                     {order.listing_grade && (
                       <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded border ${GRADE_STYLE[order.listing_grade] || ''}`}>
                         Grade {order.listing_grade} — {order.listing_grade_display}
@@ -130,6 +130,24 @@ const OrdersPage = () => {
                     )}
                     {order.escrow_released === false && order.is_p2p && (
                       <p className="text-xs text-blue-600 mt-1">Payment in escrow — released on delivery confirmation</p>
+                    )}
+
+                    {/* Return Item button — shown for delivered/confirmed orders */}
+                    {['delivered', 'confirmed', 'pending'].includes(order.status) && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => navigate(`/return/${order.id}`)}
+                          className="px-3 py-1.5 text-xs font-bold text-white bg-[#232F3E] hover:bg-[#131921] rounded-lg transition-colors"
+                        >
+                          Return Item
+                        </button>
+                        <button
+                          onClick={() => navigate(`/product/${order.listing_id || order.id}`)}
+                          className="px-3 py-1.5 text-xs font-semibold text-[#007185] border border-[#007185] rounded-lg hover:bg-[#007185] hover:text-white transition-colors"
+                        >
+                          View Item
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
