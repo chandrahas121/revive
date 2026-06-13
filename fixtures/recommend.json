@@ -1,0 +1,70 @@
+{
+  "user_id": "user_buyer_001",
+  "items": [
+    {
+      "listing_id": "lst_priya_shoes_001",
+      "product_id": "B08SHOE001",
+      "score": 0.8742,
+      "reason": "customers like you loved this · available near you",
+      "grade": "B",
+      "source": "p2p",
+      "price": 489.00,
+      "als_score": 0.62,
+      "clip_score": 0.48,
+      "grade_boost": 0.8,
+      "proximity_boost": 1.0
+    },
+    {
+      "listing_id": "lst_monitor_002",
+      "product_id": "B07BABY001",
+      "score": 0.7310,
+      "reason": "matches your style · Amazon-verified P2P · Grade A certified refurbished",
+      "grade": "A",
+      "source": "p2p",
+      "price": 2850.00,
+      "als_score": 0.45,
+      "clip_score": 0.55,
+      "grade_boost": 1.0,
+      "proximity_boost": 1.0
+    },
+    {
+      "listing_id": "lst_headphones_003",
+      "product_id": "B06AUDIO01",
+      "score": 0.6840,
+      "reason": "customers like you loved this · Grade A certified refurbished",
+      "grade": "A",
+      "source": "warehouse",
+      "price": 1299.00,
+      "als_score": 0.72,
+      "clip_score": 0.30,
+      "grade_boost": 1.0,
+      "proximity_boost": 0.0
+    },
+    {
+      "listing_id": "lst_laptop_004",
+      "product_id": "B05LAPTOP1",
+      "score": 0.5910,
+      "reason": "Grade B certified refurbished",
+      "grade": "B",
+      "source": "renewed",
+      "price": 28999.00,
+      "als_score": 0.50,
+      "clip_score": 0.28,
+      "grade_boost": 0.8,
+      "proximity_boost": 0.0
+    },
+    {
+      "listing_id": "lst_tablet_005",
+      "product_id": "B04TABLET1",
+      "score": 0.5550,
+      "reason": "customers like you loved this",
+      "grade": "A",
+      "source": "renewed",
+      "price": 12500.00,
+      "als_score": 0.65,
+      "clip_score": 0.22,
+      "grade_boost": 1.0,
+      "proximity_boost": 0.0
+    }
+  ]
+}

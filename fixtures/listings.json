@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "listing_id": "lst_priya_shoes_001",
+      "product_id": "B08SHOE001",
+      "title": "Women's Running Shoes - Blue, Size 6",
+      "brand": "Nike",
+      "category": "Footwear",
+      "grade": "B",
+      "source": "p2p",
+      "price": 489.00,
+      "mrp": 2999.00,
+      "geohash5": "tbxx1",
+      "status": "listed",
+      "condition_summary": "Light cosmetic wear on sole edges, fully functional.",
+      "seller_id": "user_priya_001",
+      "amazon_verified": true
+    },
+    {
+      "listing_id": "lst_monitor_002",
+      "product_id": "B07BABY001",
+      "title": "Baby Monitor with Night Vision",
+      "brand": "Motorola",
+      "category": "Electronics",
+      "grade": "A",
+      "source": "p2p",
+      "price": 2850.00,
+      "mrp": 5999.00,
+      "geohash5": "tbxx1",
+      "status": "listed",
+      "condition_summary": "Like new, all accessories included.",
+      "seller_id": "user_rahul_001",
+      "amazon_verified": true
+    },
+    {
+      "listing_id": "lst_headphones_003",
+      "product_id": "B06AUDIO01",
+      "title": "Wireless Noise-Cancelling Headphones",
+      "brand": "Sony",
+      "category": "Electronics",
+      "grade": "A",
+      "source": "warehouse",
+      "price": 1299.00,
+      "mrp": 4990.00,
+      "geohash5": "tbxx2",
+      "status": "listed",
+      "condition_summary": "Like new, minor packaging wear.",
+      "seller_id": null,
+      "amazon_verified": true
+    }
+  ],
+  "total": 3
+}

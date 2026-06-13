@@ -1,0 +1,14 @@
+{
+  "risk": 0.68,
+  "flagged_item_id": "B09G9HD6PD",
+  "nudge_text": "💡 Size tip: Customers with your profile size up in Nike. 87% who matched your size kept this item.",
+  "credit_promise": 8,
+  "breakdown": [
+    {
+      "product_id": "B09G9HD6PD",
+      "category": "Footwear",
+      "brand": "Nike",
+      "risk": 0.68
+    }
+  ]
+}

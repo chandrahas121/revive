@@ -1,0 +1,33 @@
+{
+  "listing_id": "lst_priya_shoes_001",
+  "gs1_uri": "https://id.gs1.org/01/00843951002342/21/lst_priya_shoes_001",
+  "grade": "B",
+  "defects": [
+    {
+      "type": "scratch on surface",
+      "severity": "minor",
+      "location": "bottom-left"
+    }
+  ],
+  "owners": [
+    {
+      "user_id": "user_priya_001",
+      "event": "original_purchase",
+      "timestamp": "2024-03-15T10:22:00Z"
+    },
+    {
+      "user_id": "amazon_returns",
+      "event": "return_received",
+      "timestamp": "2025-06-01T14:05:00Z"
+    },
+    {
+      "user_id": "revive_system",
+      "event": "graded",
+      "timestamp": "2026-06-13T10:42:00Z"
+    }
+  ],
+  "model_version": "revive-grade-v1.0",
+  "signature": "sha256:a4f2b8c1d9e3f7a0b5c2d8e4f9a1b6c3",
+  "ledger_valid": true,
+  "chain_length": 3
+}

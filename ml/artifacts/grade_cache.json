@@ -1,0 +1,51 @@
+{
+  "dceed79a86b59ed189193e9c": {
+    "listing_id": "8be13aa9-7787-4b52-be2c-3aeb72a819ff",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "dent",
+        "severity": "minor",
+        "location": "on the back pocket"
+      }
+    ],
+    "completeness": 0.955,
+    "condition_summary": "This pair of jeans is in very good condition with only light cosmetic wear, such as a minor dent on the back pocket, but it is fully functional.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 20279,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "dceed79a86b59ed189193e9c",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "a12d3a4aa57c9ece9e6a8818": {
+    "listing_id": "c59860bd-be4f-4c01-9fe2-f2ff121fe0ff",
+    "grade": "B",
+    "confidence": 0.72,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "center-left",
+        "bbox": [
+          199.69,
+          415.92,
+          333.12,
+          506.65
+        ],
+        "bbox_area_pct": 0.0189
+      }
+    ],
+    "completeness": 0.697,
+    "condition_summary": "The shoe appears to be in very good condition with only a minor scuff mark visible.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 5573,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "a12d3a4aa57c9ece9e6a8818",
+    "n_dino_detections": 1,
+    "from_cache": false
+  }
+}

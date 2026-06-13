@@ -1,0 +1,30 @@
+{
+  "listing_id": "lst_priya_shoes_001",
+  "grade": "B",
+  "confidence": 0.91,
+  "defects": [
+    {
+      "type": "scratch on surface",
+      "severity": "minor",
+      "location": "bottom-left",
+      "bbox": [42.5, 180.3, 95.2, 210.8],
+      "source": "dino"
+    },
+    {
+      "type": "worn out area",
+      "severity": "minor",
+      "location": "bottom-right",
+      "bbox": [280.0, 195.0, 340.0, 225.0],
+      "source": "llm"
+    }
+  ],
+  "completeness": 0.85,
+  "condition_summary": "Light cosmetic wear on sole edges, fully functional, original box missing.",
+  "functional": true,
+  "box_present": false,
+  "latency_ms": 1240,
+  "model_version": "revive-grade-v1.0",
+  "image_hash": "a3f4d9e1b7c2058f",
+  "n_dino_detections": 2,
+  "from_cache": false
+}

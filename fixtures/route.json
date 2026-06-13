@@ -1,0 +1,21 @@
+{
+  "listing_id": "lst_priya_shoes_001",
+  "chosen_path": "resell_p2p",
+  "ev_breakdown": {
+    "resell_p2p": 312.50,
+    "resell_warehouse": -38.75,
+    "refurbish": 185.00,
+    "donate": 60.00,
+    "recycle": 15.00
+  },
+  "price": 489.00,
+  "price_post_refurb": 620.00,
+  "refurb_cost": 80.00,
+  "sell_probability": 0.72,
+  "km_saved": 585.0,
+  "co2_saved_kg": 122.85,
+  "demand_score": 0.74,
+  "local_buyers": 47,
+  "demand_note": "47 buyers within 8 km searched for Footwear this month",
+  "green_credits_earned": 307
+}

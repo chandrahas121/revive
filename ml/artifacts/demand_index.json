@@ -1,0 +1,1012 @@
+{
+  "tbxx1": {
+    "Footwear": {
+      "demand_score": 0.729,
+      "local_buyers": 97,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.729,
+      "note": "97 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Electronics this month \u00b7 you're in the demand cluster!"
+    },
+    "Clothing": {
+      "demand_score": 0.822,
+      "local_buyers": 108,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.822,
+      "note": "108 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.587,
+      "local_buyers": 80,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 3.3,
+      "gravity_score": 0.6292,
+      "note": "80 buyers within 8 km searched for Home & Kitchen this month \u00b7 nearest demand cluster: Indiranagar (3.3 km)"
+    },
+    "Sports": {
+      "demand_score": 0.914,
+      "local_buyers": 119,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.914,
+      "note": "119 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.661,
+      "local_buyers": 89,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.661,
+      "note": "89 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Books this month \u00b7 you're in the demand cluster!"
+    },
+    "Toys": {
+      "demand_score": 0.447,
+      "local_buyers": 63,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 3.3,
+      "gravity_score": 0.6976,
+      "note": "63 buyers within 8 km searched for Toys this month \u00b7 nearest demand cluster: Indiranagar (3.3 km)"
+    },
+    "Jewelry": {
+      "demand_score": 0.541,
+      "local_buyers": 74,
+      "area_type": "tech_hub",
+      "label": "Koramangala",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 3.3,
+      "gravity_score": 0.5574,
+      "note": "74 buyers within 8 km searched for Jewelry this month \u00b7 nearest demand cluster: Indiranagar (3.3 km)"
+    }
+  },
+  "tbxx2": {
+    "Footwear": {
+      "demand_score": 0.63,
+      "local_buyers": 85,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.9713,
+      "note": "85 buyers within 8 km searched for Footwear this month \u00b7 nearest demand cluster: BTM Layout (0.9 km)"
+    },
+    "Electronics": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Electronics this month \u00b7 you're in the demand cluster!"
+    },
+    "Clothing": {
+      "demand_score": 0.76,
+      "local_buyers": 101,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.9014,
+      "note": "101 buyers within 8 km searched for Clothing this month \u00b7 nearest demand cluster: BTM Layout (0.9 km)"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.501,
+      "local_buyers": 70,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.9713,
+      "note": "70 buyers within 8 km searched for Home & Kitchen this month \u00b7 nearest demand cluster: BTM Layout (0.9 km)"
+    },
+    "Sports": {
+      "demand_score": 0.786,
+      "local_buyers": 104,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.786,
+      "note": "104 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.587,
+      "local_buyers": 80,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.7489,
+      "note": "80 buyers within 8 km searched for Beauty this month \u00b7 nearest demand cluster: BTM Layout (0.9 km)"
+    },
+    "Books": {
+      "demand_score": 0.885,
+      "local_buyers": 116,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.885,
+      "note": "116 buyers within 8 km searched for Books this month \u00b7 you're in the demand cluster!"
+    },
+    "Toys": {
+      "demand_score": 0.402,
+      "local_buyers": 58,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.9713,
+      "note": "58 buyers within 8 km searched for Toys this month \u00b7 nearest demand cluster: BTM Layout (0.9 km)"
+    },
+    "Jewelry": {
+      "demand_score": 0.534,
+      "local_buyers": 74,
+      "area_type": "tech_hub",
+      "label": "HSR Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.9713,
+      "note": "74 buyers within 8 km searched for Jewelry this month \u00b7 nearest demand cluster: BTM Layout (0.9 km)"
+    }
+  },
+  "tbxx3": {
+    "Footwear": {
+      "demand_score": 0.847,
+      "local_buyers": 111,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.847,
+      "note": "111 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 0.58,
+      "local_buyers": 79,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 3.3,
+      "gravity_score": 0.6976,
+      "note": "79 buyers within 8 km searched for Electronics this month \u00b7 nearest demand cluster: Koramangala (3.3 km)"
+    },
+    "Clothing": {
+      "demand_score": 0.807,
+      "local_buyers": 106,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.807,
+      "note": "106 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.902,
+      "local_buyers": 118,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.902,
+      "note": "118 buyers within 8 km searched for Home & Kitchen this month \u00b7 you're in the demand cluster!"
+    },
+    "Sports": {
+      "demand_score": 0.569,
+      "local_buyers": 78,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 3.3,
+      "gravity_score": 0.6376,
+      "note": "78 buyers within 8 km searched for Sports this month \u00b7 nearest demand cluster: Koramangala (3.3 km)"
+    },
+    "Beauty": {
+      "demand_score": 0.74,
+      "local_buyers": 98,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.74,
+      "note": "98 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.694,
+      "local_buyers": 93,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx1",
+      "nearest_cluster_label": "Koramangala",
+      "dist_to_cluster_km": 3.3,
+      "gravity_score": 0.6976,
+      "note": "93 buyers within 8 km searched for Books this month \u00b7 nearest demand cluster: Koramangala (3.3 km)"
+    },
+    "Toys": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Toys this month \u00b7 you're in the demand cluster!"
+    },
+    "Jewelry": {
+      "demand_score": 0.799,
+      "local_buyers": 105,
+      "area_type": "residential",
+      "label": "Indiranagar",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.799,
+      "note": "105 buyers within 8 km searched for Jewelry this month \u00b7 you're in the demand cluster!"
+    }
+  },
+  "tbxx4": {
+    "Footwear": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 0.777,
+      "local_buyers": 103,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.9713,
+      "note": "103 buyers within 8 km searched for Electronics this month \u00b7 nearest demand cluster: HSR Layout (0.9 km)"
+    },
+    "Clothing": {
+      "demand_score": 0.928,
+      "local_buyers": 121,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.928,
+      "note": "121 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Home & Kitchen this month \u00b7 you're in the demand cluster!"
+    },
+    "Sports": {
+      "demand_score": 0.662,
+      "local_buyers": 89,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.7635,
+      "note": "89 buyers within 8 km searched for Sports this month \u00b7 nearest demand cluster: HSR Layout (0.9 km)"
+    },
+    "Beauty": {
+      "demand_score": 0.771,
+      "local_buyers": 102,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.771,
+      "note": "102 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.79,
+      "local_buyers": 104,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 0.9,
+      "gravity_score": 0.8596,
+      "note": "104 buyers within 8 km searched for Books this month \u00b7 nearest demand cluster: HSR Layout (0.9 km)"
+    },
+    "Toys": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Toys this month \u00b7 you're in the demand cluster!"
+    },
+    "Jewelry": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "residential",
+      "label": "BTM Layout",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Jewelry this month \u00b7 you're in the demand cluster!"
+    }
+  },
+  "tbxw1": {
+    "Footwear": {
+      "demand_score": 0.748,
+      "local_buyers": 99,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 2.1,
+      "gravity_score": 0.8467,
+      "note": "99 buyers within 8 km searched for Footwear this month \u00b7 nearest demand cluster: BTM Layout (2.1 km)"
+    },
+    "Electronics": {
+      "demand_score": 0.434,
+      "local_buyers": 62,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 2.9,
+      "gravity_score": 0.7443,
+      "note": "62 buyers within 8 km searched for Electronics this month \u00b7 nearest demand cluster: HSR Layout (2.9 km)"
+    },
+    "Clothing": {
+      "demand_score": 0.702,
+      "local_buyers": 94,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 2.1,
+      "gravity_score": 0.7857,
+      "note": "94 buyers within 8 km searched for Clothing this month \u00b7 nearest demand cluster: BTM Layout (2.1 km)"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.775,
+      "local_buyers": 102,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 2.1,
+      "gravity_score": 0.8467,
+      "note": "102 buyers within 8 km searched for Home & Kitchen this month \u00b7 nearest demand cluster: BTM Layout (2.1 km)"
+    },
+    "Sports": {
+      "demand_score": 0.491,
+      "local_buyers": 68,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx2",
+      "nearest_cluster_label": "HSR Layout",
+      "dist_to_cluster_km": 2.9,
+      "gravity_score": 0.585,
+      "note": "68 buyers within 8 km searched for Sports this month \u00b7 nearest demand cluster: HSR Layout (2.9 km)"
+    },
+    "Beauty": {
+      "demand_score": 0.59,
+      "local_buyers": 80,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 2.1,
+      "gravity_score": 0.6528,
+      "note": "80 buyers within 8 km searched for Beauty this month \u00b7 nearest demand cluster: BTM Layout (2.1 km)"
+    },
+    "Books": {
+      "demand_score": 0.556,
+      "local_buyers": 76,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 2.1,
+      "gravity_score": 0.6689,
+      "note": "76 buyers within 8 km searched for Books this month \u00b7 nearest demand cluster: BTM Layout (2.1 km)"
+    },
+    "Toys": {
+      "demand_score": 0.921,
+      "local_buyers": 120,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxw1",
+      "nearest_cluster_label": "Bommanahalli",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.921,
+      "note": "120 buyers within 8 km searched for Toys this month \u00b7 you're in the demand cluster!"
+    },
+    "Jewelry": {
+      "demand_score": 0.692,
+      "local_buyers": 93,
+      "area_type": "residential",
+      "label": "Bommanahalli",
+      "nearest_cluster": "tbxx4",
+      "nearest_cluster_label": "BTM Layout",
+      "dist_to_cluster_km": 2.1,
+      "gravity_score": 0.8467,
+      "note": "93 buyers within 8 km searched for Jewelry this month \u00b7 nearest demand cluster: BTM Layout (2.1 km)"
+    }
+  },
+  "tbxw2": {
+    "Footwear": {
+      "demand_score": 0.361,
+      "local_buyers": 53,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.361,
+      "note": "53 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 0.806,
+      "local_buyers": 106,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.806,
+      "note": "106 buyers within 8 km searched for Electronics this month \u00b7 you're in the demand cluster!"
+    },
+    "Clothing": {
+      "demand_score": 0.411,
+      "local_buyers": 59,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.411,
+      "note": "59 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.227,
+      "local_buyers": 37,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.227,
+      "note": "37 buyers within 8 km searched for Home & Kitchen this month \u00b7 you're in the demand cluster!"
+    },
+    "Sports": {
+      "demand_score": 0.394,
+      "local_buyers": 57,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.394,
+      "note": "57 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.321,
+      "local_buyers": 48,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.321,
+      "note": "48 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.541,
+      "local_buyers": 74,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.541,
+      "note": "74 buyers within 8 km searched for Books this month \u00b7 you're in the demand cluster!"
+    },
+    "Toys": {
+      "demand_score": 0.202,
+      "local_buyers": 34,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw1",
+      "nearest_cluster_label": "Bommanahalli",
+      "dist_to_cluster_km": 7.9,
+      "gravity_score": 0.2631,
+      "note": "34 buyers within 8 km searched for Toys this month \u00b7 nearest demand cluster: Bommanahalli (7.9 km)"
+    },
+    "Jewelry": {
+      "demand_score": 0.375,
+      "local_buyers": 54,
+      "area_type": "tech_hub",
+      "label": "Electronic City",
+      "nearest_cluster": "tbxw2",
+      "nearest_cluster_label": "Electronic City",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.375,
+      "note": "54 buyers within 8 km searched for Jewelry this month \u00b7 you're in the demand cluster!"
+    }
+  },
+  "tbxv1": {
+    "Footwear": {
+      "demand_score": 0.799,
+      "local_buyers": 105,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.799,
+      "note": "105 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 0.715,
+      "local_buyers": 95,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.715,
+      "note": "95 buyers within 8 km searched for Electronics this month \u00b7 you're in the demand cluster!"
+    },
+    "Clothing": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.771,
+      "local_buyers": 102,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.771,
+      "note": "102 buyers within 8 km searched for Home & Kitchen this month \u00b7 you're in the demand cluster!"
+    },
+    "Sports": {
+      "demand_score": 0.795,
+      "local_buyers": 105,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.795,
+      "note": "105 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.952,
+      "local_buyers": 124,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.952,
+      "note": "124 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.631,
+      "local_buyers": 85,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.631,
+      "note": "85 buyers within 8 km searched for Books this month \u00b7 you're in the demand cluster!"
+    },
+    "Toys": {
+      "demand_score": 0.625,
+      "local_buyers": 85,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxx3",
+      "nearest_cluster_label": "Indiranagar",
+      "dist_to_cluster_km": 3.9,
+      "gravity_score": 0.6262,
+      "note": "85 buyers within 8 km searched for Toys this month \u00b7 nearest demand cluster: Indiranagar (3.9 km)"
+    },
+    "Jewelry": {
+      "demand_score": 0.979,
+      "local_buyers": 127,
+      "area_type": "retail",
+      "label": "Malleshwaram",
+      "nearest_cluster": "tbxv1",
+      "nearest_cluster_label": "Malleshwaram",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.979,
+      "note": "127 buyers within 8 km searched for Jewelry this month \u00b7 you're in the demand cluster!"
+    }
+  },
+  "tbxv2": {
+    "Footwear": {
+      "demand_score": 0.669,
+      "local_buyers": 90,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 1.9,
+      "gravity_score": 0.6919,
+      "note": "90 buyers within 8 km searched for Footwear this month \u00b7 nearest demand cluster: Yeshwanthpur (1.9 km)"
+    },
+    "Electronics": {
+      "demand_score": 0.686,
+      "local_buyers": 92,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.686,
+      "note": "92 buyers within 8 km searched for Electronics this month \u00b7 you're in the demand cluster!"
+    },
+    "Clothing": {
+      "demand_score": 0.74,
+      "local_buyers": 98,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.74,
+      "note": "98 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.582,
+      "local_buyers": 79,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 1.9,
+      "gravity_score": 0.789,
+      "note": "79 buyers within 8 km searched for Home & Kitchen this month \u00b7 nearest demand cluster: Yeshwanthpur (1.9 km)"
+    },
+    "Sports": {
+      "demand_score": 0.651,
+      "local_buyers": 88,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.651,
+      "note": "88 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.738,
+      "local_buyers": 98,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.738,
+      "note": "98 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.5,
+      "local_buyers": 70,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 1.9,
+      "gravity_score": 0.5415,
+      "note": "70 buyers within 8 km searched for Books this month \u00b7 nearest demand cluster: Yeshwanthpur (1.9 km)"
+    },
+    "Toys": {
+      "demand_score": 0.551,
+      "local_buyers": 76,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 1.9,
+      "gravity_score": 0.8748,
+      "note": "76 buyers within 8 km searched for Toys this month \u00b7 nearest demand cluster: Yeshwanthpur (1.9 km)"
+    },
+    "Jewelry": {
+      "demand_score": 0.986,
+      "local_buyers": 128,
+      "area_type": "retail",
+      "label": "Rajajinagar",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.986,
+      "note": "128 buyers within 8 km searched for Jewelry this month \u00b7 you're in the demand cluster!"
+    }
+  },
+  "tbxu1": {
+    "Footwear": {
+      "demand_score": 0.415,
+      "local_buyers": 59,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.415,
+      "note": "59 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 0.834,
+      "local_buyers": 110,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.834,
+      "note": "110 buyers within 8 km searched for Electronics this month \u00b7 you're in the demand cluster!"
+    },
+    "Clothing": {
+      "demand_score": 0.404,
+      "local_buyers": 58,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.404,
+      "note": "58 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.246,
+      "local_buyers": 39,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.246,
+      "note": "39 buyers within 8 km searched for Home & Kitchen this month \u00b7 you're in the demand cluster!"
+    },
+    "Sports": {
+      "demand_score": 0.528,
+      "local_buyers": 73,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.528,
+      "note": "73 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.356,
+      "local_buyers": 52,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.356,
+      "note": "52 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.572,
+      "local_buyers": 78,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.572,
+      "note": "78 buyers within 8 km searched for Books this month \u00b7 you're in the demand cluster!"
+    },
+    "Toys": {
+      "demand_score": 0.277,
+      "local_buyers": 43,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.277,
+      "note": "43 buyers within 8 km searched for Toys this month \u00b7 you're in the demand cluster!"
+    },
+    "Jewelry": {
+      "demand_score": 0.252,
+      "local_buyers": 40,
+      "area_type": "tech_hub",
+      "label": "Whitefield",
+      "nearest_cluster": "tbxu1",
+      "nearest_cluster_label": "Whitefield",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.252,
+      "note": "40 buyers within 8 km searched for Jewelry this month \u00b7 you're in the demand cluster!"
+    }
+  },
+  "tbxu2": {
+    "Footwear": {
+      "demand_score": 0.791,
+      "local_buyers": 104,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.791,
+      "note": "104 buyers within 8 km searched for Footwear this month \u00b7 you're in the demand cluster!"
+    },
+    "Electronics": {
+      "demand_score": 0.466,
+      "local_buyers": 65,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 1.9,
+      "gravity_score": 0.6001,
+      "note": "65 buyers within 8 km searched for Electronics this month \u00b7 nearest demand cluster: Rajajinagar (1.9 km)"
+    },
+    "Clothing": {
+      "demand_score": 0.69,
+      "local_buyers": 92,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.69,
+      "note": "92 buyers within 8 km searched for Clothing this month \u00b7 you're in the demand cluster!"
+    },
+    "Home & Kitchen": {
+      "demand_score": 0.902,
+      "local_buyers": 118,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.902,
+      "note": "118 buyers within 8 km searched for Home & Kitchen this month \u00b7 you're in the demand cluster!"
+    },
+    "Sports": {
+      "demand_score": 0.579,
+      "local_buyers": 79,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.579,
+      "note": "79 buyers within 8 km searched for Sports this month \u00b7 you're in the demand cluster!"
+    },
+    "Beauty": {
+      "demand_score": 0.742,
+      "local_buyers": 99,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.742,
+      "note": "99 buyers within 8 km searched for Beauty this month \u00b7 you're in the demand cluster!"
+    },
+    "Books": {
+      "demand_score": 0.619,
+      "local_buyers": 84,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 0.619,
+      "note": "84 buyers within 8 km searched for Books this month \u00b7 you're in the demand cluster!"
+    },
+    "Toys": {
+      "demand_score": 1.0,
+      "local_buyers": 130,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxu2",
+      "nearest_cluster_label": "Yeshwanthpur",
+      "dist_to_cluster_km": 0.0,
+      "gravity_score": 1.0,
+      "note": "130 buyers within 8 km searched for Toys this month \u00b7 you're in the demand cluster!"
+    },
+    "Jewelry": {
+      "demand_score": 0.752,
+      "local_buyers": 100,
+      "area_type": "residential",
+      "label": "Yeshwanthpur",
+      "nearest_cluster": "tbxv2",
+      "nearest_cluster_label": "Rajajinagar",
+      "dist_to_cluster_km": 1.9,
+      "gravity_score": 0.8625,
+      "note": "100 buyers within 8 km searched for Jewelry this month \u00b7 nearest demand cluster: Rajajinagar (1.9 km)"
+    }
+  }
+}

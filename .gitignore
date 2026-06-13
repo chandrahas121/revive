@@ -1,0 +1,52 @@
+# Environments
+.env
+.venv
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Project specific
+demo_output/
+*.mp4
+*.jpg
+*.png
+*.webp
+*.zip
+*.tsv
+*.7z
+*.jsonl
+data/*.zip
+data/*.tsv
+data/*.7z
+data/*.jsonl
+ml/artifacts/*.pkl
+ml/artifacts/*.pkl
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary/Cache directories
+.pytest_cache/
+.coverage
+htmlcov/

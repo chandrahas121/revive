@@ -1,0 +1,16 @@
+{
+  "cells": [
+    {"geohash5": "tbxx1", "lat": 12.9716, "lng": 77.5946, "demand": 0.92, "label": "Koramangala"},
+    {"geohash5": "tbxx2", "lat": 12.9352, "lng": 77.6245, "demand": 0.78, "label": "HSR Layout"},
+    {"geohash5": "tbxx3", "lat": 13.0012, "lng": 77.5953, "demand": 0.65, "label": "Indiranagar"},
+    {"geohash5": "tbxx4", "lat": 12.9279, "lng": 77.6271, "demand": 0.82, "label": "BTM Layout"},
+    {"geohash5": "tbxw1", "lat": 12.9141, "lng": 77.6407, "demand": 0.55, "label": "Bommanahalli"},
+    {"geohash5": "tbxw2", "lat": 12.8456, "lng": 77.6603, "demand": 0.43, "label": "Electronic City"},
+    {"geohash5": "tbxv1", "lat": 13.0359, "lng": 77.5970, "demand": 0.70, "label": "Malleshwaram"},
+    {"geohash5": "tbxv2", "lat": 13.0533, "lng": 77.5688, "demand": 0.58, "label": "Rajajinagar"},
+    {"geohash5": "tbxu1", "lat": 12.9850, "lng": 77.7480, "demand": 0.48, "label": "Whitefield"},
+    {"geohash5": "tbxu2", "lat": 13.0688, "lng": 77.5760, "demand": 0.62, "label": "Yeshwanthpur"}
+  ],
+  "category": "Footwear",
+  "item_geohash": "tbxx1"
+}
