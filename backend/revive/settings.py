@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'trust',
     'prevent',
     'green',
+    'route',
 ]
 
 MIDDLEWARE = [
