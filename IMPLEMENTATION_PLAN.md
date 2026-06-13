@@ -64,15 +64,16 @@ One Django project; the 5 pillars are Django **apps** (clean separation, single 
 └───────┬───────────────────────────┬──────────────────┬─────────┘
         │ imports Python functions   │ boto3            │ ORM
 ┌───────▼─────────────────────┐  ┌───▼─────────────┐  ┌─▼──────────────────────┐
-│ ML modules (importable)     │  │ Amazon Bedrock  │  │ PostgreSQL (RDS)        │
-│ grade/route/prevent/recommend│ │ (Claude Haiku)  │  │ items·cards·orders·     │
+│ ML modules (importable)     │  │ OpenRouter      │  │ PostgreSQL (RDS)        │
+│ grade/route/prevent/recommend│ │ vision LLM      │  │ items·cards·orders·     │
+│                             │  │ (→Bedrock prod) │  │                         │
 │ GDINO·CLIP·LightGBM·ALS·GBDT │ └─────────────────┘  │ credits·LEDGER          │
 └──────────────────────────────┘  ← TRACK A (M1)       │ + Redis (demand,cache)  │
                                                        │ + S3 (photos,artifacts) │
                                                        └─────────────────────────┘
 ```
 
-**Single-item grading runs synchronously** in the view (must feel <2s on stage). **Batch grading + credit vesting run async** via Celery. Heavy CV models (GDINO/CLIP) are lazy-loaded singletons inside the ML modules; Bedrock is a boto3 call (no local weights).
+**Single-item grading runs synchronously** in the view (must feel <2s on stage). **Batch grading + credit vesting run async** via Celery. Heavy CV models (GDINO/CLIP) are lazy-loaded singletons inside the ML modules; the vision LLM is an HTTP call to OpenRouter (OpenAI-compatible, no local weights) — provider-abstracted so production swaps to Bedrock via one env var.
 
 ---
 
@@ -84,7 +85,7 @@ The whole point: **nobody waits.** We achieve it with three rules.
 
 | Track | Owner | Owns | Language/tools |
 |---|---|---|---|
-| **A — Intelligence** | **M1** | All ML: grade pipeline, EV optimizer, pricing, prevention, recommender. Pure Python modules + serialized artifacts. **Zero Django dependency.** | Python, notebooks, GDINO/CLIP/Bedrock, LightGBM, ALS |
+| **A — Intelligence** | **M1** | All ML: grade pipeline, EV optimizer, pricing, prevention, recommender. Pure Python modules + serialized artifacts. **Zero Django dependency.** | Python, notebooks, GDINO/CLIP/OpenRouter, LightGBM, ALS |
 | **B — Backend/API/Infra** | **M2** | Django project, models, DRF endpoints, Celery, trust/ledger, green/credits, P2P escrow, demand index, synthetic data, **AWS deploy** | Django, DRF, Postgres, Redis, boto3, EB |
 | **C — Frontend** | **M3** | All 8 React pages, shared components, Amazon styling, persona switcher, Leaflet map, animations | React, Vite, Tailwind, Leaflet, axios |
 
@@ -117,7 +118,7 @@ So nothing is dropped. (Pillars, pages, and flows from `final_idea.md` §3/§5.)
 
 | `final_idea.md` element | Track A (ML) | Track B (API/data) | Track C (UI) |
 |---|---|---|---|
-| **Pillar 1 — Grading** (GDINO+CLIP+Bedrock, video) | grade pipeline + video sampler | `/api/grade`, `/api/grade/batch`, S3 upload, cache | P3 grade view, defect-box overlay |
+| **Pillar 1 — Grading** (GDINO+CLIP+OpenRouter LLM, video) | grade pipeline + video sampler | `/api/grade`, `/api/grade/batch`, S3 upload, cache | P3 grade view, defect-box overlay |
 | **Pillar 2 — Routing** (EV optimizer, demand gravity) | EV optimizer, LightGBM price, sell-prob | `/api/route`, demand index → Redis, `/api/demand/heatmap` | Leaflet `MapPanel`, routing animation |
 | **Pillar 3 — Trust** (Health Card, ledger, GS1 QR) | — | trust app, signed JSON, append-only ledger, QR, `/api/card` | `HealthCard` component, QR render |
 | **Pillar 3 — P2P** (zero-contact) | price suggestion for listing | escrow state machine, `Order.is_p2p`, ownership transfer | P4 Sell-It, P6 buy, source badges |
@@ -128,7 +129,7 @@ So nothing is dropped. (Pillars, pages, and flows from `final_idea.md` §3/§5.)
 | **Personas** Priya/Rahul/SmallSeller/Agent/Buyer/Ops | — | seed data per persona | persona switcher + per-persona views |
 | **Datasets** (Mercari/ABO/Reviews/synthetic) | train models | synthetic generator, seed DB | — |
 | **Metrics** (RMSLE/Recall@20/EV uplift/F1) | compute + notebook | — | metrics slide (shared) |
-| **AWS hosting** (Bedrock/RDS/S3/EB/CloudFront) | Bedrock call in grade module | **deploy everything** | React build → S3 |
+| **AWS hosting** (RDS/S3/EB/CloudFront; LLM via OpenRouter, Bedrock-ready) | provider-flag call in grade module | **deploy everything** | React build → S3 |
 | **Demo video / deck / Q&A** | metrics input | — | record (shared, M3 leads) |
 
 ---
@@ -195,13 +196,17 @@ grade_image(image_bytes, product_id, operator) -> dict   # importable, no Django
        "stain on fabric","torn fabric","missing part","damaged area"]
        → boxes(score>0.30), bbox→3×3 grid location
   3. CLIP cosine(uploaded, Product.reference_image) → completeness
-  4. Bedrock Claude Haiku (boto3 invoke_model): image + DINO context text
+  4. caption(image, dino_context) via the configured provider → image + DINO context text
        → {grade, confidence, defects[], completeness, condition_summary, functional}
-       fallback: local Qwen2.5-VL (identical schema) when USE_BEDROCK=false
   5. write grade_cache; return dict (target <2s)
 ```
 
-**The AWS swap (one flag):** `anthropic.Anthropic()` → `boto3.client("bedrock-runtime").invoke_model(modelId="anthropic.claude-haiku-…")`, behind `USE_BEDROCK` env so dev never blocks on AWS approval. **Video:** OpenCV samples 4–6 frames → loop pipeline → max severity per defect type (~30 lines).
+**Provider abstraction (`LLM_PROVIDER` env: `openrouter` | `bedrock` | `local`):** one `caption()` function, three backends behind it:
+- **`openrouter` (demo default):** OpenAI SDK pointed at `https://openrouter.ai/api/v1`, `OPENROUTER_API_KEY`, a vision model id (e.g. `anthropic/claude-3.5-haiku` or `google/gemini-flash-1.5`). Image passed as a base64 `data:` URL in the message content.
+- **`bedrock` (production):** `boto3.client("bedrock-runtime").invoke_model(...)`, same Claude Haiku.
+- **`local` (offline fallback):** Qwen2.5-VL-3B.
+
+All three return the identical JSON schema, so nothing downstream changes — switching providers is one env var. No AWS approval needed for the demo path. **Video:** OpenCV samples 4–6 frames → loop pipeline → max severity per defect type (~30 lines).
 
 ---
 
@@ -213,11 +218,11 @@ grade_image(image_bytes, product_id, operator) -> dict   # importable, no Django
 | Django API | **Elastic Beanstalk** (t3.micro/t4g.micro) | 750 hrs/mo free |
 | Database | **RDS PostgreSQL** db.t4g.micro | 750 hrs/mo free 12 mo |
 | Redis + Celery | on the same EC2 (ElastiCache not reliably free) | — |
-| VLM grading | **Bedrock** Claude Haiku | pay-per-call (cents); **set a $5 Budget alarm first** |
+| Vision-LLM grading | **OpenRouter** (demo) → Bedrock-ready for prod | pay-per-call (cents); no AWS approval needed; set a small OpenRouter spend cap |
 | Photos/artifacts | **S3** | Free tier |
 | Heavy CV (GDINO/CLIP) | too heavy for free EC2 → dev on local/Colab T4+ngrok; **demo serves pre-cached grades** | Honest pitch: prod = IoT Greengrass / SageMaker endpoint |
 
-**Deploy order:** local docker-compose Days 0–1 → Day 2 AM `eb create`, point Django at RDS, `collectstatic`→S3, React build→S3/CloudFront, enable Bedrock model access (us-east-1, **do Day 0 — approval lags**). Keep local docker stack as demo fallback; record video against whichever is stable. **Gotchas:** RDS security group must allow EB; `ALLOWED_HOSTS`/`DATABASE_URL` via EB env; `django-cors-headers` for the S3 SPA.
+**Deploy order:** local docker-compose Days 0–1 → Day 2 AM `eb create`, point Django at RDS, `collectstatic`→S3, React build→S3/CloudFront. Vision LLM stays on OpenRouter (no AWS model-access approval needed) — Bedrock is the documented production swap. Keep local docker stack as demo fallback; record video against whichever is stable. **Gotchas:** RDS security group must allow EB; `ALLOWED_HOSTS`/`DATABASE_URL` via EB env; `django-cors-headers` for the S3 SPA.
 
 ---
 
@@ -230,18 +235,18 @@ grade_image(image_bytes, product_id, operator) -> dict   # importable, no Django
 - M2 pushes repo scaffold: Django project + 6 apps + `core`, docker-compose (Postgres+Redis), empty DRF views returning fixtures.
 - M3 pushes React scaffold: Vite+Tailwind, 8 routed pages (empty), `PersonaSwitcher`, axios client pointed at mock server.
 - M1 pushes `ml/` package with stub functions returning fixture JSON + notebook skeletons.
-- **Enable Bedrock model access now** (M1) and **set the AWS Budget alarm** (M2) — both have lag.
+- **Get an OpenRouter API key + test one vision call now** (M1) and **set the AWS Budget alarm** (M2). (No Bedrock approval needed for the demo; the provider flag keeps Bedrock as a one-line prod swap.)
 - ✅ Exit: everyone can run their own layer in isolation against mocks.
 
 ### 🔵 TRACK A — M1 (Intelligence)
-- **Day 1 (Jun 13):** GDINO prompt-tuning on 10 sample photos + **latency check** (Colab fallback if >2s); `grade_image()` complete (GDINO+CLIP+Bedrock, cache); LightGBM price model on Mercari (report RMSLE); EV optimizer + `route_item()`.
+- **Day 1 (Jun 13):** GDINO prompt-tuning on 10 sample photos + **latency check** (Colab fallback if >2s); `grade_image()` complete (GDINO+CLIP+OpenRouter LLM, cache); LightGBM price model on Mercari (report RMSLE); EV optimizer + `route_item()`.
 - **Day 2 (Jun 14):** video sampler; ALS recommender (Recall@20/NDCG@20) + hybrid `recommend()`; prevention GBDT + review-mined priors → `score_risk()`. Hand all functions to M2 (one import line each).
 - **Day 3 (Jun 15):** pre-grade every demo item into the cache; finalize metrics numbers for the slide; support integration bugfixes.
 - **Unblocked because:** works in notebooks/modules against the fixture schema; never needs Django or React running.
 
 ### 🟣 TRACK B — M2 (Backend / API / Infra)
 - **Day 1 (Jun 13):** all Django models + migrations + DRF endpoints returning contract shapes (calling M1 stubs); `core` Listing/Order/User/Product; **trust app** (signed Health Card + append-only ledger + GS1 QR + `/api/card`); synthetic data generator + demand index → Redis; seed DB with persona data.
-- **Day 2 (Jun 14):** swap M1 stubs → real modules as they land; **green app** (promise + Celery vest clock + redeem); **P2P escrow state machine** (`is_p2p`, escrow_released, ownership-transfer ledger append); `/api/prevent/risk`, `/api/recommend`. **Deploy to AWS** (EB + RDS + S3 + Bedrock + CloudFront).
+- **Day 2 (Jun 14):** swap M1 stubs → real modules as they land; **green app** (promise + Celery vest clock + redeem); **P2P escrow state machine** (`is_p2p`, escrow_released, ownership-transfer ledger append); `/api/prevent/risk`, `/api/recommend`. **Deploy to AWS** (EB + RDS + S3 + CloudFront; LLM via OpenRouter).
 - **Day 3 (Jun 15):** harden endpoints, fixtures→DB consistency, support M3 integration; keep local fallback green.
 - **Unblocked because:** stubs return fixture JSON, so every endpoint is "done" on Day 1 regardless of M1; M3 sees a working API immediately.
 
@@ -254,7 +259,7 @@ grade_image(image_bytes, product_id, operator) -> dict   # importable, no Django
 ### Cut-lines (decide Day 2 midday, in order)
 1. ALS rail → static mock (keep offline Recall@20 number)
 2. Video grading → skip (roadmap)
-3. AWS deploy → demo from local + ngrok (still keep S3 + Bedrock so "runs on AWS" is true)
+3. AWS deploy → demo from local + ngrok (still keep S3 + RDS so "runs on AWS" is true)
 4. **Never cut:** grade pipeline, EV routing + map, Health Card, P2P escrow, Priya + Rahul scenes.
 
 ---
@@ -269,7 +274,7 @@ revive/
 │   ├── core/  grade/  route/  trust/  prevent/  green/  recommend/   # Django apps
 │   ├── requirements.txt · Dockerfile · .ebextensions/
 ├── ml/                           # TRACK A — importable, Django-free
-│   ├── grade.py (grade_image, video) · captioner.py (Bedrock) · inference/ (GDINO+CLIP)
+│   ├── grade.py (grade_image, video) · captioner.py (provider flag: openrouter|bedrock|local) · inference/ (GDINO+CLIP)
 │   ├── route.py (ev_optimizer, pricing) · prevent.py (risk, priors) · recommend.py (als, hybrid)
 │   └── artifacts/ (LightGBM, ALS vectors, GBDT)  ·  notebooks/ (train+eval)
 ├── frontend/                     # TRACK C
@@ -290,6 +295,6 @@ revive/
 - [ ] Live: P2P — Rahul lists → appears in discovery with Verified badge → escrow checkout → ownership transfer logged
 - [ ] Live: checkout prevention nudge + credit promise; wallet shows pending→vested
 - [ ] Live: Small Seller bulk-grades 12 items in one action
-- [ ] Hosted on an AWS URL (Bedrock + S3 + RDS minimum); local fallback ready
+- [ ] Hosted on an AWS URL (S3 + RDS + EB minimum; LLM via OpenRouter, Bedrock-ready); local fallback ready
 - [ ] 3-min demo video + README + architecture diagram + metrics slide + deck
 - [ ] All 6 PS bullets demonstrably covered (map them on a slide); 4 judging criteria addressed (`final_idea.md` §11)

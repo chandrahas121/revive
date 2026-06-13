@@ -343,7 +343,7 @@ One tap → one shipment, no return. The nudge is helpful, never blocking — an
 | "Will zero-shot detection work on all products?" | It generalizes by design via text prompts; we validate on shoes, electronics, clothing. Edge cases route to the human-in-the-loop queue. |
 | "New refurb items have no interaction history — cold start?" | That's why the hybrid blend exists: the CLIP content leg scores an item the moment it's graded, zero interactions needed. |
 | "Why ALS, not a transformer recommender?" | ALS ships in 3 days and gives interpretable vectors with competitive Recall@20. Production path is LightGCN/SASRec — the architecture is right, the model is swappable. |
-| "Is this on AWS?" | Claude runs natively on Bedrock — two-line swap. Every component has a named AWS counterpart (Section 4 table). |
+| "Is this on AWS?" | The vision call is provider-abstracted — the demo routes through OpenRouter, and one env var switches it to Amazon Bedrock running the same Claude Haiku. Every component has a named AWS counterpart (Section 4 table). |
 
 ---
 
