@@ -1,51 +1,158 @@
 {
-  "dceed79a86b59ed189193e9c": {
-    "listing_id": "8be13aa9-7787-4b52-be2c-3aeb72a819ff",
+  "c06a7613a55f92c278a63248": {
+    "listing_id": "9fac07a8-739f-4f10-93f6-0cbb10e39550",
+    "grade": "C",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "moderate",
+        "location": "on the screen"
+      }
+    ],
+    "completeness": 0.703,
+    "condition_summary": "The device has a moderate scratch on the screen but is otherwise in good condition and appears fully functional.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 27102,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "c06a7613a55f92c278a63248",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "3ebeded35cf7e742b58d723d": {
+    "listing_id": "2c2790f2-a797-4354-8f96-e5f9dbbbfbcf",
     "grade": "B",
-    "confidence": 0.9,
+    "confidence": 0.72,
     "defects": [
       {
         "type": "dent",
         "severity": "minor",
-        "location": "on the back pocket"
+        "location": "top-center"
       }
     ],
-    "completeness": 0.955,
-    "condition_summary": "This pair of jeans is in very good condition with only light cosmetic wear, such as a minor dent on the back pocket, but it is fully functional.",
+    "completeness": 0.559,
+    "condition_summary": "This bottle appears to be in very good condition, with only a minor dent on the top-center area.",
     "functional": true,
     "box_present": false,
-    "latency_ms": 20279,
+    "latency_ms": 8494,
     "model_version": "revive-grade-v1.0",
-    "image_hash": "dceed79a86b59ed189193e9c",
-    "n_dino_detections": 0,
+    "image_hash": "3ebeded35cf7e742b58d723d",
+    "n_dino_detections": 1,
     "from_cache": false
   },
-  "a12d3a4aa57c9ece9e6a8818": {
-    "listing_id": "c59860bd-be4f-4c01-9fe2-f2ff121fe0ff",
+  "1a81bfbc3e68ca1541f0816b": {
+    "listing_id": "7a5a4ccf-327d-4740-8550-b6af83823495",
     "grade": "B",
     "confidence": 0.72,
     "defects": [
       {
         "type": "scuff",
         "severity": "minor",
-        "location": "center-left",
+        "location": "center",
         "bbox": [
-          199.69,
-          415.92,
-          333.12,
-          506.65
+          280.97,
+          280.76,
+          370.03,
+          315.38
         ],
-        "bbox_area_pct": 0.0189
+        "bbox_area_pct": 0.0072
       }
     ],
-    "completeness": 0.697,
-    "condition_summary": "The shoe appears to be in very good condition with only a minor scuff mark visible.",
+    "completeness": 1.0,
+    "condition_summary": "The shoe is in very good condition with only a minor scuff visible at the center.",
     "functional": true,
     "box_present": false,
-    "latency_ms": 5573,
+    "latency_ms": 7669,
     "model_version": "revive-grade-v1.0",
-    "image_hash": "a12d3a4aa57c9ece9e6a8818",
+    "image_hash": "1a81bfbc3e68ca1541f0816b",
     "n_dino_detections": 1,
+    "from_cache": false
+  },
+  "dceed79a86b59ed189193e9c": {
+    "listing_id": "d0889199-0660-4940-abde-0b1054bb1075",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "dent",
+        "severity": "minor",
+        "location": "on the bottom of the jeans"
+      }
+    ],
+    "completeness": 0.955,
+    "condition_summary": "The jeans appear to be in very good condition with only minor cosmetic wear, and are fully functional.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 7354,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "dceed79a86b59ed189193e9c",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "880a1274de529212b4416609": {
+    "listing_id": "9933303e-dcd7-4026-8d4d-8310131aa75d",
+    "grade": "D",
+    "confidence": 0.55,
+    "defects": [
+      {
+        "type": "tear",
+        "severity": "moderate",
+        "location": "center of the garment"
+      },
+      {
+        "type": "stain",
+        "severity": "moderate",
+        "location": "top-center of the garment"
+      },
+      {
+        "type": "broken piece",
+        "severity": "minor",
+        "location": "bottom-center",
+        "bbox": [
+          617.99,
+          859.55,
+          649.96,
+          891.52
+        ],
+        "bbox_area_pct": 0.001,
+        "source": "dino"
+      },
+      {
+        "type": "torn fabric",
+        "severity": "severe",
+        "location": "center",
+        "bbox": [
+          387.17,
+          332.53,
+          687.11,
+          680.04
+        ],
+        "bbox_area_pct": 0.0994,
+        "source": "dino"
+      },
+      {
+        "type": "dark stain",
+        "severity": "minor",
+        "location": "top-center",
+        "bbox": [
+          478.87,
+          175.52,
+          571.73,
+          283.28
+        ],
+        "bbox_area_pct": 0.0095,
+        "source": "dino"
+      }
+    ],
+    "completeness": 0.809,
+    "condition_summary": "The garment shows moderate wear with a visible tear in the center and a noticeable stain at the top, but appears otherwise complete and functional.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 7805,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "880a1274de529212b4416609",
+    "n_dino_detections": 3,
     "from_cache": false
   }
 }

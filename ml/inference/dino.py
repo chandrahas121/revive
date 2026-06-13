@@ -108,6 +108,8 @@ _INVALID_STANDALONE_LABELS = {
     # Single-word defect words that lack enough context when alone
     # (GDINO truncates "hole in fabric" → "hole", "crack on surface" → "crack", etc.)
     "hole", "crack", "stain", "scratch", "dent", "tear",
+    # Size/quantity words with no defect meaning on their own
+    "large", "small", "dark", "broken", "worn", "damaged",
 }
 
 # Partial labels (GDINO sometimes returns truncated text ending in a preposition)
@@ -120,6 +122,11 @@ _PARTIAL_LABEL_ENDINGS = (
     "discoloration on",
     "scuff on",
 )
+
+# GDINO sometimes produces labels that START with a preposition/article
+# (e.g. "on dark stain" from "dark stain on surface", "on surface" from
+# "crack on surface"). These are backwards truncations and meaningless.
+_INVALID_LABEL_PREFIXES = ("on ", "at ", "in ", "of ", "the ", "a ", "an ")
 
 # A genuine defect is localised — a bbox covering >35% of the image is the
 # product boundary, not a defect (DINO sometimes boxes the entire object).
@@ -215,7 +222,13 @@ def _filter_and_dedup(detections: List[Dict]) -> List[Dict]:
             logger.debug(f"[DINO] Dropped standalone/invalid label: '{d['label']}' conf={conf:.2f}")
             continue
 
-        # 1c. Drop partial labels ending in a preposition/article
+        # 1d. Drop labels that start with a preposition/article
+        # (GDINO "on dark stain", "on surface" — backwards truncation artifacts)
+        if any(label.startswith(p) for p in _INVALID_LABEL_PREFIXES):
+            logger.debug(f"[DINO] Dropped preposition-start label: '{d['label']}' conf={conf:.2f}")
+            continue
+
+        # 1e. Drop partial labels ending in a preposition/article
         is_partial = any(label == p.strip().lower() or label.endswith(p)
                          for p in _PARTIAL_LABEL_ENDINGS)
         if is_partial:

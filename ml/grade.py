@@ -417,6 +417,117 @@ def grade_image(
     return result
 
 
+def _aggregate_frame_results(frame_results: List[dict], source: str) -> dict:
+    """
+    Aggregate per-frame/per-image grade results into a single verdict.
+
+    Rules:
+      - Worst grade wins (A > B > C > D — most damage takes precedence)
+      - Defects: union across all frames, keeping highest severity per type
+      - Confidence/completeness: average across frames
+      - condition_summary: from the highest-confidence frame
+      - functional: True only if ALL frames say functional
+      - box_present: True if ANY frame detected a box
+    """
+    grade_order = {"A": 4, "B": 3, "C": 2, "D": 1}
+    sev_rank = {"minor": 1, "moderate": 2, "severe": 3}
+
+    grades = [r["grade"] for r in frame_results]
+    worst_grade = min(grades, key=lambda g: grade_order.get(g, 0))
+
+    all_defects: Dict[str, dict] = {}
+    for r in frame_results:
+        for d in r.get("defects", []):
+            dtype = d.get("type", "other")
+            if dtype not in all_defects or sev_rank.get(d.get("severity"), 0) > sev_rank.get(
+                all_defects[dtype].get("severity"), 0
+            ):
+                all_defects[dtype] = d
+
+    best_frame = max(frame_results, key=lambda r: r.get("confidence", 0))
+    avg_confidence = sum(r.get("confidence", 0) for r in frame_results) / len(frame_results)
+    avg_completeness = sum(r.get("completeness", 0) for r in frame_results) / len(frame_results)
+    total_latency = sum(r.get("latency_ms", 0) for r in frame_results)
+
+    return {
+        "listing_id": str(uuid.uuid4()),
+        "grade": worst_grade,
+        "confidence": round(avg_confidence, 3),
+        "defects": list(all_defects.values()),
+        "completeness": round(avg_completeness, 3),
+        "condition_summary": best_frame.get("condition_summary", ""),
+        "functional": all(r.get("functional", True) for r in frame_results),
+        "box_present": any(r.get("box_present", False) for r in frame_results),
+        "latency_ms": total_latency,
+        "model_version": "revive-grade-v1.0",
+        "source": source,
+        "frames_sampled": len(frame_results),
+        "per_frame_grades": grades,
+        "from_cache": False,
+    }
+
+
+def grade_multi_image(
+    images: List[bytes],
+    product_id: str = "unknown",
+    operator: str = "self",
+    reference_bytes: Optional[bytes] = None,
+    category: Optional[str] = None,
+) -> dict:
+    """
+    Grade a product from multiple angle photos (e.g. front, back, sides).
+
+    Each image is graded independently in parallel, then results are aggregated
+    with worst-grade-wins logic so no defect angle is missed.
+
+    Args:
+        images:          List of raw JPEG/PNG bytes (one per angle/photo).
+        product_id:      ASIN or internal ID.
+        operator:        "self" | "agent" | "seller".
+        reference_bytes: Catalog reference for CLIP completeness.
+        category:        Product category string (e.g. "Footwear").
+
+    Returns:
+        Same schema as grade_image() plus:
+        {
+          "source": "multi_image",
+          "frames_sampled": int,         # number of photos graded
+          "per_frame_grades": [list],    # grade per photo in input order
+        }
+    """
+    if not images:
+        return {
+            "error": "No images provided",
+            "grade": "C",
+            "confidence": 0.3,
+            "defects": [],
+            "completeness": 0.75,
+            "condition_summary": "No images to grade.",
+            "latency_ms": 0,
+            "model_version": "revive-grade-v1.0",
+            "source": "multi_image",
+            "frames_sampled": 0,
+        }
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _grade_one(img_bytes: bytes) -> dict:
+        return grade_image(
+            img_bytes,
+            product_id=product_id,
+            operator=operator,
+            reference_bytes=reference_bytes,
+            category=category,
+            use_cache=True,
+        )
+
+    # Grade all images in parallel (each already parallelises CLIP internally)
+    with ThreadPoolExecutor(max_workers=min(len(images), 4)) as pool:
+        frame_results = list(pool.map(_grade_one, images))
+
+    return _aggregate_frame_results(frame_results, source="multi_image")
+
+
 def grade_video(
     video_path: str,
     product_id: str = "unknown",
@@ -459,9 +570,8 @@ def grade_video(
             "frames_sampled": 0,
         }
 
-    frame_results = []
-    for frame_bytes in frames:
-        res = grade_image(
+    frame_results = [
+        grade_image(
             frame_bytes,
             product_id=product_id,
             operator=operator,
@@ -469,43 +579,7 @@ def grade_video(
             category=category,
             use_cache=True,
         )
-        frame_results.append(res)
+        for frame_bytes in frames
+    ]
 
-    # Aggregate: worst grade wins; max severity per defect type
-    grades = [r["grade"] for r in frame_results]
-    # Sort by severity: D < C < B < A (worst = lowest value recovery)
-    grade_order = {"A": 4, "B": 3, "C": 2, "D": 1}
-    worst_grade = min(grades, key=lambda g: grade_order.get(g, 0))
-
-    # Aggregate defects: collect all, keep highest severity per type
-    all_defects: Dict[str, dict] = {}
-    sev_rank = {"minor": 1, "moderate": 2, "severe": 3}
-    for r in frame_results:
-        for d in r.get("defects", []):
-            dtype = d.get("type", "other")
-            if dtype not in all_defects or sev_rank.get(d.get("severity"), 0) > sev_rank.get(
-                all_defects[dtype].get("severity"), 0
-            ):
-                all_defects[dtype] = d
-
-    best_frame = max(frame_results, key=lambda r: r.get("confidence", 0))
-    avg_confidence = sum(r.get("confidence", 0) for r in frame_results) / len(frame_results)
-    avg_completeness = sum(r.get("completeness", 0) for r in frame_results) / len(frame_results)
-    total_latency = sum(r.get("latency_ms", 0) for r in frame_results)
-
-    return {
-        "listing_id": str(uuid.uuid4()),
-        "grade": worst_grade,
-        "confidence": round(avg_confidence, 3),
-        "defects": list(all_defects.values()),
-        "completeness": round(avg_completeness, 3),
-        "condition_summary": best_frame.get("condition_summary", ""),
-        "functional": all(r.get("functional", True) for r in frame_results),
-        "box_present": any(r.get("box_present", False) for r in frame_results),
-        "latency_ms": total_latency,
-        "model_version": "revive-grade-v1.0",
-        "source": "video",
-        "frames_sampled": len(frames),
-        "per_frame_grades": grades,
-        "from_cache": False,
-    }
+    return _aggregate_frame_results(frame_results, source="video")
