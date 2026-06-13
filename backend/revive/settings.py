@@ -4,12 +4,18 @@ SQLite for local dev. Switch to PostgreSQL on AWS by setting DATABASE_URL env va
 """
 
 import os
+import sys
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Make ml/ importable from anywhere inside backend/
+_REPO_ROOT = str(BASE_DIR.parent)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 # Load backend/.env first (most specific), then fall back to repo-root .env
 load_dotenv(BASE_DIR / '.env')

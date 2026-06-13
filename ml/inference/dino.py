@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 _CLOTHING_PROMPTS = [
     "stain on fabric",
     "dark stain on clothing",
-    "torn fabric",
+    "fabric ripped open",
     "large tear in fabric",
-    "hole in fabric",
+    "hole in garment",
     "missing part",
     "worn out area",
     "discoloration on surface",
@@ -77,12 +77,41 @@ _DEFAULT_PROMPTS = [
     "hole in fabric",
 ]
 
+_BOOKS_PROMPTS = [
+    "stain on page",
+    "torn page",
+    "water damage on book",
+    "bent cover",
+    "damaged spine",
+    "missing page",
+    "writing on page",
+    "discoloration on surface",
+    "worn out area",
+]
+
+_HOME_KITCHEN_PROMPTS = [
+    "dent on metal",
+    "dent on surface",
+    "scratch on surface",
+    "stain on surface",
+    "crack on surface",
+    "broken piece",
+    "missing part",
+    "damaged area",
+    "worn out area",
+]
+
 _PROMPTS_BY_CATEGORY: Dict[str, List[str]] = {
-    "clothing":    _CLOTHING_PROMPTS,
-    "footwear":    _FOOTWEAR_PROMPTS,
-    "shoes":       _FOOTWEAR_PROMPTS,
-    "electronics": _ELECTRONICS_PROMPTS,
-    "appliances":  _ELECTRONICS_PROMPTS,
+    "clothing":      _CLOTHING_PROMPTS,
+    "footwear":      _FOOTWEAR_PROMPTS,
+    "shoes":         _FOOTWEAR_PROMPTS,
+    "electronics":   _ELECTRONICS_PROMPTS,
+    "appliances":    _ELECTRONICS_PROMPTS,
+    "home & kitchen":_HOME_KITCHEN_PROMPTS,
+    "home & garden": _HOME_KITCHEN_PROMPTS,
+    "sports":        _HOME_KITCHEN_PROMPTS,
+    "toys":          _HOME_KITCHEN_PROMPTS,
+    "books":         _BOOKS_PROMPTS,
 }
 
 SCORE_THRESHOLD = 0.20   # Global minimum — per-type thresholds applied below
@@ -96,6 +125,10 @@ PER_TYPE_MIN_CONF = {
     "scratch":       0.25,
     "scuff":         0.25,
     "damaged area":  0.28,
+    "tear":          0.45,   # design stripes fire at lower conf; raise to suppress them
+    "torn":          0.45,
+    "hole":          0.40,
+    "ripped":        0.40,
 }
 
 # Standalone single-word labels that GDINO produces when it half-matches a prompt.
@@ -257,12 +290,24 @@ def _filter_and_dedup(detections: List[Dict]) -> List[Dict]:
         # 4. Confidence+area gate for tear/hole labels.
         #    Pocket linings and design features are BOTH low-confidence AND small.
         #    Real tears are either higher-confidence (>=0.30) OR cover more area (>=0.08).
-        is_tear_like = any(t in label for t in ("tear", "torn", "hole"))
+        is_tear_like = any(t in label for t in ("tear", "torn", "hole", "ripped"))
         if is_tear_like:
-            if conf < 0.30 and area_pct < 0.08:
+            if conf < 0.35 and area_pct < 0.08:
                 logger.debug(
                     f"[DINO] Suppressed likely design-feature false positive: "
                     f"'{d['label']}' conf={conf:.2f} area={area_pct:.3f}"
+                )
+                continue
+
+            # Stripe-shape filter: design stripes are very tall and narrow (aspect ratio > 4:1).
+            # Real tears are roughly equidimensional or at most 3:1.
+            x0, y0, x1, y1 = d["bbox"]
+            bw = max(x1 - x0, 1)
+            bh = max(y1 - y0, 1)
+            if bh / bw > 4.0:
+                logger.debug(
+                    f"[DINO] Suppressed stripe-shaped tear (design feature): "
+                    f"'{d['label']}' aspect={bh/bw:.1f} conf={conf:.2f}"
                 )
                 continue
 

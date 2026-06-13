@@ -1,5 +1,6 @@
 from decimal import Decimal
 from datetime import timedelta
+import logging
 import uuid
 
 from django.conf import settings
@@ -13,6 +14,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+
+logger = logging.getLogger(__name__)
 
 from .models import Listing, Product, Order
 from .serializers import (
@@ -137,12 +140,45 @@ class ListingListView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        # Read bytes first so grade_image() can run before/after storage save
+        image_bytes = None
         image_url = ''
         image_file = request.FILES.get('image')
         if image_file:
+            image_bytes = image_file.read()
+            image_file.seek(0)  # reset so default_storage can read it again
             filename = f"listings/{uuid.uuid4().hex}_{image_file.name}"
             path = default_storage.save(filename, image_file)
             image_url = request.build_absolute_uri(settings.MEDIA_URL + path)
+
+        # AI grading — runs synchronously, falls back gracefully
+        grade_result = {
+            'grade': 'B',
+            'condition_summary': data.get('condition_summary', ''),
+            'completeness': 1.0,
+            'confidence': 0.0,
+            'defects': [],
+            'from_cache': False,
+        }
+        if image_bytes:
+            try:
+                from ml.grade import grade_image
+                grade_result = grade_image(
+                    image_bytes=image_bytes,
+                    product_id='P2P-TEMP',
+                    operator='seller',
+                    category=data['category'],
+                    use_cache=True,
+                )
+                logger.info(f"Graded listing: grade={grade_result.get('grade')} confidence={grade_result.get('confidence')}")
+            except Exception as e:
+                logger.warning(f"grade_image() failed, using defaults: {e}")
+
+        # If user wrote their own condition notes, prefer them; else use AI summary
+        condition_summary = (
+            data.get('condition_summary') or
+            grade_result.get('condition_summary', '')
+        )
 
         product = Product.objects.create(
             asin=f'P2P-{uuid.uuid4().hex[:8].upper()}',
@@ -156,16 +192,25 @@ class ListingListView(APIView):
         listing = Listing.objects.create(
             product=product,
             source=Listing.Source.P2P,
-            grade=Listing.Grade.B,
-            condition_summary=data.get('condition_summary', ''),
-            completeness=1.0,
+            grade=grade_result.get('grade', 'B'),
+            condition_summary=condition_summary,
+            completeness=grade_result.get('completeness', 1.0),
             price=data['price'],
             status=Listing.Status.LISTED,
             seller=request.user,
             image_url=image_url,
         )
 
-        return Response(ListingSerializer(listing).data, status=status.HTTP_201_CREATED)
+        response_data = ListingSerializer(listing).data
+        response_data['grade_result'] = {
+            'grade': grade_result.get('grade'),
+            'confidence': grade_result.get('confidence'),
+            'condition_summary': grade_result.get('condition_summary'),
+            'defects': grade_result.get('defects', []),
+            'completeness': grade_result.get('completeness'),
+            'from_cache': grade_result.get('from_cache', False),
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class ListingDetailView(APIView):

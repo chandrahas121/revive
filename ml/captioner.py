@@ -81,10 +81,10 @@ Assess the product in the image and return ONLY valid JSON with these exact fiel
   "defects": [
     {{"type": "<scratch|dent|stain|tear|missing_part|other>",
       "severity": "<minor|moderate|severe>",
-      "location": "<brief description>"}}
+      "location": "<brief location e.g. front-center, bottom-left>"}}
   ],
   "completeness": <0.0-1.0>,
-  "condition_summary": "<one professional sentence>",
+  "condition_summary": "<one professional sentence naming the specific defects seen>",
   "box_present": <true|false>,
   "functional": <true|false>
 }}
@@ -100,14 +100,13 @@ Return ONLY the JSON object — no markdown fences, no explanation."""
 
 def _det_text(detections: List[Dict]) -> str:
     if not detections:
-        return "no defects detected"
+        return "no damage regions detected"
     parts = []
     for d in detections:
         conf = d.get("confidence", 0)
         reliability = "confirmed" if conf >= 0.45 else "uncertain"
         parts.append(
-            f"{d['label']} at {d.get('location', 'unknown')} "
-            f"(conf {conf:.2f}, {reliability})"
+            f"{d.get('label', 'damage')} at {d.get('location', 'unknown')} ({reliability})"
         )
     return ", ".join(parts)
 
