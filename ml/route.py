@@ -134,53 +134,129 @@ def _load_price_model() -> Optional[Any]:
 # PRICING MODEL
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Maps REVIVE internal category names → Mercari category text tokens
+# (same tokens appear in both the training corpus and inference-time synthetic text)
+_REVIVE_TO_MERCARI_TEXT: Dict[str, tuple] = {
+    "Footwear":      ("women", "shoes", "sneakers"),
+    "Clothing":      ("women", "tops blouses", "shirts"),
+    "Electronics":   ("electronics", "computers", "laptops"),
+    "Home & Kitchen":("home", "kitchen dining", "cookware"),
+    "Books":         ("other", "books", "other"),
+    "Sports":        ("sports outdoors", "exercise", "cardio"),
+    "Beauty":        ("beauty", "skincare", "moisturizers"),
+    "Toys":          ("kids", "toys", "action figures"),
+    "Jewelry":       ("women", "jewelry", "necklaces"),
+}
+
+# Grade → human-readable condition words used in Mercari listings (training distribution)
+_GRADE_CONDITION_TEXT: Dict[str, str] = {
+    "A": "new like new mint perfect",
+    "B": "good very good excellent",
+    "C": "fair acceptable used worn",
+    "D": "poor heavily used flawed",
+}
+
+# Grade → Mercari condition ordinal (1=New→5, 5=Poor→1 reversed to 5=best)
+_GRADE_TO_COND_ORD: Dict[str, float] = {"A": 5.0, "B": 4.0, "C": 3.0, "D": 1.0}
+
+
 def _predict_price(grade: str, category: str, mrp: float = 1000.0) -> float:
-    """Predict resale price using LightGBM (Mercari-trained) or heuristic fallback."""
+    """
+    Predict resale price using LightGBM (Mercari-trained) or heuristic fallback.
+
+    Supports two artifact formats:
+      • "lgbm_tfidf_svd_v2"  — new TF-IDF + SVD pipeline (train_price_model.py v2)
+      • legacy dict / bare model — old 10-column tabular format (backward compatible)
+    """
     artifact = _load_price_model()
     if artifact is not None:
         try:
             import numpy as np
-            model = artifact["model"] if isinstance(artifact, dict) else artifact
-            encoders = artifact.get("encoders", {}) if isinstance(artifact, dict) else {}
+            artifact_type = (
+                artifact.get("type", "legacy")
+                if isinstance(artifact, dict)
+                else "legacy"
+            )
 
-            # Map REVIVE category → Mercari cat_0 / cat_1 / cat_2
-            CAT_MAP = {
-                "Footwear":    ("Women", "Shoes", "Sneakers"),
-                "Clothing":    ("Women", "Tops & Blouses", "T-Shirts"),
-                "Electronics": ("Electronics", "Computers", "Laptops"),
-                "Home & Kitchen": ("Home", "Kitchen & Dining", "Cookware"),
-                "Books":       ("Other", "Books", "Other"),
-                "Sports":      ("Sports & Outdoors", "Exercise", "Cardio"),
-                "Beauty":      ("Beauty", "Skincare", "Moisturizers"),
-                "Toys":        ("Kids", "Toys", "Action Figures"),
-                "Jewelry":     ("Women", "Jewelry", "Necklaces"),
-            }
-            cat_0_str, cat_1_str, cat_2_str = CAT_MAP.get(category, ("Other", "Other", "Other"))
-            condition_ord = GRADE_ORD.get(grade, 2)
+            # ── NEW: TF-IDF + SVD inference path ──────────────────────────────
+            if artifact_type == "lgbm_tfidf_svd_v2":
+                from scipy.sparse import hstack as sp_hstack
 
-            def encode(val: str, col: str) -> int:
-                cats = encoders.get(col, [])
-                return {v: i for i, v in enumerate(cats)}.get(val, -1)
+                model      = artifact["model"]
+                tfidf_word = artifact["tfidf_word"]
+                tfidf_char = artifact["tfidf_char"]
+                svd        = artifact["svd"]
 
-            features = np.array([[
-                encode(cat_0_str, "cat_0"),
-                encode(cat_1_str, "cat_1"),
-                encode(cat_2_str, "cat_2"),
-                encode("unknown", "brand_name"),
-                float(condition_ord),
-                0.0,    # shipping (buyer pays)
-                15.0,   # name_len typical
-                100.0,  # desc_len typical
-                0.0,    # brand_in_name
-                1.0,    # has_desc
-            ]])
+                # Build synthetic listing text from the info we have at inference time.
+                # These tokens were all present in the training corpus, so the
+                # vectorizer will produce meaningful (non-zero) TF-IDF weights.
+                c0, c1, c2  = _REVIVE_TO_MERCARI_TEXT.get(category, ("other", "other", "other"))
+                cond_words   = _GRADE_CONDITION_TEXT.get(grade, "used")
+                # Repeat category tokens to increase their TF weight (mirrors how
+                # real listings write their category name into the title/description)
+                text = f"{c0} {c1} {c2} {cond_words} {c0} {c1} {category.lower()}"
 
-            predicted_log = float(model.predict(features)[0])
-            predicted_usd = math.expm1(predicted_log)       # undo log1p → USD
-            predicted_inr = predicted_usd * 83.0            # USD → INR
-            grade_adj = predicted_inr * GRADE_RECOVERY.get(grade, 0.42)
-            # Clip to [5%, 90%] of MRP to avoid wild predictions
-            return float(max(mrp * 0.05, min(mrp * 0.90, grade_adj)))
+                X_word   = tfidf_word.transform([text])
+                X_char   = tfidf_char.transform([text])
+                X_sparse = sp_hstack([X_word, X_char], format="csr")
+                X_svd    = svd.transform(X_sparse)                  # (1, 64)
+
+                # 5 numeric features — must match build_numeric() in training script
+                cond_ord  = _GRADE_TO_COND_ORD.get(grade, 3.0)
+                # name_len_norm: use 0.15 (≈12 chars, typical short product name)
+                X_num = np.array([[cond_ord, 0.0, 0.15, 1.0, 0.0]])  # (1, 5)
+                X     = np.hstack([X_svd, X_num])                   # (1, 69)
+
+                predicted_log = float(model.predict(X)[0])
+                predicted_usd = math.expm1(predicted_log)       # undo log1p → USD
+                predicted_inr = predicted_usd * 83.0            # USD → INR
+                grade_adj     = predicted_inr * GRADE_RECOVERY.get(grade, 0.42)
+                return float(max(mrp * 0.05, min(mrp * 0.90, grade_adj)))
+
+            # ── LEGACY: 10-column tabular path (backward compatible) ──────────
+            else:
+                model    = artifact["model"] if isinstance(artifact, dict) else artifact
+                encoders = artifact.get("encoders", {}) if isinstance(artifact, dict) else {}
+
+                # Map REVIVE category → Mercari cat_0 / cat_1 / cat_2
+                CAT_MAP = {
+                    "Footwear":      ("Women", "Shoes", "Sneakers"),
+                    "Clothing":      ("Women", "Tops & Blouses", "T-Shirts"),
+                    "Electronics":   ("Electronics", "Computers", "Laptops"),
+                    "Home & Kitchen":("Home", "Kitchen & Dining", "Cookware"),
+                    "Books":         ("Other", "Books", "Other"),
+                    "Sports":        ("Sports & Outdoors", "Exercise", "Cardio"),
+                    "Beauty":        ("Beauty", "Skincare", "Moisturizers"),
+                    "Toys":          ("Kids", "Toys", "Action Figures"),
+                    "Jewelry":       ("Women", "Jewelry", "Necklaces"),
+                }
+                cat_0_str, cat_1_str, cat_2_str = CAT_MAP.get(
+                    category, ("Other", "Other", "Other"))
+                condition_ord = GRADE_ORD.get(grade, 2)
+
+                def encode(val: str, col: str) -> int:
+                    cats = encoders.get(col, [])
+                    return {v: i for i, v in enumerate(cats)}.get(val, -1)
+
+                features = np.array([[
+                    encode(cat_0_str, "cat_0"),
+                    encode(cat_1_str, "cat_1"),
+                    encode(cat_2_str, "cat_2"),
+                    encode("unknown", "brand_name"),
+                    float(condition_ord),
+                    0.0,    # shipping (buyer pays)
+                    15.0,   # name_len typical
+                    100.0,  # desc_len typical
+                    0.0,    # brand_in_name
+                    1.0,    # has_desc
+                ]])
+
+                predicted_log = float(model.predict(features)[0])
+                predicted_usd = math.expm1(predicted_log)
+                predicted_inr = predicted_usd * 83.0
+                grade_adj     = predicted_inr * GRADE_RECOVERY.get(grade, 0.42)
+                return float(max(mrp * 0.05, min(mrp * 0.90, grade_adj)))
+
         except Exception as e:
             logger.warning(f"[route] Price model inference error: {e}")
 
@@ -298,6 +374,9 @@ def _demand_lookup(geohash5: str, category: str) -> Dict[str, Any]:
         except Exception:
             pass
 
+    # Resolve seller cell early — used in artifact lookup and gravity fallback
+    seller_gh = geohash5 or "tbxx1"
+
     # Step 2: Try demand_index.json artifact (from build_demand_index.py)
     if not raw_demand:
         try:
@@ -313,8 +392,7 @@ def _demand_lookup(geohash5: str, category: str) -> Dict[str, Any]:
     if raw_demand:
         return raw_demand
 
-    # Step 2: Resolve seller location
-    seller_gh = geohash5 or "tbxx1"
+    # Step 3: Gravity model fallback
     seller_lat, seller_lng = _geohash5_approx_center(seller_gh)
 
     # Step 3: Find nearest high-demand cluster using gravity model
@@ -460,6 +538,123 @@ def _compute_refurb_cost(defects: List[Dict]) -> float:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# TIER LOGIC  (from final_idea.md §3 Rule 3 + §4 Pillar 2 tier table)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+TIER1_LIMIT = 2_000.0    # MRP < ₹2,000
+TIER2_LIMIT = 10_000.0   # MRP ₹2,000–₹10,000; above = Tier 3
+
+# Demand gate constants
+BASE_HOLDING_COST = 2.5  # ₹/day — same as HOLDING_COST_PER_DAY
+DECAY_FACTOR = 0.05      # holding cost grows 5% per day
+SELL_THRESHOLD = 50.0    # min expected local value (₹) to flag as SELL
+
+
+def _get_tier(mrp: float) -> int:
+    if mrp < TIER1_LIMIT:
+        return 1
+    if mrp <= TIER2_LIMIT:
+        return 2
+    return 3
+
+
+_ROUTE_LABEL: Dict[str, str] = {
+    "resell_p2p":       "Resell Nearby",
+    "resell_warehouse": "Resell City-Wide",
+    "refurbish":        "Refurbish & Resell",
+    "donate":           "Donate",
+    "recycle":          "Recycle",
+}
+
+_CUSTOMER_MESSAGE: Dict[str, str] = {
+    "resell_p2p":       "Your item will be resold to someone nearby",
+    "resell_warehouse": "Your item will be listed city-wide on Amazon Resale",
+    "refurbish":        "Your item will be professionally refurbished and resold",
+    "donate":           "Your item will be donated to a verified NGO partner",
+    "recycle":          "Your item will be responsibly recycled",
+}
+
+
+def _apply_tier_rules(chosen_path: str, tier: int, dist_to_cluster_km: float) -> str:
+    """
+    Hard routing rules that override the EV optimizer (from final_idea.md §4 Pillar 2).
+
+    Tier 1 (<₹2,000):  all routes allowed
+    Tier 2 (₹2k–10k):  Route B (kirana relay for long-distance P2P) BLOCKED.
+                        resell_p2p only if buyer within 5 km (Route A, Flex agent).
+    Tier 3 (>₹10,000): ALWAYS SPN refurb node — overrides even donate, because
+                        the SPN node does a professional inspection and decides
+                        final disposition. Only recycle (hazardous) is exempted.
+    """
+    if tier == 3:
+        # Tier 3: always refurbish via SPN node (Route C2) — final_idea.md §3 Rule 3
+        if chosen_path != "recycle":
+            return "refurbish"
+    elif tier == 2:
+        # Tier 2: Route B blocked — P2P only for nearby buyers (≤5 km)
+        if chosen_path == "resell_p2p" and dist_to_cluster_km > 5.0:
+            return "resell_warehouse"
+    return chosen_path
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 1 — DEMAND GATE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def demand_gate(
+    item_id: str,
+    location_geohash: str,
+    category: str,
+    grade: str,
+    asking_price: float,
+    days_listed: int,
+) -> Dict[str, Any]:
+    """
+    Stage 1 demand gate — runs every 6 hours while an item waits for a buyer.
+
+    Returns a dict with:
+      action:  SELL | HOLD | ESCALATE_CITY | ESCALATE_FC | LIQUIDATE
+      reason:  human-readable explanation
+      demand_score, sell_probability, expected_local_value, holding_cost
+    """
+    demand_info = _demand_lookup(location_geohash, category)
+    demand_score = demand_info["demand_score"]
+    sell_prob = _sell_probability(asking_price, grade, category, demand_score)
+    holding_cost = BASE_HOLDING_COST * (1.0 + DECAY_FACTOR * days_listed)
+    expected_local_value = sell_prob * asking_price - holding_cost
+
+    # Day thresholds (strict order: longest first)
+    if days_listed >= 60:
+        action = "LIQUIDATE"
+        reason = "Item unsold after 60 days — liquidate via FBA or donate to NGO"
+    elif days_listed >= 21:
+        action = "ESCALATE_FC"
+        reason = f"No city-wide buyer after {days_listed}d — entering Amazon FC for national listing"
+    elif days_listed >= 7:
+        action = "ESCALATE_CITY"
+        reason = f"No local buyer after {days_listed}d — widening to city-wide / national listing"
+    elif expected_local_value > SELL_THRESHOLD:
+        action = "SELL"
+        reason = f"Local demand sufficient (EV=₹{expected_local_value:.0f}) — proceed to Stage 2 routing"
+    else:
+        action = "HOLD"
+        reason = f"Expected local value ₹{expected_local_value:.0f} below threshold — hold and re-check in 6h"
+
+    return {
+        "item_id": item_id,
+        "action": action,
+        "reason": reason,
+        "demand_score": round(demand_score, 3),
+        "sell_probability": round(sell_prob, 3),
+        "expected_local_value": round(expected_local_value, 2),
+        "holding_cost_per_day": round(holding_cost / max(days_listed, 1), 2),
+        "days_listed": days_listed,
+        "local_buyers": demand_info.get("local_buyers", 0),
+        "demand_note": demand_info.get("note", ""),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PUBLIC INTERFACE
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -527,21 +722,26 @@ def route_item(
         "recycle":          round(ev_recycle, 2),
     }
 
-    # ── Step 6: argmax EV ─────────────────────────────────────────────────────
+    # ── Step 6: Tier determination (overrides EV for high-value items) ─────────
+    tier = _get_tier(mrp)
+
+    # ── Step 7: argmax EV ─────────────────────────────────────────────────────
     max_path = max(ev_breakdown, key=lambda k: ev_breakdown[k])
     max_ev = ev_breakdown[max_path]
 
-    # Phoenix special rule: if max(EV) < donation_tax_benefit + brand_value → donate
+    # REVIVE spec: if max(EV) < donation_tax_benefit + brand_value → donate
     donation_floor = ev_donate  # already = mrp × (tax_benefit + brand_value)
     if max_ev < donation_floor:
         chosen_path = "donate"
     elif grade == "D" and ev_refurbish < 0 and max_path in ("resell_p2p", "resell_warehouse"):
-        # D grade with no refurb viability → donate or recycle
         chosen_path = "donate" if ev_donate > ev_recycle else "recycle"
     else:
         chosen_path = max_path
 
-    # ── Step 7: Environmental impact ─────────────────────────────────────────
+    # Apply hard tier routing rules (final_idea.md §4 Pillar 2 tier table)
+    chosen_path = _apply_tier_rules(chosen_path, tier, dist_to_cluster_km)
+
+    # ── Step 8: Environmental impact ─────────────────────────────────────────
     if "p2p" in chosen_path:
         # Item routed locally — saves the full warehouse roundtrip MINUS local delivery
         # Even if seller is in the demand cluster (dist=0), they still avoid sending
@@ -553,7 +753,7 @@ def route_item(
     co2_saved_kg = round(km_saved * CO2_PER_KM, 2)
     green_credits = round(co2_saved_kg * 2.5)  # 2.5 credits per kg CO₂ saved
 
-    # ── Step 8: MCDA framing (for pitch) ─────────────────────────────────────
+    # ── Step 9: MCDA framing (for pitch) ─────────────────────────────────────
     mcda_note = (
         f"EV optimizer: {chosen_path} wins with EV=₹{max_ev:.0f} "
         f"vs liquidate=₹{ev_recycle:.0f} "
@@ -563,6 +763,9 @@ def route_item(
     return {
         "listing_id":             listing_id,
         "chosen_path":            chosen_path,
+        "route_label":            _ROUTE_LABEL.get(chosen_path, chosen_path),
+        "customer_message":       _CUSTOMER_MESSAGE.get(chosen_path, ""),
+        "tier":                   tier,
         "ev_breakdown":           ev_breakdown,
         "price":                  round(price, 2),
         "price_post_refurb":      round(post_refurb_price, 2),

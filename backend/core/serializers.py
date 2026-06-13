@@ -52,8 +52,9 @@ class ListingSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'product', 'source', 'source_display',
             'grade', 'grade_display', 'condition_summary',
-            'completeness', 'price', 'status', 'seller_name',
-            'image', 'created_at',
+            'completeness', 'price', 'geohash5', 'status',
+            'chosen_path', 'tier', 'ev_data',
+            'seller_name', 'image', 'created_at',
         )
 
     def get_seller_name(self, obj):
@@ -70,6 +71,8 @@ class CreateListingSerializer(serializers.Serializer):
     category = serializers.CharField(max_length=100)
     description = serializers.CharField(required=False, allow_blank=True, default='')
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    mrp = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=None)
+    geohash5 = serializers.CharField(max_length=10, required=False, allow_blank=True, default='')
     condition_summary = serializers.CharField(required=False, allow_blank=True, default='')
 
 

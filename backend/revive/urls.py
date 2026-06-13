@@ -12,4 +12,5 @@ urlpatterns = [
     path('api/card/', include('trust.urls')),
     path('api/prevent/', include('prevent.urls')),
     path('api/credits/', include('green.urls')),
+    path('api/route/', include('route.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

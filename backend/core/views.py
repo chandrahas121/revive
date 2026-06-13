@@ -180,15 +180,19 @@ class ListingListView(APIView):
             grade_result.get('condition_summary', '')
         )
 
+        mrp_val = data.get('mrp') or (data['price'] * Decimal('2'))
+        geohash5 = data.get('geohash5', '') or (request.user.geohash5 if request.user else '')
+
         product = Product.objects.create(
             asin=f'P2P-{uuid.uuid4().hex[:8].upper()}',
             title=data['title'],
             category=data['category'],
-            mrp=data['price'] * Decimal('2'),
+            mrp=mrp_val,
             reference_image_url=image_url,
             description=data.get('description', ''),
         )
 
+        # Stage 1: create listing with grade, then run routing
         listing = Listing.objects.create(
             product=product,
             source=Listing.Source.P2P,
@@ -196,10 +200,35 @@ class ListingListView(APIView):
             condition_summary=condition_summary,
             completeness=grade_result.get('completeness', 1.0),
             price=data['price'],
+            geohash5=geohash5,
             status=Listing.Status.LISTED,
             seller=request.user,
             image_url=image_url,
         )
+
+        # Stage 2: smart routing — persist chosen_path / tier / ev_data on the listing
+        route_result = {}
+        try:
+            from ml.route import route_item
+            route_result = route_item(
+                listing_id=str(listing.pk),
+                grade=grade_result.get('grade', 'B'),
+                category=data['category'],
+                defects=grade_result.get('defects', []),
+                geohash5=geohash5,
+                mrp=float(mrp_val),
+            )
+            listing.chosen_path = route_result.get('chosen_path', '')
+            listing.tier = route_result.get('tier', 1)
+            listing.ev_data = route_result.get('ev_breakdown', {})
+            # If route says sell price differs, update listing price
+            routed_price = route_result.get('price')
+            if routed_price and routed_price > 0:
+                listing.price = Decimal(str(routed_price))
+            listing.save()
+            logger.info(f"Routed listing {listing.pk}: path={listing.chosen_path} tier={listing.tier}")
+        except Exception as e:
+            logger.warning(f"route_item() failed for listing {listing.pk}: {e}")
 
         response_data = ListingSerializer(listing).data
         response_data['grade_result'] = {
@@ -210,6 +239,7 @@ class ListingListView(APIView):
             'completeness': grade_result.get('completeness'),
             'from_cache': grade_result.get('from_cache', False),
         }
+        response_data['route_result'] = route_result
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 

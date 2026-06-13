@@ -1,363 +1,709 @@
-# PROJECT REVIVE 🔥
-### Every product deserves a second life — and AI finds it the next owner.
-**Amazon HackOn Final Plan · Team of 3 · Deadline: June 15, 11:59 PM**
+# PROJECT REVIVE — Final Implementation Blueprint
+### Amazon HackOn · Every product deserves a second life
 
 ---
 
 ## 1. The Idea in One Breath
 
-> **REVIVE is an AI decision engine for returned and unused products. Point a camera at any item — it grades the condition in under 2 seconds, decides the most valuable second life (resell / refurbish / P2P / donate / recycle), keeps the item local instead of shipping it 600 km back to a warehouse, certifies it with a verifiable "Product Health Card" the next buyer can trust, rewards the customer with Green Credits, and — best of all — predicts and prevents bad purchases before they ever become returns.**
+> **REVIVE is an AI decision engine for returned and unused products. It grades an item's condition in under 2 seconds, decides its most economically and environmentally optimal second life (resell locally / refurbish centrally / donate / recycle), keeps items inside the city instead of shipping them 600 km back to a warehouse, certifies every item with a verifiable Product Health Card, rewards buyers who keep their orders with Green Credits, and predicts bad purchases before they happen.**
 
-We are not building a resale marketplace. Marketplaces exist. We are building the **intelligent bridge** between a return and its next owner — the brain that today simply doesn't exist.
+We are not building a resale marketplace. Marketplaces exist. We are building the **intelligent bridge** between a product and its next owner — the decision layer that today simply does not exist inside Amazon.
 
 ---
 
-## 2. Why This Problem Is Worth Winning
+## 2. The Three Personas We Solve For
 
-The numbers (from our research in `idea.md`):
-
-- **$849.9 billion** of US retail was returned in 2025 — online return rates run ~19.3%.
-- Returns generate up to **24 million tonnes of CO₂ per year**; up to **22% of fashion returns end up in landfill** because the cost of processing exceeds the item's value.
-- **63% of shoppers "bracket"** (buy 3 sizes, return 2). Gen Z averages **7.7 returns a year**.
-- India specifically: fashion return rates of **25–30%** (Unicommerce/Redseer).
-
-But we don't pitch numbers — we pitch **three real people the current system fails**:
-
-| Persona | Their pain today | What REVIVE does |
+| Persona | Pain today | REVIVE outcome |
 |---|---|---|
-| **Priya** | Returns ₹500 shoes → they travel 600 km back to a warehouse → processing costs more than the shoes → written off as waste | Two taps in the app, drop the shoes at the kirana hub 200 m away (or doorstep pickup). The hub agent's **2-second AI scan** grades them on the spot — **refund fires before she leaves the store** — and a buyer **5 km away** gets them next. The shoes never leave the city. |
-| **Rahul** | Has a perfectly good baby monitor in a drawer. Classifieds = strangers, haggling, doorstep visits. So it just sits there. | Scans it once → AI grades, prices and lists it with an Amazon-verified Health Card → buyer pays through Amazon → handoff via Amazon Hub point (locker or kirana partner store). **Zero contact, zero haggling, zero effort.** |
-| **Small Seller** | 200 returns/month, manually inspects, guesses prices, re-photographs each one | Bulk photo upload → all 200 graded, priced, and routed automatically in minutes. |
-
-Customer-centric, bottom-up: every feature exists because one of these three people needs it.
+| **Priya** | Returns ₹500 shoes → 600 km trip to warehouse → liquidated at a loss | Two taps, drop at kirana 200 m away. Agent scans → Grade B in 1.4s → refund fires → buyer 5 km away gets the shoes. Shoes never leave the city. |
+| **Rahul** | Perfectly good baby monitor sits in a drawer. Classifieds = strangers, haggling, safety risk. | Photographs it in-app → AI grade + suggested price → listed with a Health Card → buyer pays via Amazon → OTP kirana handoff. Zero contact, zero haggling. |
+| **Small Seller** | 200 returns/month, manually inspects each one, guesses prices | Bulk upload → all 200 graded, priced, routed in minutes. |
 
 ---
 
-## 3. The Five Pillars (= 100% Problem-Statement Coverage)
+## 3. Core Architecture Principles (from research)
 
-The problem statement asks for six things. We deliver all six:
+Before the flow, five foundational rules that come from real-world recommerce analysis:
 
-| Problem statement asks for | REVIVE answer |
-|---|---|
-| AI deciding resell / refurbish / donate / recycle / exchange | Pillar 2 — Smart Routing |
-| Smart quality grading via image **and video** | Pillar 1 — AI Grading |
-| Personalized refurbished recommendations | Pillar 5 — "Certified Refurbished For You" rail |
-| Green credits & sustainable incentives | Pillar 5 — Green Credits wallet |
-| Easy P2P resale inside a trusted ecosystem | Pillar 3 — Health Card + zero-contact P2P |
-| Predictive return prevention | Pillar 4 — Prevention |
+**Rule 1 — List before you move.** An item physically moves only when a buyer exists. Unused items (Rahul) stay at the seller's home, listed. Returned items are held short-term at a kirana. Nothing enters a warehouse until it fails to sell locally. This is the Poshmark / Cahoot / ThredUp Direct model.
 
-### 🔍 Pillar 1 — AI Grading (photo/video → grade in <2 seconds)
+**Rule 2 — Inspection is always two layers.** AI computer vision handles cosmetic grading (scratches, dents, wear). A separate step — either agent-run guided capture, a customer screenshot, or a central SPN node — handles functional verification for electronics. No platform relies on AI photos alone.
 
-**What the judge sees:** upload a photo of scuffed shoes → defect boxes light up on the image → "Grade B · light cosmetic wear · ₹312 resale value" appears in ~1.5 seconds.
+**Rule 3 — Tier determines route.** The item's value and category decide which path it takes. Tier 1 goods (apparel, books, low-value items under ₹2,000) can use any route. Tier 2 electronics (₹2,000–₹10,000) must use Route A (agent) or Route C (FC). Tier 3 high-value electronics (above ₹10,000) always go to a central SPN refurb node. Kiranas never handle Tier 2 or Tier 3 electronics — fraud prevention.
 
-**How it works (all proven, zero-training components):**
-1. **Grounding DINO (zero-shot)** finds defects from text prompts like *"scratch on surface", "torn fabric", "missing part"* — no labeling, no fine-tuning, works on any product category. (Tip from our testing plan: compound phrases fire reliably; bare nouns don't. Budget 30–60 min of prompt tuning on Day 0.)
-2. **A vision LLM via OpenRouter** (e.g. Claude Haiku / Gemini Flash) receives the image + the detected defects as text context and returns structured JSON: grade, defect list, completeness, one-line condition summary. The detections are injected into the prompt so the caption never contradicts the boxes on screen. The call sits behind a provider flag — **one env var switches it to Amazon Bedrock (same Claude Haiku) for production**. Offline fallback: **Qwen2.5-VL-3B** locally (same prompt, same JSON).
-3. **CLIP similarity** vs. catalog reference images → flags missing accessories ("box missing", "charger missing").
-4. **Grading head** fuses everything → **Grade A / B / C / D + confidence**, mapping to the industry-standard recommerce tiers (A = Like New, recovers 70–85% of value … D = Acceptable, 30–50%).
+**Rule 4 — Sellers get real money, buyers earn credits.** Rahul receives a UPI transfer after the buyer's return window closes. Green Credits are exclusively a buyer-side reward for *not* returning a purchase. They are not earned by donating or recycling.
 
-**Video grading** (the PS says "image/video" — we check it verbatim): accept a ≤15s clip, OpenCV samples 4–6 frames, each runs through the same pipeline, take max severity per defect type. ~30 lines of code.
+**Rule 5 — The routing algorithm is two-stage.** Stage 1 (demand gate) runs continuously while the item waits and asks: is there a buyer yet? Stage 2 (EV routing) runs once — when a buyer exists — and picks the cheapest physical path to that specific buyer. Your EV optimizer is the Stage 2 engine.
 
-**Who operates the camera (important — the customer doesn't have to):** the same grading component runs in three contexts: (1) **hub/delivery agent — the default for returns**: guided capture at the kirana point or the customer's doorstep, consistent angles, trusted hands, zero customer effort; (2) **seller dock** — bulk mode for the Small Seller; (3) **customer's own phone — optional express lane only** ("scan it yourself → refund before you even hand it over") and for P2P listings like Rahul's, where photos *are* the listing. Agent-side capture also kills the fraud problem: no stale or faked customer photos.
+---
 
-### 🧭 Pillar 2 — Smart Routing (the brain — our biggest differentiator)
+## 4. The Five Pillars
 
-Every graded item gets a millisecond decision via an **Expected Value optimizer**:
+### Pillar 1 — AI Grading (photo/video → grade in under 2 seconds)
 
+**The grading pipeline:**
+1. **Grounding DINO (zero-shot)** detects defects from text prompts: "scratch on surface", "torn fabric", "missing part", "cracked screen", "dent on body". No fine-tuning needed — works across all product categories.
+2. **Vision LLM (Claude Haiku via OpenRouter / Amazon Bedrock)** receives the image plus the detected defects as structured text context and returns JSON: grade, defect list, completeness flag, one-line condition summary. Detections are injected into the prompt so captions never contradict the visual.
+3. **CLIP similarity** vs. catalog reference images flags missing accessories ("box missing", "charger missing", "manual missing").
+4. **Grading head** fuses all signals → Grade A / B / C / D + confidence score.
+5. **Video path** (15s clip): OpenCV samples 4–6 frames, each runs the same pipeline, max severity per defect type is taken.
+
+**Grade definitions (mapped to industry standard):**
+- Grade A — Like New. Original packaging or equivalent. No visible defects. 70–85% value recovery.
+- Grade B — Very Good. Minor cosmetic marks, fully functional. 55–70% value recovery.
+- Grade C — Good. Visible wear, functional. May need light cleaning. 35–55% value recovery.
+- Grade D — Acceptable. Significant cosmetic damage but functional, or needs repair. 20–35% value recovery.
+
+**Confidence gating:** Items below 70% model confidence are flagged to a human spot-check queue visible in the seller ops console. The Health Card records the model version and confidence score — fully auditable.
+
+---
+
+### Pillar 2 — Two-Stage Smart Routing (the EV brain)
+
+**Stage 1 — Demand Gate (runs continuously while item waits):**
+```
+DemandScore(item) = GeohashDensity(location, category) × P(sell | grade, price, days_listed)
+                  − HoldingCost(days_waiting) × decay_factor
+
+if DemandScore > threshold → SELL (proceed to Stage 2)
+if days_waiting > 7        → WIDEN (expand geohash radius)
+if days_waiting > 21       → ESCALATE (pull to delivery station / national listing)
+if days_waiting > 60       → LIQUIDATE / DONATE
+```
+
+**Stage 2 — Routing EV (runs once, when a buyer exists):**
 ```
 EV(path) = P(sell | grade, category, price) × resale_price
-         − logistics_cost(distance to demand)
+         − logistics_cost(actual_buyer_distance)
          − refurb_cost(defects)
-         − holding_cost(days to sell)
+         − holding_cost(days_waiting_so_far)
 
-→ pick argmax(EV);  if max(EV) < donation benefit → donate;  if hazardous/broken → recycle
+→ pick argmax(EV) across: [direct_peer, kirana_relay, city_wide, central_refurb]
+→ if max(EV) < donation_benefit → donate
+→ if hazardous / broken beyond repair → recycle
 ```
 
-- **Pricing model:** LightGBM trained on the **Mercari dataset (1.4M real resale listings)** — predicts resale price *conditioned on the AI grade*.
-- **Sell-probability model:** GBDT on price-vs-median ratio, grade, seasonality.
-- **Geohash Demand Gravity Model** — the magic ingredient: a local-demand index per (geohash cell, category). The item routes to the **nearest demand cluster**, not the central warehouse. This is the line of code that saves Priya's shoes the 600 km trip.
+**Supporting models:**
+- **Pricing model:** LightGBM trained on 1.4M Mercari resale listings — predicts resale price conditioned on AI grade, category, and brand.
+- **Sell-probability model:** GBDT on price-vs-median ratio, grade, seasonality, category velocity.
+- **Geohash Demand Gravity Model:** local-demand index per (geohash cell, category) stored in Redis. The item routes to the nearest demand cluster. This is the line that saves Priya's shoes the 600 km trip.
 
-**Pitch framing:** this is a fast, single-formula instantiation of Multi-Criteria Decision Analysis (AHP) — the academically validated framework for reverse logistics, where studies show **up to 33% higher recovered value and 65% better environmental outcomes** than rule-based routing. We have the math (eigenvalue consistency checks, criteria weights) in `idea.md` if judges dig deep.
+**Tier-based routing hard rules (override the EV optimizer):**
 
-**Demo wow:** Leaflet map — the item pinned in Bengaluru, the demand heatmap glowing around it, and the decision animating: *"Resell locally · EV ₹312 vs Liquidate ₹–40."*
-
-### 🛡️ Pillar 3 — Trust Layer: the Product Health Card
-
-The PS says it directly: *"Customers struggle to trust refurbished or second-hand products."* Trust is an information problem — the buyer doesn't know what the seller knows. The Health Card erases that asymmetry:
-
-- A **signed JSON document**: AI grade, defect photos (SHA-256 hashed, tamper-evident), grading model version, ownership-transfer log as an **append-only hash chain**.
-- Rendered as a **QR code encoding a GS1 Digital Link URI** — the *exact* data-carrier standard the EU's ESPR regulation mandates for Digital Product Passports by 2027. One QR, layered access: a consumer sees condition + recycling info; a certified repair partner sees more. We're prototyping next decade's legal requirement.
-- **Why a hash chain and not blockchain?** Blockchain solves consensus between distrusting parties. Here there's one trusted authority (Amazon) — we only need tamper-evidence, which a hash chain gives at zero cost. Blockchain would be theater. (Production path: **Amazon Aurora PostgreSQL with ledger semantics** — AWS's official recommendation after QLDB's discontinuation.)
-
-**Zero-Contact P2P (Rahul's fix):** scan → auto-grade → auto-price → Health Card → matched to "47 parents within 8 km searched for baby monitors this month" → buyer pays via Amazon checkout → **handoff via an Amazon Hub point** — a locker where they exist, or one of Amazon India's tens of thousands of "I Have Space" kirana partner stores (real, existing infrastructure — REVIVE gives it a second job as the front door of reverse logistics). Item moves 8 km instead of 600. Trust isn't rebuilt — it's *borrowed* from Amazon.
-
-### 🛑 Pillar 4 — Prevention (the best return is no return)
-
-- **Return-risk score at checkout:** GBDT on category, size-vs-history delta, brand sizing bias, return-rate priors. Return-reason priors mined from the **Amazon Reviews 2023 dataset** ("runs small", "didn't fit").
-- **Fit-intelligence nudge:** when a user adds 3 sizes of the same shoe (classic bracketing), the checkout shows: *"Customers with your purchase profile kept size 8 in this brand — size 9 was returned 3× more."* Constructive, not punitive.
-
-### 💚 Pillar 5 — Green Credits + Refurbished Discovery
-
-**Green Credits — one rule to earn, one rule to spend:**
-
-> **Earn:** complete an order and don't return it. When the return window closes with nothing sent back, the credits **vest** into your wallet. Orders the model flagged high return-risk (bracketing, risky size jump) vest more — keeping those is where the real CO₂ save is.
->
-> **Spend:** only on **certified refurbished items**. Never generic cashback.
-
-Why this design wins Q&A:
-- **Outcome-verified, not click-rewarded.** Credits are promised at checkout (*"Keep this order → +15 green credits"*) but land only at return-window expiry. There's no button to game — you earn by *not* acting, and time is the proof.
-- **Returns are never rewarded.** A return simply means no credits vest for that order. The incentive points one direction only: keep what you buy.
-- **The redemption rule creates a flywheel.** Rewards for keeping orders can only be spent on second-life inventory — so prevention (Pillar 4) funds refurb demand (Pillar 5), which consumes the graded returns from Pillars 1–3. The loop is closed by construction.
-
-The km/CO₂ numbers (≈0.21 kg CO₂/km last-mile factor, computed by the EV optimizer) appear on the customer's **impact dashboard** ("your returns this year traveled 92% fewer km") — visible pride, not currency. Demo toast in Priya's flow: *"590 km · 4.2 kg CO₂ saved."*
-
-**"Certified Refurbished For You" rail:** Implicit ALS collaborative filtering trained on **Amazon Reviews 2023** (real data, trains in minutes on CPU, gives a real Recall@20 metric), plus a **hybrid cold-start blend**:
-
-```
-score = α·ALS  +  β·CLIP_similarity(item, user history)  +  γ·grade_boost  +  δ·proximity_boost
-```
-
-The CLIP leg is free (embeddings already computed in Pillar 1) and solves the hard problem: a freshly graded item with zero interaction history still gets recommended the moment it enters inventory. On stage: Rahul's just-graded baby monitor **appears in a nearby parent's recommendation rail** seconds later — Pillar 5 stitched directly into the P2P story.
-
----
-
-## 4. Architecture
-
-```
-                 ┌─────────────────────────────────────────────┐
-                 │   React App (8 pages, persona switcher)     │
-                 │  Return flow · Sell-It · Shop · Checkout · Dashboard │
-                 └────────┬───────────────┬────────────────────┘
-                          │ REST          │ WebSocket (live grading)
-                 ┌────────▼───────────────▼────────┐
-                 │   Django REST Framework API      │
-                 └─┬───────┬───────┬───────┬──────┬┘
-        ┌──────────▼─┐ ┌───▼────┐ ┌▼─────┐ ┌▼───────┐ ┌▼──────┐
-        │ grade      │ │ route  │ │trust │ │prevent │ │green  │
-        │ GDINO+Claude│ │ LGBM EV│ │Hash  │ │GBDT    │ │ALS+   │
-        │ +CLIP+video│ │ +geohash│ │chain │ │risk    │ │wallet │
-        └──────┬─────┘ └───┬────┘ │+QR   │ └───┬────┘ └───┬───┘
-               │           │      └──┬───┘     │          │
-        ┌──────▼───────────▼─────────▼─────────▼──────────▼───┐
-        │  PostgreSQL (items, cards, credits, ledger) + Redis (demand) │
-        └───────────────────────────────────────────────────────┘
-```
-
-**Prototype stack:** React + Tailwind + Leaflet (frontend) · **Django + Django REST Framework** (API + ORM) · PostgreSQL · Redis · Celery (async grading/batch) · Grounding DINO · vision LLM via **OpenRouter** (provider-pluggable → Amazon Bedrock in production; Qwen2.5-VL local fallback) · CLIP · OpenCV · LightGBM · `implicit` ALS · qrcode/python-jose.
-
-### The AWS Story (judges are Amazon/AWS leaders — say this slide out loud)
-
-Every prototype component has a **named AWS production counterpart**. This is not a prototype; it's a blueprint:
-
-| Prototype component | AWS production service |
-|---|---|
-| Vision-LLM grading (demo: **OpenRouter**) | **Amazon Bedrock** (Claude is natively on Bedrock — the call is provider-abstracted, so the swap is one env var + client init; same Claude Haiku model) |
-| Grounding DINO defect detection | **AWS IoT Greengrass** edge nodes — sub-200ms triage on warehouse docks and in the shopper's app |
-| LightGBM / ALS / GBDT models | **Amazon SageMaker** training + Pipelines: CloudWatch monitors inference drift → auto-retrain → shadow A/B promotion |
-| EV routing engine | **AWS Lambda + Step Functions** (event-driven, millisecond, infinitely horizontal) |
-| Clickstream for prevention | **Amazon Kinesis** |
-| Health Card hash-chain ledger | **Amazon Aurora PostgreSQL** with ledger semantics (AWS's recommended successor to the discontinued QLDB) |
-| PostgreSQL / Redis | **Amazon RDS (Aurora PostgreSQL) / ElastiCache** — the DB and the Health Card ledger are the same Postgres, so the ledger story is native |
-| Demo media + datasets | **S3** |
-
----
-
-## 5. The Product Experience — Every Page, Every Flow
-
-One React app. A **persona switcher** in the top bar (Priya / Hub Agent / Rahul / Buyer / Small Seller / Ops) lets us jump between roles instantly during the demo — no logins, no friction on stage. **8 pages total**, built from shared components (`GradeCard`, `HealthCard`, `MapPanel`, `CreditsToast`, `RecRail`), all owned by M3.
-
-### The pages at a glance
-
-| # | Page | Route | Who uses it |
-|---|---|---|---|
-| P1 | My Orders | `/orders` | Priya — starting point of a return |
-| P2 | Return Wizard | `/return/:orderId` | Priya — reason + handover choice (hub drop / doorstep pickup); optional self-scan |
-| P3 | Grading & Routing Result | `/return/:orderId/result` | Agent runs the guided scan (same grading screen, "Hub Agent" persona); Priya sees refund + impact + routing map |
-| P4 | Sell-It (P2P listing) | `/sell` | Rahul — scan → AI builds the listing |
-| P5 | Refurbished Marketplace | `/shop` | Any buyer — "Certified Refurbished For You" rail |
-| P6 | Product Detail + Health Card | `/shop/item/:id` | Buyer — verified condition, QR, buy via Amazon checkout |
-| P7 | Checkout (with prevention nudge + credits) | `/checkout` | Any customer — where Pillar 4 and credit redemption live |
-| P8 | Seller / Ops Dashboard | `/dashboard` | Small Seller (bulk grading tab) + Ops (review queue + EV breakdown tab) |
-
-### Flow A — Priya returns her ₹500 shoes (P1 → P2 → handover scan → P3)
-
-**Priya never photographs anything.** Her total effort is two taps; the AI inspection happens at the handover point, operated by the agent.
-
-```
-P1 My Orders            P2 Return Wizard          Handover scan (AGENT app)    P3 Result (Priya's phone)
-┌────────────────┐      ┌───────────────────┐     ┌───────────────────────┐    ┌──────────────────────────┐
-│ Nike Shoes ₹500│      │ Reason: didn't    │     │ Guided capture at the │    │ 💸 Refund issued —       │
-│ [Return item]  │ ───► │  fit ▼            │ ──► │ kirana hub / doorstep │ ──►│   before she leaves      │
-│                │      │ Handover:         │     │ [defect boxes overlay]│    │   the store              │
-│ Echo Dot ₹3,499│      │ ◉ Drop at hub     │     │ GRADE B · 91% · 1.4s  │    │ 🍃 590 km · 4.2 kg CO₂   │
-│ [Return item]  │      │   (200 m away)    │     │ "Light wear, box      │    │   saved vs warehouse trip│
-└────────────────┘      │ ○ Doorstep pickup │     │  missing"             │    │ [map: resell locally     │
-                        │ ─────────────     │     │ → ROUTE: LOCAL RESALE │    │  ₹312 vs warehouse ₹–40] │
-                        │ ⚡ or scan it      │     └───────────────────────┘    └──────────────────────────┘
-                        │ yourself now for  │
-                        │ refund before     │
-                        │ handover (optional)│
-                        └───────────────────┘
-```
-
-Key design points:
-- **Default path = zero customer effort.** Drop at the hub → the agent's guided scan (consistent angles, good lighting, trusted hands) grades it in ~2s → refund fires on the spot. If she chooses doorstep pickup, the **delivery agent's app runs the same scan at her door** — refund on her doorstep.
-- **Self-scan is an optional express lane**, never a requirement — for customers who want the refund and grade preview before handover.
-- **Agent capture = fraud protection for free:** no stale or faked customer photos; the graded images are taken by a trusted operator and hashed into the Health Card at the moment of handover.
-- The agent scan + Priya's P3 result are staged as a 3-beat animation (grade appears → routing map animates → refund toast on her phone) — the single most important moment in the demo.
-
-### Flow B — Rahul sells his baby monitor, zero contact (P4 → sold)
-
-1. **P4 Sell-It:** Rahul photographs the monitor → same grading pipeline runs → the page assembles a **complete draft listing for him**: grade A, suggested price ₹1,840 (LightGBM), auto-written condition summary, Health Card preview. His total effort: photos + one tap on "List it."
-2. The demand panel shows the match: *"📍 47 parents within 8 km searched for baby monitors this month."*
-3. When a buyer purchases (Flow C), Rahul gets a notification: *"Sold! Drop at your nearest Amazon Hub point (kirana partner store, HSR Layout) by Friday — or a delivery partner collects it on tomorrow's route."* No chat, no haggling, no strangers at the door.
-
-### Flow C — A buyer discovers and trusts a second-hand item (P5 → P6 → P7)
-
-1. **P5 Marketplace:** the "Certified Refurbished For You" rail (hybrid ALS + CLIP ranking) — and Rahul's just-listed monitor is in it, rescued from cold start by the CLIP content leg.
-2. **P6 Product Detail:** the trust moment. The **Health Card** front and center: AI grade with defect photos, completeness check, ownership chain (1 owner), grading model version, scannable GS1 QR — and the price vs. new comparison (₹1,840 vs ₹3,200 new). The buyer knows *exactly* what they're getting; that's the PS's trust problem answered on one screen.
-3. **P7 Checkout:** standard Amazon-style checkout + **"Redeem 220 green credits (–₹22)"** toggle + delivery via locker pickup. The circular loop closes: credits earned from returns spent on refurbished goods.
-
-### Flow D — Prevention: the return that never happens (P7)
-
-A customer's cart holds the same shoe in size 8 *and* 9 (bracketing). The prevent-service flags it and **P7 Checkout** renders the nudge chip:
-
-> 👟 *"Customers with your purchase profile kept **size 8** in this brand — size 9 was returned 3× more. Remove size 9?"* — [Remove it] [Keep both]
->
-> 💚 *"Keep this order → **+15 green credits** when your return window closes."*
-
-One tap → one shipment, no return. The nudge is helpful, never blocking — and the credits **vest only when the return window expires with nothing returned**, so the reward is for the verified outcome, not the click.
-
-### Flow E — The Small Seller clears 12 returns in 20 seconds (P8)
-
-**P8 Dashboard, "Bulk Grade" tab:** drag 12 photos in → a table fills row by row in real time: thumbnail · grade · price · routing decision · margin recovered. Footer: *"12 items processed in 21s · ₹3,480 recovered · 0 manual inspections."* The **Ops tab** shows the EV breakdown per item and the human-review queue (low-confidence grades land here — our honest answer to "what if the AI is wrong?").
-
-### How the flows interlock (the full circle)
-
-```
- Pillar 4 prevents what it can ──► P7 nudge ──► order kept ──► return window closes
-            │ (the rest)                                          │
-            ▼                                                     ▼
- Priya returns (P1–P3) ──► graded + routed locally ──► inventory  GREEN CREDITS VEST
- Rahul lists (P4)      ──► graded + Health Card    ──► inventory       │
-                                       │                              │
-                                       ▼                              ▼
-                    Buyer discovers (P5), trusts (P6) ◄── credits spendable ONLY on
-                    and buys refurbished (P7)             refurbished items
-```
-
-### Demo scene → page mapping (for the video and stage)
-
-| Demo scene | Pages shown | Live or cached |
+| Tier | Value | Eligible routes |
 |---|---|---|
-| Scene 1: Priya | P1 → P2 → agent scan (persona switch to "Hub Agent") → P3 | **One live grade on stage**; cached for video |
-| Scene 1b: video grading | P2 (video upload) → P3 | Cached |
-| Scene 2: Rahul P2P | P4 → P5 (buyer's rail) → P6 | Cached |
-| Scene 3: Small Seller | P8 bulk tab | Cached batch |
-| Scene 4: Prevention | P7 nudge | Scripted cart |
-| Q&A safety net | P8 ops tab (review queue, EV breakdown) | Live |
+| Tier 1 | Below ₹2,000 | Route A (direct peer), Route B (kirana relay), Route C (city-wide), Donate |
+| Tier 2 | ₹2,000–₹10,000 | Route A (direct peer with agent) or Route C (city-wide / FC) only. Route B is BLOCKED. |
+| Tier 3 | Above ₹10,000 | Route C (SPN refurb node) only. Routes A and B are BLOCKED. |
 
 ---
 
-## 6. Datasets (all public, downloadable Day 0)
+### Pillar 3 — Product Health Card (the trust layer)
 
-| Need | Dataset | Used for |
+The Health Card is generated at grading time and lives as a signed JSON record with a GS1-style QR code. It contains:
+
+- Unique REVIVE item ID (LPN-style, internal barcode)
+- Product name and catalog match confidence
+- AI cosmetic grade + confidence score + defect list with bounding box photos
+- For Tier 2 electronics: battery health percentage (from customer screenshot), IMEI (from photo, optional but boosts "Verified" badge)
+- For Tier 3: full SPN diagnostic report (battery % via software test, IMEI clear, sensor pass/fail, functional test results)
+- Who inspected: AI-only / AI + agent doorstep / AI + SPN node
+- Previous owner count
+- Applicable guarantee window (7-day / 30-day / 90-day)
+- Guarantee holder (seller-liable via escrow / Amazon SPN-liable)
+- SHA-256 hash of the record (tamper-evident; production: Aurora PostgreSQL ledger)
+- Scannable QR linking to the live Health Card page
+
+**Guarantee chain:**
+
+| Tier | Guarantee | Liable party |
 |---|---|---|
-| Resale pricing | **Mercari Price Suggestion** (Kaggle, 1.4M listings) | LightGBM price model conditioned on grade |
-| Catalog + reference images | **Amazon Berkeley Objects (ABO)** | CLIP completeness check, demo catalog |
-| Defect detection | *none needed* — Grounding DINO is zero-shot | — |
-| Return-reason priors **and** recommender training | **Amazon Reviews 2023 (UCSD/McAuley)** — one Electronics or Clothing 5-core subset | One download, two uses: prevention priors + ALS vectors |
-| Demand index, return histories | **Synthetic generator** (geohash-distributed; clearly labeled synthetic) | Demo realism |
+| Tier 1 | 7-day "not as described" refund | Seller, via Amazon payment escrow |
+| Tier 2 | 30-day cosmetic + battery claim | Seller, via escrow; A-to-Z backstop |
+| Tier 3 | 90-day full functional coverage | Amazon SPN partner |
+
+Amazon's existing A-to-Z Guarantee is the universal backstop across all tiers.
 
 ---
 
-## 7. Execution Plan — June 12 evening → June 15, 11:59 PM
+### Pillar 4 — Return Prevention
 
-**Team:** M1 = ML/vision · M2 = ML/routing + data · M3 = backend + frontend. AI pair-programming assumed throughout — these are aggressive but honest targets.
+At checkout, a GBDT model predicts return risk per item-user pair. If risk is high:
+- Size/fit nudge: "Customers with your measurements kept size 8 in this brand."
+- Bracket detection: if 3 sizes of the same shoe are in cart → "Pick your size before checkout."
+- High-risk items show richer content: 360° view, measurements in cm, fabric/material detail.
 
-### 🌙 Day 0 — Tonight, June 12 (3–4 hrs): De-risk everything
-- **M1:** Run Grounding DINO on 10 sample photos (shoes, electronics, clothing). Tune prompts until boxes are clean. **Measure latency** — if CPU is over 2s, set up free Colab T4 + ngrok now, not later. Get an OpenRouter API key, test one vision-LLM call (OpenAI-compatible endpoint).
-- **M2:** Start Mercari + Amazon Reviews 2023 downloads (the big one is ~1.7 GB — start it tonight). Skim features.
-- **M3:** Repo scaffold: Django project + 5 apps (grade/route/trust/prevent/green), docker-compose (PostgreSQL + Redis), stub all DRF endpoints, React shell with the 8-page routing skeleton.
-- ✅ **Day 0 exit check:** defect boxes render on a real photo; datasets downloading; `docker-compose up` works.
-
-### ⚙️ Day 1 — Friday, June 13: Core ML + services
-- **M1:** Full grading pipeline — GDINO defects + Claude captioning (detections injected into prompt) + CLIP completeness → Grade A–D JSON. Defect-overlay rendering. Image cache (`grade_cache.json`, SHA-256 keyed) so demo hits are instant.
-- **M2:** LightGBM price model on Mercari (300k-row sample, trains in minutes — report RMSLE). Sell-probability model. EV optimizer. Geohash demand-index generator → Redis.
-- **M3:** trust-service (signed JSON + hash chain + GS1-style QR). Wire the seller flow end-to-end: **upload → live grade → Health Card on screen**.
-- ✅ **Day 1 exit check:** one photo goes photo → grade → price → routing decision → Health Card, end to end.
-
-### 🔗 Day 2 — Saturday, June 14: Integration + Pillar 5 + demo scenes
-- **M1:** Video frame sampler (~30 min). Then batch-grading endpoint for the Small Seller scene. Help M3 with polish.
-- **M2:** ALS recommender on Amazon Reviews subset (trains <5 min on CPU; report Recall@20/NDCG@20). Hybrid scoring endpoint (ALS + CLIP + grade + proximity). Prevention GBDT + checkout-nudge API.
-- **M3:** green-service (`POST /credits/vest` — fired when an order's return window closes with no return (simulated clock in the demo) — plus `GET /credits/{user}`; ~40 lines). Leaflet demand heatmap + routing animation. Buyer view: QR card, refurb rail, wallet widget. Ops console with EV breakdown.
-- ✅ **Day 2 exit check:** all 4 demo scenes click through without crashing.
-
-### 🎬 Day 3 — Sunday, June 15: Polish, record, submit (NOTHING new after noon)
-- **Morning:** bug-fix pass; **pre-grade every demo item into the cache** (zero API dependency during recording); metrics slide (latency, RMSLE, Recall@20, EV uplift on a synthetic 1,000-return cohort, km/CO₂ saved).
-- **Afternoon:** record the **3-minute demo video** (script below), README, architecture diagram, deck.
-- **Evening:** submission package assembled by **9 PM** — a 3-hour buffer before the 11:59 PM deadline. Dry-run the pitch ×3.
-
-### ✂️ Cut-lines (decide at Day 2 noon, in this order, no guilt)
-1. ALS rail → static mock data (keep the offline Recall@20 number for the slide)
-2. Video grading → skip (mention as roadmap)
-3. Ops console → screenshots instead of live
-4. **Never cut:** Pillar 1 grading, Pillar 2 routing + map, Health Card, the Priya scene.
+At return initiation, a "keep it" nudge is shown: "Keep this order → earn 15 Green Credits in 7 days." This converts low-conviction returns without friction.
 
 ---
 
-## 8. The 3-Minute Demo Video Script
+### Pillar 5 — Green Credits Wallet and Recommendations
 
-| Time | Scene | What happens on screen |
+**Green Credits — buyer-only, behaviour-weighted, economically bounded:**
+
+Green Credits are exclusively a buyer-side reward. Sellers (like Rahul) receive real money (UPI transfer). Credits are never earned by sellers, donors, recyclers, or agent-pickup users.
+
+**The earn rules — category-weighted, not flat:**
+
+Credits are not awarded equally for every kept order. The earn rate scales with the category's return rate, because Amazon saves more logistics cost from a prevented return in high-return categories. The formula:
+
+```
+credits_earned = BASE_RATE × category_return_rate_multiplier × order_value_band
+```
+
+Category multipliers (approximate, calibrated to Amazon India return data):
+- Fashion / footwear (30–35% return rate): 2.0× multiplier
+- Electronics / accessories (8–12% return rate): 0.8× multiplier  
+- Books / stationery (3–5% return rate): 0.5× multiplier
+- Home goods / kitchen (10–15% return rate): 1.0× multiplier (baseline)
+
+Order value bands (credits per kept order):
+- Below ₹500: 5 credits
+- ₹500–₹2,000: 10 credits × category multiplier
+- ₹2,000–₹10,000: 20 credits × category multiplier
+- Above ₹10,000: 30 credits × category multiplier (capped)
+
+Example: Priya keeps a ₹800 pair of shoes (fashion, 2.0× multiplier) → 10 × 2.0 = **20 credits**. A buyer keeps a ₹800 phone charger (electronics, 0.8×) → 10 × 0.8 = **8 credits**. The reward is proportional to the actual cost Amazon avoids.
+
+**Earn trigger — only self-drop, never agent pickup:**
+
+Credits only vest when the buyer chose kirana self-drop as their return method AND the return window closes with no return initiated. If the customer scheduled an agent pickup for their return, Amazon already bore the agent cost on their behalf — giving credits on top of that would make the high-cost route the most rewarding one, which is economically backwards. Agent pickup = convenient, fast, no credits. Kirana self-drop = slightly more effort, earns credits.
+
+This single rule aligns three incentives simultaneously: it rewards the low-cost logistics option, it rewards keeping orders, and it rewards using Amazon's existing I Have Space network.
+
+**Credit value and redemption — calibrated to be meaningful but not margin-destroying:**
+
+1 credit = ₹0.10, redeemable only on REVIVE second-life items. Redemption is capped at 20% of the second-life item's price per transaction. 200 credits = ₹20 off a second-life purchase. This is meaningful enough to feel rewarding (a typical fashion order earns 20 credits = ₹2, so after ~10 kept orders a customer has ₹20 to spend) but small enough that it costs Amazon a fraction of what a prevented return saves (average Indian e-commerce return costs ₹80–₹150 in logistics; 20 credits = ₹2 cost, so Amazon keeps ₹78–₹148 of the saving).
+
+**Spend rules:**
+- Only on REVIVE second-life items (S5 storefront). Not on new goods. Not as cashback or bank transfer.
+- Cap: 20% of purchase price per transaction.
+- Expiry: 12 months rolling from earning date.
+- Alternative: Donate credits to a verified NGO partner (e-waste recycling, tree planting). Minimum 50 credits to donate.
+
+**Vesting rules (anti-gaming):**
+- Credits are shown as "pending" at checkout when the customer opts for kirana self-drop.
+- They vest only at `POST /credits/vest` fired when the return window closes with no return recorded.
+- If a return is initiated before window close → pending credits are cancelled immediately.
+- Credits vest per order line, not per order — if a customer keeps 3 items and returns 1, they earn credits only for the 2 kept items.
+
+Anti-gaming table: [unchanged in Section 13]
+
+**"Certified Refurbished For You" rail:**
+Hybrid ALS + CLIP + grade + proximity recommender. ALS captures collaborative patterns; CLIP handles cold-start for new items (zero interactions needed — scored from the graded images immediately). Surfaced on the Amazon homepage and search results page.
+
+---
+
+## 5. The Three Physical Routes — Complete Detail
+
+### Route A — Direct Peer (Cahoot Model)
+
+**Trigger:** Demand gate finds a buyer within approximately 5 km, within 48 hours of listing.
+
+**Who this is for:** Tier 1 all items, Tier 2 electronics (mandatory for Tier 2 — no kirana option).
+
+**Physical flow:**
+1. Buyer checks out on the REVIVE storefront. Payment held in escrow.
+2. REVIVE engine generates a smart shipping label addressed to the buyer's address (not a warehouse).
+3. A Flex agent is dispatched to the seller/returner's address.
+4. **Doorstep verification (mandatory for all Route A):** The REVIVE agent app guides the Flex agent through a structured capture sequence before sealing the box:
+   - Photograph: front of item (4 seconds)
+   - Photograph: back of item
+   - Photograph: any noted defects (from the Health Card defect list)
+   - Photograph: all accessories present (matched against CLIP catalog check)
+   - For Tier 2 electronics: device powered on (screenshot of lock screen, confirming it boots)
+   - For Tier 2 electronics: battery health screenshot (iOS Settings or Android About Phone)
+   - Agent confirms each checklist item in the app. If anything fails the check → item is flagged, routed to Route C instead, buyer notified with revised ETA.
+5. Agent seals the item in a flat-pack box or poly mailer carried in the agent kit.
+6. Item ships directly to buyer. No warehouse, no kirana.
+7. Buyer receives item, has their guarantee window to raise a dispute.
+8. On window close: payment released to seller, credits vest for buyer.
+
+**Who packs:** Flex agent. Agent carries standardised Amazon-branded flat-pack boxes (S/M/L), poly mailers, bubble wrap pads, and tape. The agent app guides the packaging type based on item category and size from the grading data.
+
+**Packaging rule:** The agent app auto-selects packaging type from the grading metadata. A book gets a poly mailer. A phone gets bubble wrap inside a rigid small box. A monitor gets a medium flat-pack with corner pads. The agent cannot override the packaging type.
+
+**Cost and speed:** Estimated 64% cheaper and 4x faster than warehouse round-trip (Cahoot real-world data). CO₂ saving shown to buyer on confirmation screen.
+
+---
+
+### Route B — Kirana Relay (Light goods only)
+
+**Trigger:** Buyer exists within 5–25 km (same city zone), Tier 1 items only.
+
+**Hard block:** Tier 2 electronics (phones, laptops, monitors) are NEVER routed to a kirana relay. The REVIVE routing engine enforces this as an immutable rule — not an EV decision, a hard constraint. Reason: fraud prevention. A kirana counter cannot verify IMEI, battery health, or screen integrity. A bad actor could swap a device at the counter.
+
+**Physical flow (returns, Priya):**
+1. Priya initiates return (any reason) → AI grading fires automatically.
+2. Grade result + routing decision shown on screen. Refund confirmed immediately.
+3. Priya is shown two handover options:
+   - **"Drop it yourself at [Kirana name] 200 m away → Earn Green Credits"** — the item moves when Priya does. Credits vest when her next kept order's window closes (if she also chose kirana drop for that order).
+   - **"Schedule a home pickup → No Green Credits"** — convenient, costs Priya nothing extra, but earns no credits because Amazon bears the Flex agent cost.
+   The credit difference is the policy lever that steers customers toward the lower-cost logistics option without mandating it.
+4. Priya drops the item at the nearest I Have Space kirana partner (2–4 km max, shown on map).
+5. Kirana partner scans the QR code on the REVIVE label using the I Have Space app (existing Amazon tool, no new app needed for kirana).
+6. Kirana holds item for up to 5 days.
+7. **Kirana's role is limited to:** scan QR on receipt, apply a new REVIVE label if needed (from the small packing kit Amazon supplies), hold in a designated shelf area, scan QR on release. No inspection, no grading, no opening the package.
+8. When a buyer is matched and collects (OTP shown on buyer's phone, entered at kirana) → kirana scans release QR → payment released.
+9. If no buyer in 5 days → item consolidates onto the next daily Amazon delivery station truck run (existing middle-mile route, no new logistics).
+
+**Repackaging at kirana:** Amazon supplies each I Have Space kirana with a small REVIVE kit: 5 poly mailers (S/M/L), 1 roll of tape, 10 REVIVE QR labels. The kirana applies a fresh label only if the existing packaging is damaged beyond holding. They do not open items, do not inspect, do not grade.
+
+**Physical flow (unused items, Rahul):**
+1. Rahul lists item via "Sell It" in the Amazon app. Item stays at his home.
+2. Buyer checks out. Payment escrowed.
+3. Rahul receives app notification with a prepaid shipping label addressed to the buyer (or to a kirana if buyer chose kirana collection).
+4. Rahul drops at the kirana or schedules Flex pickup — his choice.
+5. Kirana scan-in → buyer OTP collection → payment released to Rahul.
+
+---
+
+### Route C — City-Wide / Central Node
+
+**Trigger:** No local buyer found after 7 days (returned items) / national listing needed; OR Tier 2 or Tier 3 item that is blocked from Route B.
+
+**Sub-route C1 — City-wide delivery station (day 7–21):**
+- Unsold kirana-held returns are consolidated onto the daily delivery station truck.
+- At the delivery station, the item goes through basic repackaging (the delivery station has a proper repack area) and is listed as Amazon Resale nationally.
+- Sell-probability model re-runs at the wider radius. Price may auto-adjust downward to reflect wider logistics cost.
+
+**Sub-route C2 — SPN refurb node (Tier 3 or Grade C electronics):**
+- High-value items above ₹10,000, or items with significant defects where refurb is economically viable, are routed to an Amazon SPN refurb partner.
+- This applies to BOTH returned items AND Rahul's self-listed unused item (if above ₹10,000): "We'll arrange a pickup for a full inspection to issue you a 90-day Health Card and get you a higher listing price."
+- SPN node performs: functional testing (all sensors, ports, camera, speaker, battery cycle count), data wipe (electronics), OEM-compliant minor repair, full repackaging.
+- Item re-enters the marketplace as Amazon Renewed (90-day guarantee, SPN-liable).
+- Seller receives payout after the 90-day window at the Renewed price minus SPN service fee.
+
+**Sub-route C3 — National FC listing (day 21+):**
+- Item reaches an Amazon FC for the first time.
+- This is explicitly the last resort — not the default. The FC sees this item only because it failed to sell locally and city-wide.
+- Listed as Amazon Resale at national pricing.
+- If unsold at day 60 → liquidation (B-Stock / FBA Liquidations) or donation (registered NGO partner).
+
+---
+
+## 6. Demand Clock — Escalation Timeline
+
+| Day | State | What happens |
 |---|---|---|
-| 0:00–0:20 | Hook | "₹850 billion of products were returned last year. Most travel hundreds of km to die in a warehouse. Meet Priya." |
-| 0:20–1:00 | **Priya** | Two taps to return → cut to the kirana hub: agent's guided scan → defect boxes + "Grade B, 1.4s" → map animates: local buyer 5 km away, *"Resell locally ₹312 vs Warehouse ₹–40"* → Priya's phone buzzes: instant refund + *"590 km · 4.2 kg CO₂ saved"* |
-| 1:00–1:40 | **Rahul** | Baby monitor scan → Health Card with QR → "47 parents within 8 km" → Amazon checkout + locker handoff → his monitor pops up in a neighbor's "Certified Refurbished For You" rail |
-| 1:40–2:10 | **Small Seller** | 12 returns bulk-uploaded → all graded/priced/routed in ~20s → "200 manual inspections per month, eliminated" |
-| 2:10–2:30 | **Prevention** | Checkout with 3 shoe sizes → nudge: "Your profile keeps size 8" → return never happens |
-| 2:30–3:00 | Scale + AWS | Architecture slide with the AWS mapping table → "Every component has a named AWS production counterpart. Per item routed locally: ~590 km avoided, 3–5× value recovered. Multiply by Amazon's return volume." |
+| 0 | Item graded and listed | Held at home (unused) or kirana (returned). Visible to buyers within 5–25 km geohash. |
+| 0–7 | Local window | Demand gate runs every 6 hours. Route A or B fires if buyer found. |
+| 7 | No local buyer | Listing widens to city-wide. National Amazon Resale listing activated. Price auto-drops 10%. Kirana sends item to delivery station. |
+| 7–21 | City window | City-wide demand gate. Route C1 active. |
+| 21 | No city buyer | Item enters Amazon FC. Price auto-drops another 10%. Last-resort national listing. |
+| 60 | Disposition clock | Liquidation via FBA Liquidations or donation to NGO partner. Item exits the system. |
+
+**Unused items only:** Rahul's item never enters a warehouse on its own. If it does not sell by day 60, the listing simply expires. The item stays at his home. He receives a notification offering to relist at a lower price or to schedule a kirana drop for donation. The warehouse does not fill with unsold junk from C2C sellers — only items that have already been graded, listed, and proven unsellable flow through the escalation ladder.
 
 ---
 
-## 9. Metrics We Quote (memorize these)
+## 7. AI Grading — What Each Tier Requires
 
-- **Grading latency: <2s per item** — demonstrated live
-- **Pricing: RMSLE ≈ 0.45–0.50** on Mercari holdout (real-data number)
-- **Recommendations: Recall@20 / NDCG@20** on Amazon Reviews 2023 (real-data number)
-- **EV uplift: 3–5× recovered value** vs. naive liquidation (synthetic 1,000-return cohort)
-- **~590 km saved per locally routed item; ~4.2 kg CO₂ each**
-- **Prevention: F1-score** as the primary metric (false positives waste intervention budget; false negatives miss preventable returns — F1 balances both; AUC reported secondary)
+### Tier 1 — Apparel, books, toys, home goods, accessories (below ₹2,000)
+
+**For a return (agent-captured):**
+- 4 photos taken by the Flex agent or kirana-adjacent agent: front, back, label/tag, defect close-up (if any)
+- 1 optional short video (15s) of the item laid flat, panning across it
+- Agent confirms: original packaging present (yes/no), all accessories present (yes/no)
+- AI runs cosmetic grade. No functional test needed.
+- Health Card: cosmetic grade + defect photos + "AI-only" inspection tag + 7-day guarantee
+
+**For a self-listed unused item (Rahul / Sell It flow):**
+- Customer takes 4 guided photos (in-app prompts with silhouette overlays): front, back, label, any defects
+- Customer declares: "I confirm this item is as described." (Logged with timestamp.)
+- Customer sets asking price (AI suggests based on LightGBM model; customer can adjust ±30%)
+- AI runs grade. Health Card generated.
+- 7-day "not as described" guarantee, seller liable via escrow.
 
 ---
 
-## 10. Judge Q&A Cheat Sheet
+### Tier 2 — Phones, laptops, monitors, speakers, tablets (₹2,000–₹10,000)
 
-| Pushback | Our answer |
+**For a return (agent at doorstep — Route A mandatory):**
+- 6 photos: front, back, screen (powered on), all ports, any defects, accessories laid out
+- 1 video (15s): screen-on with the item rotating slowly to show all sides
+- Battery health screenshot: iOS (Settings → Battery → Battery Health) or Android (Settings → About Phone or third-party diagnostic)
+- IMEI photo (Settings → About Phone or *#06# dialled on screen)
+- Agent confirms: device powers on (yes/no); all accessories present (yes/no); original charger present (yes/no)
+- AI runs cosmetic grade. Battery % extracted from screenshot via OCR. IMEI logged.
+- Health Card: cosmetic grade + battery % + IMEI + "Agent-verified at doorstep" tag + 30-day guarantee
+- **Fraud check:** if agent's live photos differ significantly from CLIP catalog reference (e.g., wrong model, wrong colour), item is immediately flagged to SPN node for investigation.
+
+**For a self-listed unused item:**
+- 6 guided photos: front, back, screen (powered on), all ports visible, all accessories laid out, any defects
+- Battery health screenshot (mandatory for phones/laptops)
+- IMEI photo (optional, but unlocks "IMEI Verified" badge on the Health Card which increases sell probability)
+- Device age declared (purchase year from dropdown)
+- Seller declaration (logged)
+- AI grade + battery OCR + 30-day guarantee, seller liable via escrow.
+- If battery below 80% → AI automatically adds a note on the Health Card: "Battery below 80% — may need replacement." Cannot be suppressed by seller.
+
+---
+
+### Tier 3 — High-value electronics, cameras, laptops above ₹10,000
+
+**For both returns AND self-listed items:**
+- Customer provides 4 standard photos (front, back, screen, accessories) for the preliminary listing.
+- REVIVE system immediately schedules a Flex agent pickup for SPN node delivery.
+- Customer is told: "For items above ₹10,000, we arrange a professional inspection to issue you a 90-day Health Card — this typically increases your sale price by 20–35%."
+- SPN node performs full diagnostic: battery cycle count (software test, not screenshot), IMEI / IMEI2 check, blacklist check, all sensors tested, screen dead-pixel scan, all ports tested, data wiped (factory reset or certified wipe with proof).
+- SPN node re-photographs the item on a clean background (becomes the listing image).
+- Health Card: full SPN diagnostic report + "Professionally inspected" badge + 90-day guarantee, SPN liable.
+- Item listed as Amazon Renewed or Amazon REVIVE Certified.
+
+---
+
+## 8. Page-by-Page Amazon App Integration
+
+### Existing pages — modified
+
+**S1 — My Orders page**
+- No "Give it a second life" button added (this was a previous design error).
+- The existing "Return or Replace Items" button is unchanged.
+- One addition: a Green Credits balance chip in the account header — "🌿 220 credits" — tapping opens the Credits Wallet (S8).
+
+**S2 — Return Wizard (reason selection)**
+- Existing screen. Unchanged. Customer selects return reason as today.
+- One addition at the bottom of the reason screen: a "keep it" nudge card — "Keep this order instead → earn [N] Green Credits when the return window closes" (N is pre-calculated by the credits engine based on item category and value). CTA: "Keep it — I changed my mind." If tapped → return cancelled, credits queued to vest at window close.
+- If customer proceeds with return → next screen is S3 (AI grading), not the existing packaging/shipping screen.
+
+**S7 — Checkout**
+- Existing screen. Two additions:
+  - Return-risk nudge (if prevention model fires): "Customers with your measurements kept size 8 in this brand." Non-intrusive, below the size selector.
+  - Green Credits toggle: "Use 220 credits (−₹22)". Applies only to REVIVE second-life items, not new goods. Toggle off by default, opt-in.
+
+---
+
+### New pages — built for REVIVE
+
+**S3 — AI Grading Result (new — the core demo screen)**
+
+Triggered: automatically after S2 reason selection for any return. Also shown after photo upload in the Sell It flow (S4).
+
+Contents shown to the customer:
+- Product photo with defect bounding boxes overlaid in orange
+- Grade badge (A / B / C / D) with confidence percentage
+- Grading time shown ("1.4s") — builds trust in the AI
+- Defect list in plain language: "Light scuff on left toe — cosmetic only", "Original box missing"
+- Simple routing outcome message (not internal EV numbers): "Your item will be resold to someone nearby" / "Your item will be refurbished" / "Your item will be donated to [NGO name]" — no EV figures, no logistics math, no heatmap
+- For returns: Refund confirmation banner: "Refund of ₹499 initiated — arrives in 2–3 hours"
+- For returns: a simple environmental message (personal and warm, not a data dashboard): "This item will stay in your city instead of travelling to a warehouse." One sentence. No km numbers, no CO₂ figures — those are meaningful to Amazon's internal reporting, not to Priya's experience.
+- Handover choice (for returns, Tier 1 only): two options shown as cards:
+  - "Drop it yourself at [Kirana Name] · 200 m away · Open till 9 PM → Earn Green Credits"
+  - "Schedule a pickup from your home → No credits (convenient option)"
+  - Kirana shown with name, distance, and today's hours. No map. No heatmap.
+- For Tier 2 returns: only the agent option is shown (Route B blocked). Message: "A Flex agent will collect this from your doorstep — we'll schedule that now."
+- For self-list (Sell It): "Your item is now listed. Keep it at home — we'll notify you the moment someone purchases it."
+
+What S3 does NOT show (internal only, visible in the ops console):
+- The EV formula breakdown
+- The demand heatmap
+- CO₂ savings in kg
+- Kilometres avoided
+- Logistics cost comparison
+
+The ops console (Amazon internal / hackathon demo screen) shows all of the above — the heatmap, the EV breakdown, the routing animation. That is the demo wow moment for judges and for Amazon's product team. It is not the customer experience.
+
+**S4 — Sell It (new — Rahul's entry point)**
+
+Entry: Account menu → "Sell unused items" (new tab, positioned next to "Buy Again" in the account navigation).
+
+Step 1 — Item identification:
+- Search bar with catalog auto-complete: "Start typing your product name…" (matched to Amazon catalog via product search API)
+- Or scan barcode / QR on the product box
+- Once matched: product name, model, catalog image confirmed by customer
+
+Step 2 — Photos and details (varies by tier, auto-detected from catalog price):
+- Tier 1: 4 photo prompts with silhouette overlays (front, back, label, any defects)
+- Tier 2: 6 photo prompts + battery screenshot prompt + optional IMEI prompt + video prompt (15s)
+- Tier 3: 4 preliminary photos + message: "A Flex agent will be scheduled to complete the inspection."
+- For all tiers: purchase year (dropdown), reason for selling (dropdown: outgrown / upgraded / gift duplicate / other), condition self-assessment (cross-referenced with AI grade)
+
+Step 3 — AI grade result (same as S3 display) + price suggestion
+- AI suggests price based on LightGBM model
+- Customer can adjust price within a band (±30% of AI suggestion)
+- "Demand signal": "47 buyers in your area searched for this in the last 30 days"
+- Seller declaration checkbox: "I confirm this item is as described and I am its legal owner." (Logged with timestamp and user ID.)
+
+Step 4 — Listing confirmation
+- Health Card preview (shows what the buyer will see)
+- Guarantee shown: "7-day buyer protection" / "30-day battery + cosmetic" / "90-day full coverage"
+- "Your item is live. Keep it at home. We'll notify you when someone buys it."
+
+**S5 — REVIVE Storefront (new — the buyer-side shelf)**
+
+Entry: Main Amazon navigation bar → "Second Life" tab (between "Today's Deals" and "Customer Service"). Also reachable from the "Certified Refurbished For You" rail on the homepage.
+
+Layout:
+- Filter chips row: Grade (A / B / C / D) · Near me (toggle, uses location) · Category dropdown · Price range · Guarantee length (7 / 30 / 90 day)
+- Sort options: Nearest first / Best value / Newest listed / Price low–high
+- Product tiles: product photo, grade badge, seller rating, guarantee badge, distance ("4.2 km away"), price with discount vs. new
+
+"Certified Refurbished For You" AI rail (top of page):
+- Personalised recommendations from the ALS + CLIP + grade + proximity hybrid model
+- Cold-start items (new listings, zero interactions) scored by CLIP content similarity to the user's purchase history
+
+**S6 — Product Health Card page (new — the trust page)**
+
+Entry: "View Health Card" button on every product tile in S5. Also accessible via QR code scan from the physical item.
+
+Contents:
+- Product name + model
+- Grade badge + confidence
+- Defect photos with bounding boxes (same as grading output)
+- Inspection details: who inspected (AI-only / AI + Agent doorstep / AI + SPN node), when
+- Functional data (if Tier 2 or 3): battery %, IMEI status, sensor test results
+- Previous owner count
+- Guarantee badge (7 / 30 / 90 day) with guarantee holder named
+- Amazon A-to-Z Guarantee universal backstop badge
+- "Verified by REVIVE" QR code (scannable by the buyer once received to confirm authenticity)
+- SHA-256 hash of the record (shown as truncated hash for transparency)
+- Buy button
+
+**S8 — Green Credits Wallet (new — in account menu)**
+
+Entry: Account → Green Credits (below "Your Orders" and "Returns & Orders").
+
+Contents:
+- Total balance: "220 credits = ₹22 discount on second-life items"
+- How credits work (one-line explainer, always visible): "Earn credits by keeping orders and dropping returns at a kirana yourself. Spend them on REVIVE second-life items."
+- Pending credits: orders in their return window with kirana self-drop chosen, showing countdown: "Air Fryer — window closes in 4 days → 16 credits pending"
+- Earning history with category context: "Kept ₹1,200 kurta (fashion) + kirana drop → +24 credits · Jun 10", "Kept ₹800 phone case (electronics) + kirana drop → +8 credits · Jun 8"
+- Spending history: "Used 100 credits on REVIVE refurb headphones → −₹10 · Jun 8"
+- Earn rate explainer (collapsible): shows the category multiplier table so customers understand why fashion earns more than electronics
+- Redemption: "Use on REVIVE second-life items — up to 20% off any purchase" → link to S5
+- Donate option: "Donate 50+ credits to [NGO name]" — converts credits to a verified environmental action
+- Expiry: "Credits expire 12 months after earning. Your oldest credits expire [date]."
+- What does NOT earn credits (visible, honest): "Agent pickup returns, donations, recycling, selling items"
+
+**S9 — Ops Console (Amazon internal / hackathon demo screen)**
+
+Not customer-facing. This is the screen that demonstrates REVIVE's intelligence to judges and to Amazon's product team.
+
+Contents:
+- Live item feed: every graded item with its grade, EV breakdown, and assigned route
+- Leaflet demand heatmap: item pins across the city, demand density glowing per geohash cell, route animations showing items flowing toward nearby buyers instead of a distant warehouse
+- EV breakdown per item: "Resell locally ₹312 vs Warehouse ₹–40 vs Liquidate ₹18"
+- Routing decision log: Stage 1 demand gate outputs + Stage 2 route selection per item
+- Metrics dashboard: average km saved per item, CO₂ avoided this week, local match rate, items escalated to FC vs. sold locally
+- Confidence queue: items below 70% grading confidence flagged for human review
+- Disposition summary: items by route (P2P / Kirana / City-wide / SPN / FC / Donated)
+
+This is the "brain" screen — the one that proves REVIVE is a decision engine, not just a resale listing tool.
+
+Not a customer-facing page, but required for Route A and Route B:
+
+For Flex agents:
+- Job appears in Flex app: "REVIVE pickup — [address] — [item category]"
+- On arrival: guided photo capture sequence (6 structured prompts with camera overlays, specific to tier)
+- Checklist confirmation (powers on, accessories present, packaging type auto-selected)
+- Flag item button (if real condition doesn't match Health Card → reroutes to C)
+- Seal confirmation: agent scans the newly affixed REVIVE label to confirm handoff
+
+For kirana partners (I Have Space app — existing app, new REVIVE section):
+- "REVIVE Drop-off" tab
+- Scan incoming QR label → item registered as received
+- Shelf assignment (REVIVE designated shelf)
+- Buyer collection: scan buyer OTP barcode → item released
+- Day 5 alert: "This REVIVE item has not been collected — consolidate to next delivery station run"
+
+---
+
+## 9. Complete Customer Journey Maps
+
+### Journey 1 — Priya returns shoes (Tier 1, Route B)
+
+1. My Orders (S1) → taps "Return or Replace Items"
+2. Return Wizard (S2) → selects "Doesn't fit". Sees keep-it nudge card: "Keep this → earn 20 Green Credits in 7 days." Ignores it, proceeds.
+3. AI Grading (S3) fires automatically. Grade B in 1.4s. Defect boxes shown. Simple message: "Your shoes will be resold to someone nearby." Refund ₹499 initiated.
+4. Handover choice shown: "Drop at [Kirana name] 200 m away → Earn Green Credits" vs "Schedule home pickup → No credits." Priya chooses kirana drop (to earn credits).
+5. Priya drops shoes at kirana. Kirana scans QR. Item registered.
+6. Within 5 days, a buyer 4 km away purchases the shoes on S5.
+7. Buyer collects from the kirana using OTP. Kirana scans release.
+8. Day 14 (Priya's original return window close — separate event): Priya's credits vest. She kept her previous order AND used the kirana drop → **20 credits** (fashion tier multiplier 2.0× on ₹800 kept order, tracked from her last non-returned purchase). The returned shoes themselves do not earn her credits — credits are earned by keeping, not by returning.
+9. Buyer's 7-day guarantee window runs. No dispute → Health Card closed.
+
+Note: Priya earns credits from orders she kept, not from returning these shoes. The keep-it nudge on S2 was the opportunity she passed up.
+
+### Journey 2 — Rahul lists unused baby monitor (Tier 2, Route A)
+
+1. Account menu → "Sell unused items" → S4 Sell It.
+2. Searches "Motorola baby monitor" → catalog match confirmed.
+3. 6 photo prompts + battery screenshot (device at 91%) + optional IMEI.
+4. Grade A result. Price suggested: ₹2,340. Rahul adjusts to ₹2,200. Demand signal: "47 parents searched for this nearby."
+5. Item listed. Rahul keeps it at home. Nothing moves.
+6. 3 days later: buyer 3.8 km away purchases. Rahul gets app notification: "Your item has been sold — a Flex agent will collect it tomorrow."
+7. Since Tier 2: Route A (agent doorstep) mandatory. Flex agent dispatched to Rahul.
+8. Agent performs doorstep verification: 6 photos + powers-on check + battery screenshot re-confirmed.
+9. Agent seals in bubble-wrapped rigid box (auto-selected by agent app for electronics category).
+10. Item ships directly to buyer. No kirana, no warehouse.
+11. Buyer receives, has 30-day guarantee window.
+12. Day 31 (window close, no dispute): **Rahul receives UPI transfer of ₹2,200 minus REVIVE platform commission (e.g., 8%).** Rahul gets money. Rahul does not get Green Credits.
+13. Buyer's Green Credits vest: buyer kept a ₹2,200 electronics purchase and used kirana self-drop (or did they schedule agent delivery here? — buyer chose home delivery from Rahul, so no kirana self-drop involved, therefore no credits for the buyer either on this transaction). Credits vest for buyers only when they choose kirana self-drop for their own returns on separately kept orders.
+
+### Journey 3 — Buyer purchases from REVIVE storefront
+
+1. Homepage "Certified Refurbished For You" rail shows baby monitor (Rahul's).
+2. Buyer taps → sees product page with Health Card badge.
+3. Taps "View Health Card" → S6 Health Card page: Grade A, battery 91%, IMEI verified, agent-verified at doorstep, 30-day guarantee, Amazon A-to-Z backstop.
+4. Buys. Checkout (S7) shows Green Credits toggle (if they have credits) and return-risk nudge.
+5. Selects delivery to home address. Flex agent delivers directly from Rahul's home.
+6. Buyer accepts item → guarantee window starts.
+7. No dispute within 30 days → credits vest in buyer's wallet.
+
+### Journey 4 — Small seller bulk upload
+
+1. Seller Central / REVIVE API integration (or seller-facing web portal).
+2. Bulk photo upload: 12 return photos uploaded in one batch.
+3. All 12 graded in ~20s total. Each returns a JSON record.
+4. Routing assigned: 7 to local P2P, 3 to city-wide, 2 to SPN refurb.
+5. Health Cards generated for all 12. Auto-listed on REVIVE storefront.
+6. Seller sees a disposition dashboard: item IDs, grades, routes, expected recovery values, listing prices.
+
+---
+
+## 10. Routing Algorithm — Corrected Final Form
+
+### Stage 1 — Demand Gate (polling loop, runs every 6 hours)
+
+```python
+def demand_gate(item_id, location_geohash, category, grade, asking_price, days_listed):
+    demand_score = geohash_demand_index(location_geohash, category)
+    sell_prob = gbdt_sell_probability(grade, asking_price, category, days_listed)
+    holding_cost = BASE_HOLDING_COST * (1 + DECAY_FACTOR * days_listed)
+    
+    expected_local_value = sell_prob * asking_price - holding_cost
+    
+    if expected_local_value > SELL_THRESHOLD:
+        return "SELL"  # Proceed to Stage 2 when buyer appears
+    elif days_listed >= 21:
+        return "ESCALATE_FC"  # Pull to Amazon FC
+    elif days_listed >= 7:
+        return "ESCALATE_CITY"  # Widen to city-wide / national listing
+    elif days_listed >= 60:
+        return "LIQUIDATE"
+    else:
+        return "HOLD"  # Keep listed, check again in 6 hours
+```
+
+### Stage 2 — Routing EV (fires once, when a buyer checks out)
+
+```python
+def routing_ev(item, buyer_location, tier):
+    buyer_distance_km = haversine(item.location, buyer_location)
+    
+    # Hard tier blocks (override EV)
+    if tier == 3:
+        return "ROUTE_C_SPN"
+    if tier == 2 and buyer_distance_km > 5:
+        return "ROUTE_C_CITY"  # Route A only for Tier 2
+    
+    # EV calculation for eligible routes
+    routes = {}
+    
+    if buyer_distance_km <= 5:
+        routes["A_direct"] = (
+            sell_prob(item) * item.asking_price
+            - flex_cost(buyer_distance_km)
+            - item.refurb_cost
+            - item.holding_cost_so_far
+        )
+    
+    if buyer_distance_km <= 25 and tier == 1:  # Route B: Tier 1 only
+        routes["B_kirana"] = (
+            sell_prob(item) * item.asking_price
+            - kirana_logistics_cost(buyer_distance_km)
+            - item.refurb_cost
+            - item.holding_cost_so_far
+        )
+    
+    routes["C_city"] = (
+        sell_prob(item) * item.asking_price * 0.85  # price discount for wider listing
+        - delivery_station_cost(buyer_distance_km)
+        - item.refurb_cost
+        - item.holding_cost_so_far
+    )
+    
+    best_route = max(routes, key=routes.get)
+    
+    if routes[best_route] < DONATION_BENEFIT:
+        return "DONATE"
+    
+    return best_route
+```
+
+**Note on the algorithm approach:** This two-stage structure is a fast instantiation of Multi-Criteria Decision Analysis (AHP), the academically validated framework for reverse logistics decision-making. Studies show this approach yields up to 33% higher recovered value and 65% better environmental outcomes than rule-based routing. The geohash demand-gravity model (local demand index per geohash cell and category) is the key differentiator — it routes items to nearest demand clusters, not to central warehouses, at the level of a single line of logic.
+
+---
+
+## 11. Technology Stack
+
+| Component | Technology | AWS production equivalent |
+|---|---|---|
+| Defect detection | Grounding DINO (zero-shot) | SageMaker endpoint (custom container) |
+| Vision captioning | Claude Haiku via OpenRouter | Amazon Bedrock (Claude Haiku, one env var switch) |
+| Accessory check | CLIP similarity vs. catalog | SageMaker + S3 image store |
+| Grading head | Lightweight fusion classifier | SageMaker |
+| Pricing model | LightGBM on Mercari 1.4M listings | SageMaker |
+| Sell-probability | GBDT | SageMaker |
+| Demand index | Geohash → Redis sorted set | ElastiCache Redis |
+| EV optimizer | Python, runs in memory, ~2ms | Lambda (stateless) |
+| Recommender | ALS (collaborative) + CLIP (content) | SageMaker + Personalize |
+| Prevention model | GBDT on user + item features | SageMaker |
+| Health Card store | Signed JSON + SHA-256 hash chain | Aurora PostgreSQL ledger mode |
+| Green Credits | Event-driven vest on window close | Lambda + DynamoDB |
+| Routing map | Leaflet.js + geohash tiles | CloudFront + S3 |
+| Demand heatmap | Redis geohash index → client render | ElastiCache + CloudFront |
+| Backend API | Django REST Framework | ECS Fargate |
+| Frontend | React | CloudFront + S3 |
+| Offline grading | Qwen2.5-VL-3B (same JSON schema) | Edge device / Lambda@Edge |
+
+---
+
+## 12. Metrics
+
+- **Grading latency:** under 2 seconds per item — demonstrated live
+- **Pricing accuracy:** RMSLE ~0.45–0.50 on Mercari holdout (real-data number)
+- **Recommendations:** Recall@20 / NDCG@20 on Amazon Reviews 2023 subset
+- **EV uplift:** 3–5× recovered value vs. naive liquidation (synthetic 1,000-return cohort)
+- **Distance saved:** ~590 km per locally routed item; ~4.2 kg CO₂ per item
+- **Prevention F1:** primary metric (false positives waste intervention budget; false negatives miss preventable returns; F1 balances both)
+- **Industry benchmark (Cahoot, real-world):** 64% cost reduction and 4× speed improvement for P2P vs. warehouse round-trip
+
+---
+
+## 13. Green Credits Anti-Gaming Design
+
+| Potential exploit | How it's blocked |
 |---|---|
-| "It's just a resale marketplace." | The marketplace is the *output*. The product is the **decision engine** — grading + EV routing + demand gravity. That bridge doesn't exist today. |
-| "Won't green credits encourage *more* returns?" | The opposite — credits are earned **only by keeping orders**: they vest when the return window closes with nothing sent back. A return means no credits, period. It's a verified outcome, not a button click, so there's nothing to game — and they're spendable only on refurbished items, so the reward feeds second-life demand. |
-| "AI grading will be wrong sometimes." | Confidence-gated: low-confidence items go to a human spot-check queue (visible in our ops console). The Health Card records the model version — fully auditable. |
-| "Asking customers to photograph returns is friction." | They don't — the default return is two taps. The **agent** at the hub or doorstep runs the guided scan: zero customer effort, consistent capture quality, and trusted photos (no fraud via stale images). Self-scan exists only as an optional express lane; photos are required only where they *are* the product — Rahul's P2P listing. |
-| "P2P trust is unsolved." | Exactly why it runs *through* Amazon: verified Health Card + Amazon payments + locker handoff. Trust is borrowed, not rebuilt. |
-| "Why not blockchain?" | Blockchain solves consensus between distrusting parties; we have one trusted authority and only need tamper-evidence. A hash chain delivers that at zero overhead. Production: Aurora PostgreSQL ledger. |
-| "Will zero-shot detection work on all products?" | It generalizes by design via text prompts; we validate on shoes, electronics, clothing. Edge cases route to the human-in-the-loop queue. |
-| "New refurb items have no interaction history — cold start?" | That's why the hybrid blend exists: the CLIP content leg scores an item the moment it's graded, zero interactions needed. |
-| "Why ALS, not a transformer recommender?" | ALS ships in 3 days and gives interpretable vectors with competitive Recall@20. Production path is LightGCN/SASRec — the architecture is right, the model is swappable. |
-| "Is this on AWS?" | The vision call is provider-abstracted — the demo routes through OpenRouter, and one env var switches it to Amazon Bedrock running the same Claude Haiku. Every component has a named AWS counterpart (Section 4 table). |
+| Schedule agent pickup, then claim credits | Agent pickup earns zero credits by design. Only kirana self-drop earns credits. No override. |
+| Return an item then immediately relist it for credits | Credits are earned by keeping orders, not by any return action. Returning earns nothing. |
+| Drop at kirana but then initiate return within window | Return initiation cancels pending credits immediately at the same event trigger. |
+| Donate junk to earn credits | Donate and recycle earn zero credits. |
+| List an item, claim it sold, farm credits | Sellers get money, not credits. Credits are buyer-only, on their own separate purchases. |
+| Game the keep-it nudge by accepting then returning the next day | Credits vest only at window close. Return before window close → credits cancelled, no partial vest. |
+| Buy cheap items repeatedly just to earn credits | Earn rate is low (₹0.10 per credit; fashion ₹800 order earns 20 credits = ₹2). The economics don't reward churn. Return window closure is the only verified trigger. |
+| Inflate category to get higher multiplier | Category is auto-detected from the Amazon product catalog at purchase, not self-declared. |
 
 ---
 
-## 11. Judging Criteria — How We Score
+## 14. Judge Q&A Cheat Sheet
 
-| Criterion | Our play |
+| Pushback | Answer |
 |---|---|
-| **01 Quality of Presentation** | Story-first: three personas, four crisp demo scenes, one number per scene. No jargon walls. |
-| **02 Quality of Implementation** | Working end-to-end prototype: live grading <2s, real datasets (Mercari, Amazon Reviews), real metrics (RMSLE, Recall@20), polished 3-view UI. |
-| **03 Technical Architecture** | 5 microservices, stateless millisecond routing, edge-ready grading, full AWS production mapping, MLOps drift-retraining story. |
-| **04 Futuristic Vision** | Health Card = Digital Product Passport, the EU-mandated standard by 2027 — Amazon becomes the *infrastructure* of global circular commerce, not just a retailer. Roadmap: Renewed API integration, drone-based 30-min P2P transfers, cross-retailer passport network. |
+| "It's just a resale marketplace." | The marketplace is the output. The product is the decision engine — grading + two-stage EV routing + demand-gravity model. That bridge doesn't exist inside Amazon today. |
+| "Won't green credits encourage more returns?" | Credits vest only when a purchase's return window closes with nothing sent back. A return means zero credits. It rewards the opposite behaviour. |
+| "AI grading will be wrong sometimes." | Confidence-gated: below 70% confidence → human spot-check queue in the ops console. The Health Card records the model version. Fully auditable. |
+| "Asking customers to photograph returns is friction." | They don't. The Flex agent runs the guided scan at the doorstep. Customer effort = zero. Self-scan is optional express lane only. |
+| "Kiranas can't inspect electronics." | Correct — and by design they never do. Hard routing rule: Tier 2 and Tier 3 electronics are blocked from Route B. They always go to a Flex agent (Route A) or SPN node (Route C). |
+| "What if there's no local demand?" | The demand clock escalates: local (0–7 days) → city-wide (7–21 days) → national FC listing (21+ days) → liquidation at day 60. The warehouse is the last resort, not the default. |
+| "Who repackages the item?" | Tiered by route. Flex agent carries packing materials and seals at doorstep for Route A. Kirana applies a label swap only (light touch) for Route B Tier 1. Delivery station does full repack for Route C. The grading step already separated items by repack complexity before they reach any node. |
+| "Will P2P trust hold?" | The trust comes from Amazon's existing rails: verified Health Card, Amazon payments (held in escrow), Amazon A-to-Z Guarantee backstop, and two-sided seller/buyer ratings. Trust is borrowed from Amazon's existing infrastructure, not rebuilt from scratch. |
+| "P2P only works if there's local demand — what's the real match rate?" | Cahoot reports 30–40% of returns route peer-to-peer in real deployments. We don't claim 100%. The escalation ladder handles the rest — that's exactly why the demand clock exists. |
+| "Is this on AWS?" | The vision call is provider-abstracted. Demo routes through OpenRouter; one environment variable switches it to Amazon Bedrock running the same Claude Haiku model. Every component in the stack has a named AWS production counterpart. |
 
 ---
 
-## 12. Closing Line of the Pitch
+## 15. Closing Pitch Line
 
-> *"Amazon's promise has always been: from need to done. REVIVE extends that promise to the product's second life — every return becomes someone's perfect purchase, 5 km away instead of 600. That's good for Priya, good for Rahul, good for sellers, good for Amazon, and good for the planet."*
+> *"Amazon's promise has always been: from need to done. REVIVE extends that promise to the product's second life — every return becomes someone's perfect purchase, 5 km away instead of 600. That's good for Priya. Good for Rahul. Good for sellers. Good for Amazon. And good for the planet."*
