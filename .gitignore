@@ -56,7 +56,12 @@ data/*.jsonl
 data/*.json
 !data/_sample_*.json
 ml/artifacts/*.pkl
-ml/artifacts/*.pkl
+ml/artifacts/*.keras
+ml/artifacts/*.h5
+ml/artifacts/*.pt
+ml/artifacts/*.pth
+ml/artifacts/*.onnx
+ml/artifacts/grade_cache.json
 
 # OS generated files
 .DS_Store
