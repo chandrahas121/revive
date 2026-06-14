@@ -53,6 +53,8 @@ data/*.zip
 data/*.tsv
 data/*.7z
 data/*.jsonl
+data/*.json
+!data/_sample_*.json
 ml/artifacts/*.pkl
 ml/artifacts/*.pkl
 

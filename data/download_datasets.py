@@ -147,9 +147,42 @@ def _create_synthetic_mercari(path: Path, n: int = 10_000) -> None:
     logger.info(f"✅ Synthetic Mercari dataset created: {path} ({n} rows)")
 
 
+
+# ─── Clothing Fit (Rent the Runway / ModCloth) ─ Pillar 4 Fit-Twin ──────
+def download_clothing_fit() -> Path:
+    """Download the clothing-fit dataset (Rent the Runway + ModCloth) from Kaggle.
+
+    Produces:
+        data/renttherunway_final_data.json
+        data/modcloth_final_data.json
+    """
+    rtr = DATA_DIR / "renttherunway_final_data.json"
+    if rtr.exists():
+        logger.info(f"Already exists: {rtr}")
+        return rtr
+    try:
+        logger.info("Downloading clothing-fit dataset via Kaggle API\u2026")
+        subprocess.run(
+            ["kaggle", "datasets", "download", "-d",
+             "rmisra/clothing-fit-dataset-for-size-recommendation",
+             "-p", str(DATA_DIR), "--unzip"],
+            check=True,
+        )
+        logger.info(f"\u2705 Clothing-fit data saved to {DATA_DIR}")
+    except FileNotFoundError:
+        logger.error(
+            "Kaggle CLI not found. Install: pip install kaggle\n"
+            "Configure API key: see data/KAGGLE_SETUP.md\n"
+            "Or download manually: "
+            "https://www.kaggle.com/datasets/rmisra/clothing-fit-dataset-for-size-recommendation"
+        )
+    return rtr
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download REVIVE ML datasets")
     parser.add_argument("--mercari", action="store_true", help="Download Mercari Price Suggestion")
+    parser.add_argument("--fit", action="store_true", help="Download clothing-fit (Rent the Runway / ModCloth)")
     parser.add_argument("--amazon-reviews", action="store_true", help="Download Amazon Reviews 2023")
     parser.add_argument("--category", default="Electronics",
                         choices=list(AMAZON_REVIEWS_URLS.keys()),
@@ -157,13 +190,17 @@ if __name__ == "__main__":
     parser.add_argument("--full", action="store_true", help="Download full (not 5-core) Amazon reviews")
     args = parser.parse_args()
 
-    if not args.mercari and not args.amazon_reviews:
+    if not args.mercari and not args.amazon_reviews and not args.fit:
         parser.print_help()
         sys.exit(1)
 
     if args.mercari:
         p = download_mercari_kaggle()
         print(f"Mercari: {p}")
+
+    if args.fit:
+        p = download_clothing_fit()
+        print(f"Clothing-fit: {p}")
 
     if args.amazon_reviews:
         p = download_amazon_reviews(args.category, use_5core=not args.full)

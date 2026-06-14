@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import HealthCard from '../components/stitch/HealthCard'
 import VirtualTryOn from '../components/stitch/VirtualTryOn'
+import FitTwin from '../components/stitch/FitTwin'
 import api, { getHealthCard } from '../api/client'
 import { useCart } from '../context/CartContext'
 
@@ -41,6 +42,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [added, setAdded] = useState(false)
+  const [selectedSize, setSelectedSize] = useState(null)
+  const SIZES = [2, 4, 6, 8, 10, 12, 14, 16]
   const [showHealthCard, setShowHealthCard] = useState(false)
   const [cardData, setCardData] = useState(null)
   const [cardLoading, setCardLoading] = useState(false)
@@ -78,6 +81,7 @@ const ProductDetailPage = () => {
       image: listing.image,
       grade: listing.grade,
       source: listing.source,
+      size: selectedSize,
     })
     setAdded(true)
   }
@@ -268,6 +272,26 @@ const ProductDetailPage = () => {
 
               <p className="text-lg text-[#007600]">In Stock</p>
 
+              {isClothing(product.category) && (
+                <div>
+                  <p className="text-xs font-semibold text-[#0F1111] mb-1">Select size</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SIZES.map((sz) => (
+                      <button
+                        key={sz}
+                        onClick={() => setSelectedSize(sz)}
+                        className={`w-9 h-9 rounded border text-xs font-semibold transition-colors
+                          ${selectedSize === sz
+                            ? 'bg-[#131921] text-white border-[#131921]'
+                            : 'bg-white text-[#0F1111] border-[#D5D9D9] hover:border-[#131921]'}`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {listing.source === 'p2p' && (
                 <p className="text-xs text-gray-500 bg-[#F0F2F2] border border-[#D5D9D9] rounded p-2 leading-relaxed">
                   Ships from Amazon Hub after seller verification
@@ -314,6 +338,15 @@ const ProductDetailPage = () => {
                 <VirtualTryOn
                   garmentImage={listing.image}
                   garmentTitle={product.title}
+                />
+              )}
+
+              {isClothing(product.category) && (
+                <FitTwin
+                  category={product.category}
+                  itemId={product.fit_item_id}
+                  size={selectedSize}
+                  availableSizes={SIZES}
                 />
               )}
 

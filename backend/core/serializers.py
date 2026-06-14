@@ -102,6 +102,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'listing_grade', 'listing_grade_display', 'listing_source_display',
             'listing_category', 'listing_mrp', 'listing_chosen_path', 'listing_tier',
             'status', 'is_p2p', 'escrow_released', 'return_window_closes', 'created_at',
+            'size',
         )
 
     def get_listing_title(self, obj):

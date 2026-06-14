@@ -484,14 +484,29 @@ class OrderListCreateView(APIView):
         except Listing.DoesNotExist:
             return Response({'error': 'Listing not available.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Optional chosen size (clothing) — feeds the buyer's fit_size_profile.
+        size = request.data.get('size')
+        try:
+            size = float(size) if size is not None else None
+        except (TypeError, ValueError):
+            size = None
+
         order = Order.objects.create(
             user=request.user,
             listing=listing,
+            size=size,
             status='confirmed',
             is_p2p=(listing.source == 'p2p'),
             return_window_closes=timezone.now() + timedelta(days=7),
         )
         listing.status = Listing.Status.SOLD
         listing.save()
+
+        # Refresh the size profile from kept orders (no measurements needed).
+        try:
+            from prevent.fit_profile import update_fit_size_profile
+            update_fit_size_profile(request.user)
+        except Exception:
+            pass
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)

@@ -23,7 +23,7 @@ const CheckoutPage = () => {
     try {
       setPlacing(true)
       setError('')
-      await Promise.all(cart.map((item) => api.post('/api/orders/', { listing_id: item.id })))
+      await Promise.all(cart.map((item) => api.post('/api/orders/', { listing_id: item.id, size: item.size })))
       clearCart()
       setSuccess(true)
       setTimeout(() => navigate('/orders'), 2000)
