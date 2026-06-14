@@ -65,7 +65,7 @@ const Header = () => {
         </button>
 
         {/* Logo */}
-        <div onClick={() => { navigate('/'); closeMenu(); }} className="flex-shrink-0 cursor-pointer">
+        <div onClick={() => { navigate('/'); closeMenu(); }} className="flex-shrink-0 cursor-pointer border border-transparent hover:border-white rounded-sm transition-colors">
           <img
             width={110}
             height={33}
@@ -73,6 +73,17 @@ const Header = () => {
             alt="Amazon logo"
             className="p-2 object-contain"
           />
+        </div>
+
+        {/* Deliver to — hidden on mobile */}
+        <div className="hidden md:flex flex-col cursor-pointer flex-shrink-0 px-1 py-1 border border-transparent hover:border-white rounded-sm transition-colors min-w-[90px]">
+          <span className="text-gray-300 text-[11px] leading-none">Delivering to</span>
+          <span className="flex items-center gap-0.5 mt-0.5">
+            <svg className="w-3.5 h-3.5 text-white flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <span className="text-white font-bold text-[13px] leading-none">Update location</span>
+          </span>
         </div>
 
         {/* Search — takes all remaining space */}
@@ -95,12 +106,19 @@ const Header = () => {
         {/* Right actions */}
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0 text-white">
           {/* Account */}
-          <div className="cursor-pointer px-1 sm:px-2 py-1 text-xs" onClick={handleAuthClick}>
-            <p className="text-gray-300 hidden sm:block leading-none mb-0.5">
+          <div
+            className="cursor-pointer px-1 sm:px-2 py-1 border border-transparent hover:border-white rounded-sm transition-colors flex-shrink-0"
+            onClick={handleAuthClick}
+          >
+            <p className="text-gray-300 text-[11px] leading-none mb-0.5 hidden sm:block">
               {user ? `Hello, ${user.name.split(' ')[0]}` : 'Hello, sign in'}
             </p>
-            <p className="font-bold text-xs sm:text-sm leading-none">
-              {user ? 'Sign out' : 'Sign in'}
+            <p className="font-bold text-[13px] leading-none hidden sm:block">
+              {user ? 'Account & Sign out' : 'Account & Lists'}
+              <span className="ml-0.5">▾</span>
+            </p>
+            <p className="font-bold text-sm leading-none sm:hidden">
+              {user ? 'Hi' : 'Sign in'}
             </p>
           </div>
 
@@ -115,13 +133,13 @@ const Header = () => {
             </div>
           )}
 
-          {/* Orders — hidden on mobile (in hamburger instead) */}
+          {/* Returns & Orders — hidden on mobile */}
           <div
             onClick={() => navigate('/orders')}
-            className="cursor-pointer px-1 sm:px-2 py-1 text-xs hidden md:block"
+            className="cursor-pointer px-1 sm:px-2 py-1 border border-transparent hover:border-white rounded-sm transition-colors hidden md:block flex-shrink-0"
           >
-            <p className="text-gray-300 leading-none mb-0.5">Returns</p>
-            <p className="font-bold text-sm leading-none">& Orders</p>
+            <p className="text-gray-300 text-[11px] leading-none mb-0.5">Returns</p>
+            <p className="font-bold text-[13px] leading-none">&amp; Orders</p>
           </div>
 
           {/* Cart */}
@@ -143,21 +161,31 @@ const Header = () => {
       </div>
 
       {/* ── Desktop nav bar ── */}
-      <div className="hidden md:flex items-center bg-[#232F3E] text-white text-xs sm:text-sm overflow-x-auto whitespace-nowrap px-2 py-0.5 gap-0.5">
-        {navItems.map((item) => (
+      <div className="hidden md:flex items-center bg-[#232F3E] text-white text-sm overflow-x-auto whitespace-nowrap px-1 py-1 gap-0">
+        {/* ≡ All */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1.5 px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 transition-colors font-bold"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
+          </svg>
+          All
+        </button>
+        {navItems.filter(i => i.label !== 'All').map((item) => (
           <button
             key={item.label}
             onClick={item.action}
-            className={`px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 transition-colors
-              ${item.highlight ? 'font-semibold text-[#febd69]' : ''}`}
+            className={`px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 transition-colors
+              ${item.highlight ? 'font-bold text-[#febd69]' : ''}`}
           >
             {item.label}
           </button>
         ))}
-        <span className="text-gray-600 px-1 flex-shrink-0 hidden lg:inline">|</span>
-        <button className="px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Electronics</button>
-        <button className="px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Fashion</button>
-        <button className="px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Home &amp; Garden</button>
+        <span className="text-gray-600 px-1 flex-shrink-0 hidden lg:inline select-none">|</span>
+        <button onClick={() => navigate('/?q=Electronics')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Electronics</button>
+        <button onClick={() => navigate('/?q=Fashion')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Fashion</button>
+        <button onClick={() => navigate('/?q=Home')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Home &amp; Garden</button>
       </div>
 
       {/* ── Mobile drawer ── */}
