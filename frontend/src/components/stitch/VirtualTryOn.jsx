@@ -15,7 +15,6 @@ const VirtualTryOn = ({ garmentImage, garmentTitle }) => {
   const [personFile, setPersonFile] = useState(null);
   const [resultImage, setResultImage] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [latency, setLatency] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -25,7 +24,6 @@ const VirtualTryOn = ({ garmentImage, garmentTitle }) => {
     setPersonFile(null);
     setResultImage(null);
     setErrorMsg("");
-    setLatency(null);
   };
 
   const handleClose = () => {
@@ -77,9 +75,8 @@ const VirtualTryOn = ({ garmentImage, garmentTitle }) => {
         timeout: 120000, // 2 min — HF Spaces can be slow
       });
 
-      const { result_image_b64, latency_ms } = res.data;
+      const { result_image_b64 } = res.data;
       setResultImage(`data:image/jpeg;base64,${result_image_b64}`);
-      setLatency(latency_ms);
       setPhase("result");
     } catch (err) {
       const msg =
@@ -125,7 +122,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle }) => {
                 <span className="text-xl">👗</span>
                 <div>
                   <h2 className="font-bold text-gray-900 text-base">Virtual Try-On</h2>
-                  <p className="text-xs text-gray-500">Powered by IDM-VTON · AI diffusion model</p>
+                  <p className="text-xs text-gray-500">See how it looks on you</p>
                 </div>
               </div>
               <button
@@ -238,7 +235,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle }) => {
                   </div>
                   <div className="text-center space-y-1">
                     <p className="font-semibold text-gray-800">AI is generating your try-on…</p>
-                    <p className="text-xs text-gray-400">Using IDM-VTON diffusion model · typically 15–30 seconds</p>
+                    <p className="text-xs text-gray-400">This usually takes 15–30 seconds</p>
                   </div>
                   {/* Progress steps */}
                   <div className="w-full space-y-2 max-w-xs">
@@ -261,43 +258,23 @@ const VirtualTryOn = ({ garmentImage, garmentTitle }) => {
               {/* ── RESULT PHASE ─────────────────────────────────────────── */}
               {phase === "result" && resultImage && (
                 <div className="space-y-4">
-                  {/* Timing badge */}
-                  {latency && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
-                        ✅ Generated in {(latency / 1000).toFixed(1)}s
-                      </span>
-                    </div>
-                  )}
+                  {/* Heading */}
+                  <div className="text-center space-y-1">
+                    <p className="text-lg font-bold text-gray-900">✨ Here's your look</p>
+                    <p className="text-xs text-gray-500">{garmentTitle}</p>
+                  </div>
 
-                  {/* Side-by-side comparison — same-height boxes, images scale to fit */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide text-center">Your Photo</p>
-                      <div
-                        className="bg-gray-50 border rounded-xl overflow-hidden flex items-center justify-center"
-                        style={{ height: '420px' }}
-                      >
-                        <img
-                          src={personPreview}
-                          alt="Original"
-                          style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', display: 'block' }}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold text-purple-600 uppercase tracking-wide text-center">✨ Try-On Result</p>
-                      <div
-                        className="bg-purple-50 border border-purple-100 rounded-xl overflow-hidden flex items-center justify-center"
-                        style={{ height: '420px' }}
-                      >
-                        <img
-                          src={resultImage}
-                          alt="Virtual Try-On Result"
-                          style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', display: 'block' }}
-                        />
-                      </div>
-                    </div>
+                  {/* Result image — single, centered, prominent */}
+                  <div className="relative bg-gradient-to-b from-purple-50 to-white border border-purple-100 rounded-2xl overflow-hidden flex items-center justify-center p-3 shadow-inner">
+                    <img
+                      src={resultImage}
+                      alt="Virtual Try-On Result"
+                      className="rounded-xl shadow-lg"
+                      style={{ maxWidth: '100%', maxHeight: '460px', width: 'auto', height: 'auto', display: 'block' }}
+                    />
+                    <span className="absolute top-3 right-3 text-[10px] font-semibold bg-purple-600 text-white px-2 py-1 rounded-full shadow">
+                      AI Try-On
+                    </span>
                   </div>
 
                   {/* Disclaimer */}
