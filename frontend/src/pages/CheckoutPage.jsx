@@ -9,7 +9,7 @@ import { useCart } from '../context/CartContext'
 const CheckoutPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { cart, removeFromCart, clearCart, cartTotal } = useCart()
+  const { cart, removeFromCart, updateQuantity, clearCart, cartTotal, cartItemCount } = useCart()
   const [redeemedCredits, setRedeemedCredits] = useState(0)
   const [placing, setPlacing] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -23,7 +23,12 @@ const CheckoutPage = () => {
     try {
       setPlacing(true)
       setError('')
-      await Promise.all(cart.map((item) => api.post('/api/orders/', { listing_id: item.id, size: item.size })))
+      await Promise.all(cart.flatMap((item) => {
+        const qty = item.qty || 1
+        return Array.from({ length: qty }, () =>
+          api.post('/api/orders/', { listing_id: item.id, size: item.size })
+        )
+      }))
       clearCart()
       setSuccess(true)
       setTimeout(() => navigate('/orders'), 2000)
@@ -76,7 +81,7 @@ const CheckoutPage = () => {
               <div className="bg-white rounded-lg shadow-sm divide-y border border-[#D5D9D9]">
                 <div className="px-3 sm:px-4 py-3 border-b border-[#D5D9D9]">
                   <h2 className="font-bold text-[#0F1111] text-sm sm:text-base">
-                    Cart ({cart.length} item{cart.length !== 1 ? 's' : ''})
+                    Cart ({cartItemCount} item{cartItemCount !== 1 ? 's' : ''})
                   </h2>
                 </div>
 
@@ -93,7 +98,11 @@ const CheckoutPage = () => {
                   </button>
                 </div>
 
-                {cart.map((item) => (
+                {cart.map((item) => {
+                  const isUnique = item.source && item.source !== 'new'
+                  const itemQty = item.qty || 1
+                  const maxQty = item.maxStock || (isUnique ? 1 : 10)
+                  return (
                   <div key={item.id} className="flex gap-3 sm:gap-4 p-3 sm:p-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
                       {item.image && (
@@ -106,17 +115,43 @@ const CheckoutPage = () => {
                         <span className="text-[10px] font-bold text-green-700">Grade {item.grade}</span>
                       )}
                       <p className="font-bold text-[#0F1111] mt-1 text-sm">
-                        ₹{parseFloat(item.price).toLocaleString('en-IN')}
+                        ₹{(parseFloat(item.price) * itemQty).toLocaleString('en-IN')}
+                        {itemQty > 1 && <span className="text-xs text-gray-400 font-normal ml-1">(₹{parseFloat(item.price).toLocaleString('en-IN')} each)</span>}
                       </p>
+                      {/* Quantity controls */}
+                      <div className="flex items-center gap-0 mt-2">
+                        <div className="inline-flex items-center border border-[#D5D9D9] rounded-lg overflow-hidden">
+                          <button
+                            onClick={() => itemQty <= 1 ? removeFromCart(item.id) : updateQuantity(item.id, itemQty - 1)}
+                            className="w-8 h-8 flex items-center justify-center text-sm font-bold text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6] transition-colors border-r border-[#D5D9D9]"
+                          >
+                            {itemQty === 1 ? (
+                              <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                            ) : '−'}
+                          </button>
+                          <span className="w-10 text-center text-xs font-bold text-[#0F1111] bg-white py-1.5">{itemQty}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, itemQty + 1)}
+                            disabled={itemQty >= maxQty}
+                            className={`w-8 h-8 flex items-center justify-center text-sm font-bold transition-colors border-l border-[#D5D9D9]
+                              ${itemQty >= maxQty ? 'text-gray-300 bg-[#F0F2F2] cursor-not-allowed' : 'text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6]'}`}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="mx-2 text-gray-300">|</span>
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-[#007185] hover:underline hover:text-[#c45500] text-xs"
+                        >
+                          Delete
+                        </button>
+                        {isUnique && <span className="text-[10px] text-amber-600 ml-2">One-of-a-kind</span>}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-[#007185] hover:underline text-xs self-start flex-shrink-0"
-                    >
-                      Remove
-                    </button>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -158,7 +193,7 @@ const CheckoutPage = () => {
                 <h2 className="font-bold text-[#0F1111] text-sm sm:text-base">Order Summary</h2>
 
                 <div className="flex justify-between text-xs sm:text-sm text-gray-600">
-                  <span>Subtotal ({cart.length} items)</span>
+                  <span>Subtotal ({cartItemCount} items)</span>
                   <span>₹{cartTotal.toLocaleString('en-IN')}</span>
                 </div>
                 {redeemedCredits > 0 && (

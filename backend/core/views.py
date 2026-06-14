@@ -479,8 +479,9 @@ class OrderListCreateView(APIView):
             is_p2p=(listing.source == 'p2p'),
             return_window_closes=timezone.now() + timedelta(days=7),
         )
-        listing.status = Listing.Status.SOLD
-        listing.save()
+        if listing.source != 'new':
+            listing.status = Listing.Status.SOLD
+            listing.save()
 
         try:
             from prevent.fit_profile import update_fit_size_profile

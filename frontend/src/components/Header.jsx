@@ -21,7 +21,7 @@ const Header = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const { cart } = useCart();
+  const { cart, cartItemCount } = useCart();
   const [searchText, setSearchText] = useState(searchParams.get('q') || '');
   const [menuOpen, setMenuOpen] = useState(false);
   const [credits, setCredits] = useState(null);
@@ -170,9 +170,9 @@ const Header = () => {
             className="cursor-pointer flex items-center gap-1 px-1 sm:px-2 py-1"
           >
             <div className="relative">
-              {cart.length > 0 && (
+              {cartItemCount > 0 && (
                 <span className="absolute -top-1.5 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-[#febd69] rounded-full text-[#131921] font-bold text-[10px] sm:text-xs flex items-center justify-center">
-                  {cart.length}
+                  {cartItemCount}
                 </span>
               )}
               <ShoppingCart className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
