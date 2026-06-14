@@ -1,0 +1,4 @@
+Two notes for you
+I installed the Django stack into your global Python 3.13 to run migrations/tests (Postgres psycopg2 skipped — it's prod-only; I overrode DATABASE_URL to SQLite only for the test commands, no files changed). Your requirements.txt is untouched and still correct for deployment.
+Frontend is intentionally untouched, per your call. When you wire it: checkout posts {cart:[{listing_id, size?}]} to /api/prevent/risk/ and renders nudge_text / bracket_nudge / show_rich_content; the return wizard posts {order_id, reason, accept} to /api/prevent/keep/. The vest-on-window-close cron (turning queued → vested and crediting the Green wallet) is Pillar 5 — ReturnDeflection.is_due is the hook for it.
+Want me to write that vesting job (the Pillar 4→5 bridge) next, or leave it for the Green Credits work?
