@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../Header';
-import api, { generateHealthCard } from '../../api/client';
+import api, { generateHealthCard, suggestCatalog } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { getTier, TIER_INFO, TIER_PHOTO_PROMPTS } from '../../utils/tier';
+// v2: photo prompts come from the CATEGORY profile, not the price tier (Q1/Q7).
+import { capturePrompts, isElectronics } from '../../utils/categoryProfiles';
 
 const CATEGORIES = [
   'Electronics', 'Footwear', 'Clothing', 'Home & Kitchen',
@@ -194,8 +196,12 @@ const SellIt = () => {
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Electronics');
-  const [mrp, setMrp] = useState('');            // original price → drives tier
-  const [price, setPrice] = useState('');         // asking price
+  const [mrp, setMrp] = useState('');            // original price (from catalog match)
+  const [price, setPrice] = useState('');         // asking price (system-suggested)
+  // v2 (point 3): catalog match → MRP + suggested price (no manual MRP typing)
+  const [catalogResults, setCatalogResults] = useState([]);
+  const [catalogMatched, setCatalogMatched] = useState(false);
+  const [suggestedPrice, setSuggestedPrice] = useState(null);
   const [description, setDescription] = useState('');
   const [conditionSummary, setConditionSummary] = useState('');
 
@@ -220,26 +226,64 @@ const SellIt = () => {
   const [createdListing, setCreatedListing] = useState(null);
   const [routeResult, setRouteResult] = useState(null);
 
+  // Risk tier (value-based) still drives guarantee/inspection wording, but is
+  // NOT shown to the customer as "Tier N" (Q5). Photo prompts are category-driven.
   const tier = getTier(mrp);
   const tierInfo = TIER_INFO[tier];
-  const prompts = TIER_PHOTO_PROMPTS[tier];
+  const electronics = isElectronics(category);
+  const prompts = capturePrompts(category);
   const coverFile = photoSlots.front || Object.values(photoSlots)[0] || null;
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login');
   }, [user, authLoading, navigate]);
 
-  const runGrading = async (file, cat) => {
+  // v2 (point 3): debounced catalog lookup as the seller types the product name
+  useEffect(() => {
+    if (catalogMatched || title.trim().length < 3) { setCatalogResults([]); return; }
+    const t = setTimeout(() => {
+      suggestCatalog({ q: title.trim(), category, grade: gradeResult?.grade || 'B' })
+        .then((res) => setCatalogResults(res.data.results || []))
+        .catch(() => setCatalogResults([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [title, category, catalogMatched]);   // eslint-disable-line
+
+  const pickCatalog = (item) => {
+    setTitle(item.title);
+    setCategory(item.category || category);
+    setMrp(String(item.mrp));                 // MRP set from catalog, not typed
+    setSuggestedPrice(item.suggested_price);
+    setPrice(String(item.suggested_price));   // pre-fill suggested resale price
+    if (item.image && !description) setDescription(item.brand ? `${item.brand} · ${item.title}` : item.title);
+    setCatalogMatched(true);
+    setCatalogResults([]);
+  };
+
+  // v2 (point 2): which required angles are still missing for this category.
+  const requiredKeys = prompts.filter((p) => p.required).map((p) => p.key);
+  const missingRequired = requiredKeys.filter((k) => !photoSlots[k]);
+  const canGrade = missingRequired.length === 0;
+
+  // Grade the FULL set of uploaded photos (not just the front image).
+  const runGradingMulti = async () => {
+    if (!canGrade) {
+      setGradeError(`Please add all required photos first: ${missingRequired.join(', ')}`);
+      return;
+    }
     setGrading(true);
     setGradeResult(null);
     setGradeError('');
     try {
       const fd = new FormData();
-      fd.append('image', file);
-      fd.append('category', cat);
+      // Send every captured angle; the cover/front goes first.
+      const ordered = Object.entries(photoSlots).sort(([a], [b]) =>
+        (a === 'front' ? -1 : b === 'front' ? 1 : 0));
+      ordered.forEach(([, file]) => fd.append('images', file));
+      fd.append('category', category);
       fd.append('operator', 'seller');
-      fd.append('include_heatmap', 'true');
-      const res = await api.post('/api/grade/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      fd.append('skip_match', 'true');   // seller's own item — no fraud/instance gate
+      const res = await api.post('/api/grade/inspect/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setGradeResult(res.data);
       if (!conditionSummary && res.data.condition_summary) setConditionSummary(res.data.condition_summary);
     } catch {
@@ -256,10 +300,9 @@ const SellIt = () => {
       if (prev[slotKey]) URL.revokeObjectURL(prev[slotKey]);
       return { ...prev, [slotKey]: URL.createObjectURL(file) };
     });
-    // The cover/front photo drives the AI grade
-    if (slotKey === 'front' || (!photoSlots.front && Object.keys(photoSlots).length === 0)) {
-      runGrading(file, category);
-    }
+    // v2: do NOT grade per-image; the user grades the whole set once all required
+    // angles are uploaded (see the "Grade my item" button).
+    setGradeResult(null);
   };
 
   const handleSubmit = async (e) => {
@@ -268,8 +311,9 @@ const SellIt = () => {
     if (!mrp)           { setError('Original price is required — it determines the inspection tier.'); return; }
     if (!price)         { setError('Asking price is required.'); return; }
     if (parseFloat(price) <= 0) { setError('Asking price must be greater than 0.'); return; }
-    if (!coverFile)     { setError('Please add at least the front photo so the AI can grade your item.'); return; }
-    if (tier === 2 && !batteryPct) { setError('Battery health is required for electronics in this tier.'); return; }
+    if (missingRequired.length) { setError(`Please add all required photos: ${missingRequired.join(', ')}`); return; }
+    if (!gradeResult)   { setError('Please tap "Grade my item" so the AI can assess all your photos first.'); return; }
+    if (electronics && tier >= 2 && !batteryPct) { setError('Battery health is required for electronics.'); return; }
     if (!declared)      { setError('Please confirm the ownership & condition declaration.'); return; }
 
     try {
@@ -284,6 +328,11 @@ const SellIt = () => {
       formData.append('mrp', mrp);
       formData.append('condition_summary', conditionSummary.trim());
       formData.append('image', coverFile);
+      // v2 (point 2): reuse the multi-image grade instead of re-grading one image
+      if (gradeResult?.grade) {
+        formData.append('grade_override', gradeResult.grade);
+        formData.append('completeness_override', String(gradeResult.completeness ?? 1.0));
+      }
 
       const res = await api.post('/api/listings/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -337,7 +386,7 @@ const SellIt = () => {
     );
   }
 
-  const lowBattery = tier >= 2 && batteryPct && parseInt(batteryPct, 10) < 80;
+  const lowBattery = electronics && batteryPct && parseInt(batteryPct, 10) < 80;
   const submitLabel = grading ? 'Grading photo…'
     : submitting ? 'Publishing…'
     : tier === 3 ? 'Schedule Professional Inspection'
@@ -366,9 +415,31 @@ const SellIt = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Product name <span className="text-red-500">*</span>
               </label>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+              <input type="text" value={title}
+                onChange={(e) => { setTitle(e.target.value); setCatalogMatched(false); }}
                 placeholder="Start typing your product name… e.g. Sony WH-1000XM4"
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#febd69] focus:ring-1 focus:ring-[#febd69] text-sm" />
+              {/* v2 (point 3): catalog matches — pick one to auto-fill MRP + price */}
+              {catalogResults.length > 0 && (
+                <div className="mt-1 border border-gray-200 rounded-lg divide-y bg-white shadow-sm max-h-60 overflow-y-auto">
+                  {catalogResults.map((c) => (
+                    <button key={c.asin} type="button" onClick={() => pickCatalog(c)}
+                      className="w-full flex items-center gap-2 p-2 text-left hover:bg-yellow-50">
+                      <img src={c.image} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
+                      <span className="min-w-0 flex-grow">
+                        <span className="block text-xs font-medium text-gray-800 line-clamp-1">{c.title}</span>
+                        <span className="block text-[10px] text-gray-400">
+                          MRP ₹{c.mrp.toLocaleString('en-IN')} · suggest ₹{c.suggested_price.toLocaleString('en-IN')}
+                          {c.rating ? ` · ★${c.rating}` : ''}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {catalogMatched && (
+                <p className="mt-1 text-[11px] text-green-700">✓ Matched to catalogue — MRP set automatically.</p>
+              )}
             </div>
 
             <div>
@@ -398,16 +469,16 @@ const SellIt = () => {
               </div>
             </div>
 
-            {/* Tier badge — appears once MRP entered */}
+            {/* v2: buyer-protection badge — guarantee + inspection only, NO "Tier N" (Q5) */}
             {mrp && (
               <div className="rounded-lg p-3 border" style={{ background: tierInfo.bg, borderColor: tierInfo.color + '40' }}>
                 <div className="flex items-center justify-between">
-                  <p className="font-black text-sm" style={{ color: tierInfo.color }}>{tierInfo.label} · {tierInfo.range}</p>
+                  <p className="font-black text-sm" style={{ color: tierInfo.color }}>Buyer protection</p>
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/70" style={{ color: tierInfo.color }}>
                     {tierInfo.guarantee}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">{tierInfo.blurb} · {tierInfo.inspection}</p>
+                <p className="text-xs text-gray-600 mt-1">{tierInfo.inspection}</p>
               </div>
             )}
           </div>
@@ -416,10 +487,10 @@ const SellIt = () => {
           {mrp && (
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1">
-                Step 2 — Photos <span className="text-gray-400 font-normal text-xs">({tierInfo.label} requires {prompts.filter(p => p.required).length})</span>
+                Step 2 — Photos <span className="text-gray-400 font-normal text-xs">({category} — {prompts.filter(p => p.required).length} required)</span>
               </h2>
               <p className="text-xs text-gray-400 mb-3">
-                Grading as <span className="font-semibold text-[#232F3E]">{category}</span> — the front photo is graded by AI instantly.
+                Grading as <span className="font-semibold text-[#232F3E]">{category}</span> — upload all required angles, then tap <b>Grade my item</b>.
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -452,6 +523,23 @@ const SellIt = () => {
                 ))}
               </div>
 
+              {/* v2 (point 2): grade the whole set; gated on all required angles */}
+              <div className="mt-3 flex items-center gap-3">
+                <button type="button" onClick={runGradingMulti} disabled={!canGrade || grading}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors
+                    ${canGrade && !grading ? 'bg-[#232F3E] text-[#febd69] hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  {grading ? 'Grading…' : gradeResult ? 'Re-grade' : 'Grade my item'}
+                </button>
+                {!canGrade && (
+                  <span className="text-xs text-amber-600">
+                    Add required photos: {missingRequired.join(', ')}
+                  </span>
+                )}
+                {canGrade && !gradeResult && !grading && (
+                  <span className="text-xs text-gray-400">All required photos added — ready to grade.</span>
+                )}
+              </div>
+
               {grading && (
                 <div className="mt-3 flex items-center gap-2 text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5">
                   <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -463,8 +551,8 @@ const SellIt = () => {
             </div>
           )}
 
-          {/* Step 2b — Tier 2/3 functional details */}
-          {mrp && tier >= 2 && (
+          {/* Step 2b — functional details (electronics only — v2 Q7: a shoe never sees this) */}
+          {mrp && electronics && (
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 space-y-4">
               <h2 className="text-sm sm:text-base font-bold text-gray-800">
                 Step 2b — Device details
@@ -474,7 +562,7 @@ const SellIt = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Battery health %{tier === 2 && <span className="text-red-500"> *</span>}
+                    Battery health %{electronics && <span className="text-red-500"> *</span>}
                   </label>
                   <input type="number" value={batteryPct} onChange={(e) => setBatteryPct(e.target.value)}
                     placeholder="e.g. 91" min="0" max="100"

@@ -17,11 +17,13 @@ const GRADE_LABELS = {
   D: 'Acceptable',
 };
 
+// v2 (point 7): two trust badges only. Renewed = authorized-center refurb;
+// everything else second-life is "Revive".
 const SOURCE_LABEL = {
-  p2p:       { text: 'REVIVE',    style: 'bg-[#232F3E] text-[#febd69]' },
-  renewed:   { text: 'Renewed',   style: 'bg-[#007185] text-white' },
-  warehouse: { text: 'Warehouse', style: 'bg-[#565959] text-white' },
-  return:    { text: 'Returned',  style: 'bg-gray-400 text-white' },
+  renewed:   { text: 'Renewed by Amazon', style: 'bg-[#007185] text-white' },
+  p2p:       { text: 'Revive', style: 'bg-[#232F3E] text-[#febd69]' },
+  warehouse: { text: 'Revive', style: 'bg-[#232F3E] text-[#febd69]' },
+  return:    { text: 'Revive', style: 'bg-[#232F3E] text-[#febd69]' },
 };
 
 const Product = ({ id, title, price, description, category, image, grade, source }) => {

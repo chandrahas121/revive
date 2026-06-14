@@ -54,6 +54,9 @@ class ListingSerializer(serializers.ModelSerializer):
             'grade', 'grade_display', 'condition_summary',
             'completeness', 'price', 'geohash5', 'status',
             'chosen_path', 'tier', 'ev_data',
+            # v2: condition_label + disposition are buyer-facing; risk_tier is
+            # intentionally NOT exposed here (backend-only, §2 Axis B).
+            'condition_label', 'disposition',
             'seller_name', 'image', 'created_at',
         )
 
@@ -74,6 +77,9 @@ class CreateListingSerializer(serializers.Serializer):
     mrp = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=None)
     geohash5 = serializers.CharField(max_length=10, required=False, allow_blank=True, default='')
     condition_summary = serializers.CharField(required=False, allow_blank=True, default='')
+    # v2: live location → geohash encoded server-side if geohash5 not supplied
+    lat = serializers.FloatField(required=False, allow_null=True, default=None)
+    lng = serializers.FloatField(required=False, allow_null=True, default=None)
 
 
 class OrderSerializer(serializers.ModelSerializer):

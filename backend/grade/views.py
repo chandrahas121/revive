@@ -275,13 +275,17 @@ class InspectAndRouteView(APIView):
         except (TypeError, ValueError):
             mrp = 1000.0
 
+        # v2: seller listing their OWN item (Sell It) passes skip_match=true, so the
+        # fraud/instance gate (meant for returns) is bypassed. Dedup still runs.
+        skip_match = str(request.data.get('skip_match', '')).lower() in ('true', '1', 'yes')
+
         # Read the cover image bytes once (used for the match gate + heatmap)
         cover_bytes = images[0].read() if images else None
         if cover_bytes is not None:
             images[0].seek(0)
 
         # ── Fraud gate: does the photo match the product being returned? ───────
-        if cover_bytes is not None:
+        if cover_bytes is not None and not skip_match:
             try:
                 from ml.verify import verify_match
                 match = verify_match(cover_bytes, expected_category=category, expected_title=expected_title)
@@ -301,6 +305,46 @@ class InspectAndRouteView(APIView):
                         "Please scan the correct item."
                     ),
                 }, status=status.HTTP_200_OK)
+
+            # ── Instance gate (v2 Q4): is it the SAME model, not just the same
+            #    category? Compare against the catalog reference via DINOv2/CLIP. ─
+            try:
+                from ml.catalog import get_reference_bytes
+                from ml.instance_match import instance_match
+                ref_bytes = get_reference_bytes(category)
+                inst = instance_match(cover_bytes, ref_bytes)
+                if inst.get('checked') and not inst.get('match'):
+                    return Response({
+                        'match': False,
+                        'instance_match': inst,
+                        'message': (
+                            f"This doesn't look like the same {expected_title or category} "
+                            "in our catalogue (different model/variant). Please scan the correct item."
+                        ),
+                    }, status=status.HTTP_200_OK)
+            except Exception as e:
+                logger.warning(f"instance_match failed, failing open: {e}")
+
+        # ── Duplicate-photo gate (v2 Q6): reject the same shot in many slots ────
+        if len(images) > 1:
+            try:
+                from ml.image_dedup import find_duplicates
+                _all_bytes = []
+                for f in images:
+                    _all_bytes.append(f.read()); f.seek(0)
+                dups = find_duplicates(_all_bytes)
+                if dups:
+                    return Response({
+                        'match': True,
+                        'duplicate_photos': True,
+                        'duplicate_pairs': dups,
+                        'message': (
+                            "Some photos look identical. Please capture each angle "
+                            "separately (e.g. front, back, soles) so we can verify the item."
+                        ),
+                    }, status=status.HTTP_200_OK)
+            except Exception as e:
+                logger.warning(f"duplicate check failed, skipping: {e}")
 
         # ── Grade: video → multi-image → single ───────────────────────────────
         grade_result = None

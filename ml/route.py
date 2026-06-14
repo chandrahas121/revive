@@ -162,12 +162,24 @@ _GRADE_TO_COND_ORD: Dict[str, float] = {"A": 5.0, "B": 4.0, "C": 3.0, "D": 1.0}
 
 def _predict_price(grade: str, category: str, mrp: float = 1000.0) -> float:
     """
-    Predict resale price using LightGBM (Mercari-trained) or heuristic fallback.
-
-    Supports two artifact formats:
-      • "lgbm_tfidf_svd_v2"  — new TF-IDF + SVD pipeline (train_price_model.py v2)
-      • legacy dict / bare model — old 10-column tabular format (backward compatible)
+    Predict resale price. Order of preference:
+      1. Trained Keras MLP ensemble (ml/price_keras.py) if its artifacts exist
+      2. LightGBM artifact (price_model.pkl) — TF-IDF+SVD or legacy tabular
+      3. Heuristic: mrp × GRADE_RECOVERY
     """
+    # 1) Trained Keras ensemble (model1_best.keras + model2_best.keras + vectorizers)
+    try:
+        from ml.price_keras import predict_price_inr as _keras_price
+    except Exception:
+        try:
+            from price_keras import predict_price_inr as _keras_price
+        except Exception:
+            _keras_price = None
+    if _keras_price is not None:
+        kp = _keras_price(grade, category, mrp)
+        if kp is not None:
+            return float(kp)
+
     artifact = _load_price_model()
     if artifact is not None:
         try:
@@ -537,6 +549,25 @@ def _compute_refurb_cost(defects: List[Dict]) -> float:
     return total
 
 
+# v2 (Q9): per-defect price deduction for selling AS-IS. The cosmetic grade sets
+# the base recovery; specific defects then deduct a severity-weighted fraction of
+# MRP so a cracked screen costs more than a light scuff — not just a letter grade.
+_DEFECT_SEVERITY_DEDUCT = {"minor": 0.02, "moderate": 0.06, "severe": 0.15}
+
+
+def _apply_defect_discount(price: float, defects: List[Dict], mrp: float) -> float:
+    """Reduce the as-is price by a severity-weighted, MRP-scaled defect penalty
+    (capped at 50% of MRP). Returns the discounted price, floored at 5% of MRP."""
+    if not defects:
+        return price
+    deduction = 0.0
+    for d in defects:
+        sev = d.get("severity", "minor")
+        deduction += _DEFECT_SEVERITY_DEDUCT.get(sev, 0.02) * mrp
+    deduction = min(deduction, mrp * 0.5)
+    return max(mrp * 0.05, price - deduction)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # TIER LOGIC  (from final_idea.md §3 Rule 3 + §4 Pillar 2 tier table)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -550,7 +581,27 @@ DECAY_FACTOR = 0.05      # holding cost grows 5% per day
 SELL_THRESHOLD = 50.0    # min expected local value (₹) to flag as SELL
 
 
-def _get_tier(mrp: float) -> int:
+# v2: risk-tier (value × fraud-risk) + disposition gate. Imported lazily so
+# route.py still works if the new modules are absent (falls back to price tier).
+try:
+    from ml.risk_tier import tier_int as _tier_int_fn, risk_tier as _risk_tier_fn
+    from ml.category_profiles import is_electronics as _is_electronics_fn
+    from ml.disposition import disposition as _disposition_fn
+    _V2 = True
+except Exception:  # pragma: no cover
+    try:
+        from risk_tier import tier_int as _tier_int_fn, risk_tier as _risk_tier_fn
+        from category_profiles import is_electronics as _is_electronics_fn
+        from disposition import disposition as _disposition_fn
+        _V2 = True
+    except Exception:
+        _V2 = False
+
+
+def _get_tier(mrp: float, category: str = "") -> int:
+    """Legacy integer tier (1/2/3). v2: derived from risk_tier(mrp, category)."""
+    if _V2:
+        return _tier_int_fn(mrp, category)
     if mrp < TIER1_LIMIT:
         return 1
     if mrp <= TIER2_LIMIT:
@@ -559,6 +610,7 @@ def _get_tier(mrp: float) -> int:
 
 
 _ROUTE_LABEL: Dict[str, str] = {
+    "restock_new":      "Restock as New",
     "resell_p2p":       "Resell Nearby",
     "resell_warehouse": "Resell City-Wide",
     "refurbish":        "Refurbish & Resell",
@@ -567,6 +619,7 @@ _ROUTE_LABEL: Dict[str, str] = {
 }
 
 _CUSTOMER_MESSAGE: Dict[str, str] = {
+    "restock_new":      "Good news — this is unused, so it goes back as new",
     "resell_p2p":       "Your item will be resold to someone nearby",
     "resell_warehouse": "Your item will be listed city-wide on Amazon Resale",
     "refurbish":        "Your item will be professionally refurbished and resold",
@@ -575,23 +628,23 @@ _CUSTOMER_MESSAGE: Dict[str, str] = {
 }
 
 
-def _apply_tier_rules(chosen_path: str, tier: int, dist_to_cluster_km: float) -> str:
+def _apply_tier_rules(chosen_path: str, tier: int, dist_to_cluster_km: float,
+                      category: str = "") -> str:
     """
-    Hard routing rules that override the EV optimizer (from final_idea.md §4 Pillar 2).
+    Physical-route eligibility rules (final_idea_v2.md §7). These constrain HOW a
+    resell item ships — they do NOT decide whether to resell/refurbish/donate
+    (that is the Disposition Gate's job in route_item, Stage 0).
 
-    Tier 1 (<₹2,000):  all routes allowed
-    Tier 2 (₹2k–10k):  Route B (kirana relay for long-distance P2P) BLOCKED.
-                        resell_p2p only if buyer within 5 km (Route A, Flex agent).
-    Tier 3 (>₹10,000): ALWAYS SPN refurb node — overrides even donate, because
-                        the SPN node does a professional inspection and decides
-                        final disposition. Only recycle (hazardous) is exempted.
+    The ONLY hard rule here: the kirana-relay (Route B) is blocked for fraud-prone
+    ELECTRONICS that can't be verified at a counter — a ₹6,000 phone must use
+    city-wide/agent, but a ₹6,000 Nike shoe keeps its kirana-relay option.
+    (The old "HIGH tier always refurbishes" rule was removed — disposition now
+    decides RENEWED_SPN, so a like-new open-box phone is no longer force-refurbished.)
     """
-    if tier == 3:
-        # Tier 3: always refurbish via SPN node (Route C2) — final_idea.md §3 Rule 3
-        if chosen_path != "recycle":
-            return "refurbish"
-    elif tier == 2:
-        # Tier 2: Route B blocked — P2P only for nearby buyers (≤5 km)
+    electronics = _is_electronics_fn(category) if _V2 else (tier >= 2)
+
+    if tier >= 2 and electronics:
+        # Electronics relay block — long-distance P2P must use city-wide (no kirana)
         if chosen_path == "resell_p2p" and dist_to_cluster_km > 5.0:
             return "resell_warehouse"
     return chosen_path
@@ -666,6 +719,12 @@ def route_item(
     geohash5: Optional[str] = None,
     mrp: float = 1000.0,
     product_id: str = "unknown",
+    *,
+    sealed: bool = False,
+    opened: bool = True,
+    verified_match: bool = True,
+    complete: bool = True,
+    functional_pass: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Route a graded return item to its highest-value second life.
@@ -687,8 +746,11 @@ def route_item(
     """
     defects = defects or []
 
-    # ── Step 1: Price prediction (LightGBM Mercari-trained) ──────────────────
+    # ── Step 1: Price prediction (catalog-MRP-anchored, grade-adjusted) ───────
     price = _predict_price(grade, category, mrp)
+    # v2 (Q9): deduct a severity-weighted penalty for the specific defects found,
+    # so pricing reflects condition + defects, not just the letter grade.
+    price = _apply_defect_discount(price, defects, mrp)
 
     # ── Step 2: Geohash demand gravity lookup ─────────────────────────────────
     demand_info = _demand_lookup(geohash5 or "tbxx1", category)
@@ -722,24 +784,63 @@ def route_item(
         "recycle":          round(ev_recycle, 2),
     }
 
-    # ── Step 6: Tier determination (overrides EV for high-value items) ─────────
-    tier = _get_tier(mrp)
+    # ── Step 6: Risk tier (backend-only) ──────────────────────────────────────
+    tier = _get_tier(mrp, category)
 
-    # ── Step 7: argmax EV ─────────────────────────────────────────────────────
+    # ── Step 6b: Stage 0 Disposition Gate (v2 §6) ─────────────────────────────
+    # Decides whether the item restocks as NEW / open-box / used / renewed /
+    # recycle. Flags not available to the router default conservatively
+    # (opened, unsealed); the listing/return flow passes richer flags via the
+    # backend when it has them.
+    disp = None
+    if _V2:
+        disp = _disposition_fn(
+            grade=grade,
+            category=category,
+            sealed=bool(sealed),
+            opened=bool(opened),
+            verified_match=bool(verified_match),
+            complete=bool(complete),
+            functional_pass=functional_pass,
+            safe=(grade != "F"),
+            refurb_economical=(ev_refurbish > 0),
+        )
+
+    # ── Step 7: choose the path ───────────────────────────────────────────────
     max_path = max(ev_breakdown, key=lambda k: ev_breakdown[k])
     max_ev = ev_breakdown[max_path]
+    donation_floor = ev_donate  # = mrp × (tax_benefit + brand_value)
 
-    # REVIVE spec: if max(EV) < donation_tax_benefit + brand_value → donate
-    donation_floor = ev_donate  # already = mrp × (tax_benefit + brand_value)
-    if max_ev < donation_floor:
-        chosen_path = "donate"
-    elif grade == "D" and ev_refurbish < 0 and max_path in ("resell_p2p", "resell_warehouse"):
-        chosen_path = "donate" if ev_donate > ev_recycle else "recycle"
+    if disp is not None:
+        # v2: the Disposition Gate is AUTHORITATIVE for the destination class.
+        # The EV optimizer only chooses the physical resell route (p2p vs city-wide)
+        # for items that are actually being resold — it can no longer override the
+        # disposition into donate/refurbish (that was the donate/refurbish bug).
+        outcome = disp["outcome"]
+        if outcome == "RESTOCK_NEW":
+            chosen_path = "restock_new"
+        elif outcome == "RECYCLE_DONATE":
+            chosen_path = "donate" if ev_donate >= ev_recycle else "recycle"
+        elif outcome == "RENEWED_SPN":
+            chosen_path = "refurbish"
+        else:  # OPEN_BOX / USED_P2P → resell; pick the better resell route by EV
+            chosen_path = "resell_p2p" if ev_p2p >= ev_warehouse else "resell_warehouse"
     else:
-        chosen_path = max_path
+        # Legacy (no v2 modules): original EV argmax with donation floor
+        if max_ev < donation_floor:
+            chosen_path = "donate"
+        elif grade in ("D", "E") and ev_refurbish < 0 and max_path in ("resell_p2p", "resell_warehouse"):
+            chosen_path = "donate" if ev_donate > ev_recycle else "recycle"
+        else:
+            chosen_path = max_path
 
-    # Apply hard tier routing rules (final_idea.md §4 Pillar 2 tier table)
-    chosen_path = _apply_tier_rules(chosen_path, tier, dist_to_cluster_km)
+    # Physical-route eligibility (electronics kirana block) — resell paths only
+    if chosen_path in ("resell_p2p", "resell_warehouse"):
+        chosen_path = _apply_tier_rules(chosen_path, tier, dist_to_cluster_km, category)
+
+    # A restocked-as-new item is sold at full catalog price, not a resale discount.
+    if chosen_path == "restock_new":
+        price = mrp
 
     # ── Step 8: Environmental impact ─────────────────────────────────────────
     if "p2p" in chosen_path:
@@ -764,8 +865,12 @@ def route_item(
         "listing_id":             listing_id,
         "chosen_path":            chosen_path,
         "route_label":            _ROUTE_LABEL.get(chosen_path, chosen_path),
-        "customer_message":       _CUSTOMER_MESSAGE.get(chosen_path, ""),
+        "customer_message":       (disp["customer_message"] if disp else _CUSTOMER_MESSAGE.get(chosen_path, "")),
         "tier":                   tier,
+        "risk_tier":              (_risk_tier_fn(mrp, category) if _V2 else None),
+        "disposition":            (disp["outcome"] if disp else None),
+        "condition_label":        (disp["condition_label"] if disp else None),
+        "enters_revive":          (disp["enters_revive"] if disp else True),
         "ev_breakdown":           ev_breakdown,
         "price":                  round(price, 2),
         "price_post_refurb":      round(post_refurb_price, 2),

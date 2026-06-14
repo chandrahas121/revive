@@ -7,9 +7,10 @@ import { getCredits } from "../api/client";
 
 const NAV_ITEMS = (user, navigate, close) => [
   { label: 'All',          action: () => { navigate('/'); close(); } },
-  { label: 'Shop Revive',  action: () => { navigate('/?source=p2p'); close(); }, highlight: true },
+  // v2 (point 7): only two second-life surfaces — Revive (AI-scanned seller/return
+  // items) and Renewed (Amazon authorized-center refurbished). No Warehouse/Returns.
+  { label: 'Shop Revive',  action: () => { navigate('/?source=revive'); close(); }, highlight: true },
   { label: 'Renewed',      action: () => { navigate('/?source=renewed'); close(); } },
-  { label: 'Warehouse',    action: () => { navigate('/?source=warehouse'); close(); } },
   { label: 'Sell Unused Items', action: () => { navigate('/sell'); close(); } },
   ...(user ? [{ label: 'My Listings', action: () => { navigate('/my-listings'); close(); } }] : []),
   ...(user ? [{ label: 'Green Credits', action: () => { navigate('/credits'); close(); } }] : []),

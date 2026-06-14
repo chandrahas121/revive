@@ -4,6 +4,11 @@ import Header from '../components/Header'
 import Banner, { TrustStrip } from '../components/Banner'
 import ProductFeed from '../components/ProductFeed'
 import api, { getRecommendations } from '../api/client'
+import { useLocation as useGeoLocation } from '../hooks/useLocation'
+
+// v2 (point 6): location is requested ONCE (silent browser permission prompt) and
+// then used only to sort the storefront nearest-first — exactly like Amazon, which
+// uses your location quietly rather than showing a "deals near you" banner.
 
 const GRADE_PILL = {
   A: 'bg-green-100 text-green-800', B: 'bg-yellow-100 text-yellow-800',
@@ -51,15 +56,25 @@ const HomePage = () => {
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const { location, status, request } = useGeoLocation()
+
+  // Ask for location permission exactly once (no persistent banner).
+  useEffect(() => {
+    if (!location && status === 'idle') request()
+  }, [location, status, request])
 
   const searchQuery = searchParams.get('q') || ''
   const sourceFilter = searchParams.get('source') || ''
+  const conditionFilter = searchParams.get('condition') || ''
 
   useEffect(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (searchQuery) params.set('q', searchQuery)
     if (sourceFilter) params.set('source', sourceFilter)
+    if (conditionFilter) params.set('condition', conditionFilter)
+    // v2: "Near me" — sort the storefront by proximity to the buyer's live location
+    if (location) { params.set('lat', location.lat); params.set('lng', location.lng) }
 
     api.get(`/api/listings/?${params.toString()}`)
       .then((res) => {
@@ -80,7 +95,7 @@ const HomePage = () => {
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
-  }, [searchQuery, sourceFilter])
+  }, [searchQuery, sourceFilter, conditionFilter, location])
 
   return (
     <div className="bg-[#EAEDED] min-h-screen">

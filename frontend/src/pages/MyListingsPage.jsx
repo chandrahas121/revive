@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import api from '../api/client';
+import api, { manageListing } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const STATUS_CONFIG = {
   listed:          { label: 'Active',          style: 'bg-green-100 text-green-800 border-green-200',  dot: 'bg-green-500' },
   pending:         { label: 'Pending Verify',  style: 'bg-yellow-100 text-yellow-800 border-yellow-200', dot: 'bg-yellow-400' },
+  paused:          { label: 'Paused',          style: 'bg-amber-100 text-amber-800 border-amber-200',  dot: 'bg-amber-400' },
+  delisted:        { label: 'Delisted',        style: 'bg-gray-100 text-gray-500 border-gray-200',     dot: 'bg-gray-400' },
   sold:            { label: 'Sold',            style: 'bg-gray-100 text-gray-600 border-gray-200',     dot: 'bg-gray-400' },
   warehouse_bound: { label: 'Warehouse Bound', style: 'bg-blue-100 text-blue-700 border-blue-200',     dot: 'bg-blue-400' },
   donated:         { label: 'Donated',         style: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-400' },
@@ -37,7 +39,7 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const ListingRow = ({ listing, navigate }) => {
+const ListingRow = ({ listing, navigate, onManage, busy }) => {
   const statusCfg = STATUS_CONFIG[listing.status] || STATUS_CONFIG.listed;
   const gradeCfg = GRADE_CONFIG[listing.grade] || '';
   const isSold = listing.status === 'sold';
@@ -105,14 +107,42 @@ const ListingRow = ({ listing, navigate }) => {
               </span>
             </div>
 
-            {/* Action button */}
-            {listing.status === 'listed' && (
-              <button
-                onClick={() => navigate(`/product/${listing.id}`)}
-                className="text-xs font-semibold text-[#007185] hover:text-[#c45500] hover:underline transition-colors"
-              >
-                View listing →
-              </button>
+            {/* Action buttons (v2 Q3 — delist / pause / relist) */}
+            {(listing.status === 'listed' || listing.status === 'paused' || listing.status === 'delisted') && (
+              <div className="flex items-center gap-2">
+                {listing.status === 'listed' && (
+                  <>
+                    <button
+                      onClick={() => navigate(`/product/${listing.id}`)}
+                      className="text-xs font-semibold text-[#007185] hover:underline"
+                    >View</button>
+                    <button
+                      disabled={busy}
+                      onClick={() => onManage(listing.id, 'pause')}
+                      className="text-xs font-semibold text-amber-700 hover:underline disabled:opacity-50"
+                    >Pause</button>
+                    <button
+                      disabled={busy}
+                      onClick={() => onManage(listing.id, 'delist')}
+                      className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+                    >Delist</button>
+                  </>
+                )}
+                {(listing.status === 'paused' || listing.status === 'delisted') && (
+                  <button
+                    disabled={busy}
+                    onClick={() => onManage(listing.id, 'relist')}
+                    className="text-xs font-semibold text-green-700 hover:underline disabled:opacity-50"
+                  >Relist</button>
+                )}
+                {listing.status === 'paused' && (
+                  <button
+                    disabled={busy}
+                    onClick={() => onManage(listing.id, 'delist')}
+                    className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+                  >Delist</button>
+                )}
+              </div>
             )}
             {listing.status === 'sold' && (
               <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
@@ -150,6 +180,19 @@ const MyListingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [busyId, setBusyId] = useState(null);
+
+  const handleManage = async (id, action) => {
+    setBusyId(id);
+    try {
+      const res = await manageListing(id, action);
+      setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: res.data.status } : l)));
+    } catch {
+      setError('Could not update the listing. Please try again.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login');
@@ -286,7 +329,13 @@ const MyListingsPage = () => {
         ) : (
           <div className="space-y-3">
             {filtered.map((listing) => (
-              <ListingRow key={listing.id} listing={listing} navigate={navigate} />
+              <ListingRow
+                key={listing.id}
+                listing={listing}
+                navigate={navigate}
+                onManage={handleManage}
+                busy={busyId === listing.id}
+              />
             ))}
           </div>
         )}

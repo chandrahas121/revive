@@ -140,8 +140,8 @@ class RouteView(APIView):
         except (TypeError, ValueError):
             return Response({'error': 'mrp must be a number'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if grade not in ('A', 'B', 'C', 'D'):
-            return Response({'error': 'grade must be one of A, B, C, D'}, status=status.HTTP_400_BAD_REQUEST)
+        if grade not in ('A', 'B', 'C', 'D', 'E', 'F'):   # v2: E (parts), F (recycle)
+            return Response({'error': 'grade must be one of A, B, C, D, E, F'}, status=status.HTTP_400_BAD_REQUEST)
 
         result = _run_route(listing_id, grade, category, defects, geohash5, mrp, product_id)
         return Response(result)
@@ -284,4 +284,53 @@ class HeatmapDataView(APIView):
             "type": "FeatureCollection",
             "category": category,
             "features": features,
+        })
+
+
+class LocalDemandView(APIView):
+    """
+    GET /api/route/local-demand/?lat=<>&lng=<>&category=<>   (or ?geohash5=<>)
+    v2: converts the buyer's live location to a geohash cell and returns the
+    local demand signal for the storefront "Near me" banner + Sell It demand hint.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        category = request.query_params.get('category', 'Electronics')
+        geohash5 = request.query_params.get('geohash5', '')
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+
+        if not geohash5 and lat is not None and lng is not None:
+            try:
+                from ml.geohash import geohash_encode
+                geohash5 = geohash_encode(float(lat), float(lng), 5)
+            except (TypeError, ValueError):
+                return Response({'error': 'lat/lng must be numbers'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                logger.warning(f"geohash_encode failed: {e}")
+
+        if not geohash5:
+            geohash5 = (request.user.geohash5
+                        if getattr(request, 'user', None) and request.user.is_authenticated else 'tdr1w')
+
+        try:
+            from ml.route import _demand_lookup
+            info = _demand_lookup(geohash5, category)
+        except Exception as e:
+            logger.warning(f"_demand_lookup failed: {e}")
+            info = {"demand_score": 0.6, "local_buyers": 30,
+                    "note": "Demand estimate unavailable", "nearest_cluster_label": ""}
+
+        score = info.get("demand_score", 0.5)
+        level = "High" if score >= 0.66 else "Moderate" if score >= 0.33 else "Low"
+        return Response({
+            "geohash5": geohash5,
+            "category": category,
+            "demand_level": level,
+            "demand_score": score,
+            "local_buyers": info.get("local_buyers", 0),
+            "note": info.get("note", ""),
+            "nearest_cluster": info.get("nearest_cluster_label", ""),
         })

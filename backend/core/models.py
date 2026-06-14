@@ -7,6 +7,9 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     return_rate = models.FloatField(default=0.0)
     geohash5 = models.CharField(max_length=10, blank=True, default='')
+    # v2: live location capture (browser geolocation) → feeds local demand / "Near me"
+    lat = models.FloatField(null=True, blank=True)
+    lng = models.FloatField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -24,6 +27,9 @@ class Product(models.Model):
     mrp = models.DecimalField(max_digits=10, decimal_places=2)
     reference_image_url = models.URLField(max_length=500)
     description = models.TextField(blank=True)
+    # v2: real catalog signals (from Amazon Reviews 2023 import)
+    rating = models.FloatField(default=0.0)
+    rating_count = models.IntegerField(default=0)
 
     def __str__(self):
         return self.title
@@ -39,14 +45,18 @@ class Listing(models.Model):
         RENEWED = 'renewed', 'Amazon Renewed'
 
     class Grade(models.TextChoices):
-        A = 'A', 'Grade A – Excellent'
-        B = 'B', 'Grade B – Good'
-        C = 'C', 'Grade C – Fair'
-        D = 'D', 'Grade D – Poor'
+        A = 'A', 'Grade A – Like New'
+        B = 'B', 'Grade B – Very Good'
+        C = 'C', 'Grade C – Good'
+        D = 'D', 'Grade D – Heavy cosmetic damage (functional)'
+        E = 'E', 'Grade E – Functional defect / for parts'   # v2 (Q8)
+        F = 'F', 'Grade F – Not resellable (recycle)'        # v2 (Q8)
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending Grading'
         LISTED = 'listed', 'Listed'
+        PAUSED = 'paused', 'Paused'           # v2 (Q3) — temporarily hidden
+        DELISTED = 'delisted', 'Delisted'     # v2 (Q3) — removed by seller
         SOLD = 'sold', 'Sold'
         DONATED = 'donated', 'Donated'
         RECYCLED = 'recycled', 'Recycled'
@@ -66,8 +76,12 @@ class Listing(models.Model):
     image_url = models.URLField(max_length=500, blank=True)
     # Pillar 2 — routing result (populated by route_item() after grading)
     chosen_path = models.CharField(max_length=30, blank=True, default='')
-    tier        = models.IntegerField(default=1)
+    tier        = models.IntegerField(default=1)   # legacy int tier (1/2/3)
     ev_data     = models.JSONField(null=True, blank=True)
+    # v2 — backend-only risk tier + disposition gate result + buyer-facing label
+    risk_tier        = models.CharField(max_length=10, blank=True, default='')   # LOW/MEDIUM/HIGH
+    disposition      = models.CharField(max_length=20, blank=True, default='')   # RESTOCK_NEW/OPEN_BOX/...
+    condition_label  = models.CharField(max_length=40, blank=True, default='')   # "Used – Very Good" etc.
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -2,13 +2,15 @@ import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Product from "./Product";
 
+// v2 (point 7): only two second-life surfaces.
+//   Revive  = AI-scanned seller listings + returns resold as-is (p2p/return/warehouse)
+//   Renewed = Amazon authorized-center refurbished
 const SOURCE_TABS = [
-  { label: 'All',       value: '' },
-  { label: 'Revive',    value: 'p2p' },
-  { label: 'Renewed',   value: 'renewed' },
-  { label: 'Warehouse', value: 'warehouse' },
-  { label: 'Returns',   value: 'return' },
+  { label: 'All',     value: '' },
+  { label: 'Revive',  value: 'revive' },
+  { label: 'Renewed', value: 'renewed' },
 ];
+const REVIVE_SOURCES = ['p2p', 'return', 'warehouse'];
 
 const ProductFeed = ({ products, loading, showHeading = true }) => {
   const navigate = useNavigate();
@@ -30,6 +32,7 @@ const ProductFeed = ({ products, loading, showHeading = true }) => {
   const getCount = (value) => {
     if (activeSource !== '') return null; // don't show counts in filtered view
     if (value === '') return products.length;
+    if (value === 'revive') return REVIVE_SOURCES.reduce((n, s) => n + (sourceCounts[s] || 0), 0);
     return sourceCounts[value] || 0;
   };
 

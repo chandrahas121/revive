@@ -122,15 +122,53 @@ class ListingListView(APIView):
         source = request.query_params.get('source')
         grade = request.query_params.get('grade')
         search = request.query_params.get('q')
+        condition = request.query_params.get('condition')   # v2: unified condition filter
 
         if category:
             qs = qs.filter(product__category__icontains=category)
         if source:
-            qs = qs.filter(source=source)
+            # v2 (point 7): two surfaces only. "revive" = AI-scanned seller/return
+            # items (p2p/return/warehouse); "renewed" = authorized-center refurb.
+            if source == 'revive':
+                qs = qs.filter(source__in=['p2p', 'return', 'warehouse'])
+            else:
+                qs = qs.filter(source=source)
         if grade:
             qs = qs.filter(grade=grade)
+        if condition:
+            qs = qs.filter(condition_label__icontains=condition)
         if search:
             qs = qs.filter(product__title__icontains=search)
+
+        # v2: "Near me" — sort by proximity to the buyer's live location if provided
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+        near_geohash = request.query_params.get('near') or ''
+        if (lat and lng) or near_geohash:
+            try:
+                from ml.geohash import geohash_encode, geohash_decode
+                from ml.route import _haversine_km
+                if lat and lng:
+                    blat, blng = float(lat), float(lng)
+                else:
+                    blat, blng = geohash_decode(near_geohash)
+                listings = list(qs[:200])
+
+                def _dist(l):
+                    if not l.geohash5:
+                        return 9_999.0
+                    slat, slng = geohash_decode(l.geohash5)
+                    return _haversine_km(blat, blng, slat, slng)
+
+                listings.sort(key=_dist)
+                data = []
+                for l in listings[:40]:
+                    d = ListingSerializer(l).data
+                    d['distance_km'] = round(_dist(l), 1)
+                    data.append(d)
+                return Response({'results': data, 'count': len(listings), 'near': True})
+            except Exception as e:
+                logger.warning(f"near-me sort failed, falling back to recency: {e}")
 
         qs = qs.order_by('-created_at')
         return Response({'results': ListingSerializer(qs[:40], many=True).data, 'count': qs.count()})
@@ -160,7 +198,16 @@ class ListingListView(APIView):
             'defects': [],
             'from_cache': False,
         }
-        if image_bytes:
+        # v2 (point 2): if the client already graded the FULL photo set (multi-image
+        # grade from /api/grade/inspect/), reuse it instead of re-grading one image.
+        grade_override = request.data.get('grade_override')
+        if grade_override in ('A', 'B', 'C', 'D', 'E', 'F'):
+            grade_result['grade'] = grade_override
+            try:
+                grade_result['completeness'] = float(request.data.get('completeness_override', 1.0))
+            except (TypeError, ValueError):
+                pass
+        elif image_bytes:
             try:
                 from ml.grade import grade_image
                 grade_result = grade_image(
@@ -181,7 +228,20 @@ class ListingListView(APIView):
         )
 
         mrp_val = data.get('mrp') or (data['price'] * Decimal('2'))
+        # v2: derive geohash from live location if no geohash5 supplied; persist on user
         geohash5 = data.get('geohash5', '') or (request.user.geohash5 if request.user else '')
+        lat, lng = data.get('lat'), data.get('lng')
+        if not geohash5 and lat is not None and lng is not None:
+            try:
+                from ml.geohash import geohash_encode
+                geohash5 = geohash_encode(float(lat), float(lng), 5)
+            except Exception as e:
+                logger.warning(f"geohash_encode failed: {e}")
+        if request.user and lat is not None and lng is not None:
+            request.user.lat, request.user.lng = float(lat), float(lng)
+            if geohash5:
+                request.user.geohash5 = geohash5
+            request.user.save(update_fields=['lat', 'lng', 'geohash5'])
 
         product = Product.objects.create(
             asin=f'P2P-{uuid.uuid4().hex[:8].upper()}',
@@ -221,6 +281,10 @@ class ListingListView(APIView):
             listing.chosen_path = route_result.get('chosen_path', '')
             listing.tier = route_result.get('tier', 1)
             listing.ev_data = route_result.get('ev_breakdown', {})
+            # v2: persist risk tier (backend-only), disposition + buyer-facing label
+            listing.risk_tier = route_result.get('risk_tier') or ''
+            listing.disposition = route_result.get('disposition') or ''
+            listing.condition_label = route_result.get('condition_label') or ''
             # If route says sell price differs, update listing price
             routed_price = route_result.get('price')
             if routed_price and routed_price > 0:
@@ -319,6 +383,81 @@ class MyListingsView(APIView):
             .order_by('-created_at')
         )
         return Response({'results': ListingSerializer(qs, many=True).data, 'count': qs.count()})
+
+
+class CatalogSuggestView(APIView):
+    """
+    GET /api/catalog/suggest/?q=<title>&category=<>&grade=<A-F>
+    v2 (point 3): catalog-match a product the seller is listing and return its
+    real MRP + a system-SUGGESTED resale price — so the seller doesn't type the
+    original price. Frontend fills MRP (locked) + suggested price (adjustable ±15%).
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        q = (request.query_params.get('q') or '').strip()
+        category = request.query_params.get('category') or ''
+        grade = request.query_params.get('grade') or 'B'
+        if len(q) < 3:
+            return Response({'results': []})
+
+        qs = Product.objects.all()
+        if category:
+            qs = qs.filter(category__icontains=category)
+        qs = qs.filter(title__icontains=q)[:8]
+
+        try:
+            from ml.route import _predict_price
+        except Exception:
+            _predict_price = None
+
+        results = []
+        for p in qs:
+            mrp = float(p.mrp)
+            suggested = (_predict_price(grade, p.category, mrp) if _predict_price
+                         else round(mrp * 0.5, 2))
+            results.append({
+                'asin': p.asin, 'title': p.title, 'brand': p.brand,
+                'category': p.category, 'mrp': mrp,
+                'image': p.reference_image_url,
+                'rating': p.rating, 'rating_count': p.rating_count,
+                'suggested_price': round(float(suggested), 2),
+                'price_band': [round(float(suggested) * 0.85, 2), round(float(suggested) * 1.15, 2)],
+            })
+        return Response({'results': results})
+
+
+class ManageListingView(APIView):
+    """
+    POST /api/listings/<pk>/manage/  — seller delist / pause / relist (v2 Q3).
+    Body: { "action": "delist" | "pause" | "relist" }
+    Soft status change only — the record is retained for history/payout/audit.
+    """
+    permission_classes = [IsAuthenticated]
+
+    _ALLOWED = {
+        'delist': Listing.Status.DELISTED,
+        'pause':  Listing.Status.PAUSED,
+        'relist': Listing.Status.LISTED,
+    }
+
+    def post(self, request, pk):
+        action = (request.data.get('action') or '').lower()
+        if action not in self._ALLOWED:
+            return Response({'error': "action must be one of: delist, pause, relist"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            listing = Listing.objects.get(pk=pk, seller=request.user)
+        except Listing.DoesNotExist:
+            return Response({'error': 'Listing not found or not yours.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        if listing.status == Listing.Status.SOLD:
+            return Response({'error': 'Sold items cannot be changed.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        listing.status = self._ALLOWED[action]
+        listing.save(update_fields=['status', 'updated_at'])
+        return Response({'id': listing.pk, 'status': listing.status,
+                         'message': f'Listing {action}ed.'})
 
 
 # ─── Order views ──────────────────────────────────────────────────────────────

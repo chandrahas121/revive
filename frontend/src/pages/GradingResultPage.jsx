@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import { inspectReturn, routeItem, generateHealthCard } from '../api/client';
-import { getTier, TIER_INFO, TIER_PHOTO_PROMPTS, estimateGreenCredits } from '../utils/tier';
+import { getTier, TIER_INFO, estimateGreenCredits } from '../utils/tier';
+// v2 (point 1): return capture prompts come from the CATEGORY, not the price tier.
+import { capturePrompts } from '../utils/categoryProfiles';
 
 const GRADE_CFG = {
   A: { label: 'Like New', desc: 'No visible defects — all accessories present.', ring: '#16a34a', gradeBg: '#dcfce7', score: 95 },
@@ -24,9 +26,9 @@ const GradingResultPage = () => {
   const category = order?.listing_category || 'Electronics';
   const productTitle = order?.listing_title || 'your item';
 
-  // Tier known up-front (drives the guided photo prompts)
-  const captureTier = order?.listing_tier || getTier(mrp);
-  const prompts = TIER_PHOTO_PROMPTS[captureTier];
+  // Category drives the guided photo prompts (a returned shoe asks for soles,
+  // a returned phone asks for a powered-on screen) — never the price tier.
+  const prompts = capturePrompts(category);
 
   const [phase, setPhase] = useState('capture');   // capture | scanning | revealed | mismatch
   const [photoSlots, setPhotoSlots] = useState({});
@@ -84,6 +86,9 @@ const GradingResultPage = () => {
 
   // ── Run the multi-angle AI inspection ───────────────────────────────────────
   const runScan = async () => {
+    // v2 (point 2): require every requested angle before grading
+    const missing = prompts.filter((s) => s.required && !photoSlots[s.key]).map((s) => s.label);
+    if (missing.length) { setScanError(`Please capture: ${missing.join(', ')}`); return; }
     setPhase('scanning');
     setScanProgress(0);
     setScanError('');
