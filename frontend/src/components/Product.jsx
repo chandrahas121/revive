@@ -4,23 +4,30 @@ import { StarIcon } from "lucide-react";
 import { useCart } from "../context/CartContext";
 
 const GRADE_STYLES = {
-  A: 'bg-green-100 text-green-800 border-green-200',
-  B: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  C: 'bg-orange-100 text-orange-800 border-orange-200',
-  D: 'bg-red-100 text-red-800 border-red-200',
+  A: 'bg-[#e6f4ea] text-[#107a45]',
+  B: 'bg-[#fbf1d9] text-[#b06f00]',
+  C: 'bg-[#fbe9dd] text-[#bd4a17]',
+  D: 'bg-[#fbe5e3] text-[#b3261e]',
+};
+
+const GRADE_LABELS = {
+  A: 'Like New',
+  B: 'Very Good',
+  C: 'Good',
+  D: 'Acceptable',
 };
 
 const SOURCE_LABEL = {
   p2p:       { text: 'REVIVE',    style: 'bg-[#232F3E] text-[#febd69]' },
-  renewed:   { text: 'Renewed',   style: 'bg-blue-600 text-white' },
-  warehouse: { text: 'Warehouse', style: 'bg-gray-600 text-white' },
+  renewed:   { text: 'Renewed',   style: 'bg-[#007185] text-white' },
+  warehouse: { text: 'Warehouse', style: 'bg-[#565959] text-white' },
   return:    { text: 'Returned',  style: 'bg-gray-400 text-white' },
 };
 
 const Product = ({ id, title, price, description, category, image, grade, source }) => {
   const navigate = useNavigate();
   const { addToCart, cart } = useCart();
-  const inCart = cart.some((item) => item.id === id);
+  const inCart = id != null && cart.some((item) => Number(item.id) === Number(id));
   const stars = grade === 'A' ? 5 : grade === 'B' ? 4 : grade === 'C' ? 3 : 2;
   const srcLabel = SOURCE_LABEL[source];
 
@@ -31,7 +38,7 @@ const Product = ({ id, title, price, description, category, image, grade, source
 
   return (
     <div
-      className="relative flex flex-col bg-white rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer p-3 sm:p-4"
+      className="relative flex flex-col bg-white rounded shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-3 sm:p-4"
       onClick={() => navigate(`/product/${id}`)}
     >
       {/* Source badge */}
@@ -43,7 +50,7 @@ const Product = ({ id, title, price, description, category, image, grade, source
 
       {/* Grade badge */}
       {grade && (
-        <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded border z-10 ${GRADE_STYLES[grade] || ''}`}>
+        <span className={`absolute top-2 right-2 text-[10px] font-black px-1.5 py-0.5 rounded z-10 ${GRADE_STYLES[grade] || ''}`}>
           {grade}
         </span>
       )}
@@ -71,25 +78,34 @@ const Product = ({ id, title, price, description, category, image, grade, source
         ))}
       </div>
 
-      {/* Description */}
-      <p className="text-[11px] sm:text-xs text-gray-500 my-1 line-clamp-2">{description}</p>
-
       {/* Price */}
-      <div className="mb-2 sm:mb-3 font-bold text-sm sm:text-base">
+      <div className="mb-0.5 font-bold text-sm sm:text-base">
         ₹{parseFloat(price).toLocaleString('en-IN')}
       </div>
+
+      {/* Condition pill + grade label */}
+      {grade && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${GRADE_STYLES[grade] || ''}`}>{grade}</span>
+          <span className="text-[11px] text-gray-500">{GRADE_LABELS[grade]}</span>
+        </div>
+      )}
+
+      {/* Free delivery */}
+      <p className="text-[11px] text-[#007600] font-medium mb-2">FREE delivery Tomorrow</p>
 
       {/* Add to cart */}
       <button
         onClick={handleAdd}
         disabled={inCart}
-        className={`mt-auto py-1.5 sm:py-2 text-xs sm:text-sm rounded transition-colors
+        className={`mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border transition-colors
           ${inCart
-            ? 'bg-gray-200 text-gray-500 cursor-default'
-            : 'bg-gradient-to-b from-yellow-200 to-yellow-400 border border-yellow-300 hover:from-yellow-300 hover:to-yellow-500'
+            ? 'bg-gray-100 text-gray-400 cursor-default border-gray-200'
+            : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'
           }`}
+        style={inCart ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
       >
-        {inCart ? 'Added' : 'Add to Cart'}
+        {inCart ? 'Added to Cart' : 'Add to Cart'}
       </button>
     </div>
   );

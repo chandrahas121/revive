@@ -10,7 +10,7 @@ const SOURCE_TABS = [
   { label: 'Returns',   value: 'return' },
 ];
 
-const ProductFeed = ({ products, loading }) => {
+const ProductFeed = ({ products, loading, showHeading = true }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSource = searchParams.get('source') || '';
@@ -22,23 +22,52 @@ const ProductFeed = ({ products, loading }) => {
     navigate(`/?${params.toString()}`);
   };
 
+  // Count per source — only reliable when showing all (activeSource === '')
+  const sourceCounts = products.reduce((acc, p) => {
+    acc[p.source] = (acc[p.source] || 0) + 1;
+    return acc;
+  }, {});
+  const getCount = (value) => {
+    if (activeSource !== '') return null; // don't show counts in filtered view
+    if (value === '') return products.length;
+    return sourceCounts[value] || 0;
+  };
+
   return (
     <div>
-      {/* Filter tabs — scrollable on mobile */}
-      <div className="flex gap-1.5 sm:gap-2 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 overflow-x-auto scrollbar-none">
-        {SOURCE_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => handleTabClick(tab.value)}
-            className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap border transition-colors flex-shrink-0
-              ${activeSource === tab.value
-                ? 'bg-[#232F3E] text-[#febd69] border-[#232F3E]'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-[#232F3E]'
-              }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Section heading */}
+      {showHeading && (
+        <div className="px-3 sm:px-4 pt-4 pb-1">
+          <h2 className="text-lg sm:text-xl font-bold text-[#0F1111]">Fresh on Revive</h2>
+        </div>
+      )}
+
+      {/* Filter tabs — Amazon underline style */}
+      <div className="bg-white border-b border-[#D5D9D9] px-3 sm:px-4 overflow-x-auto scrollbar-none mt-1">
+        <div className="flex min-w-max">
+          {SOURCE_TABS.map((tab) => {
+            const count = getCount(tab.value);
+            return (
+              <button
+                key={tab.value}
+                onClick={() => handleTabClick(tab.value)}
+                className={`px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5
+                  ${activeSource === tab.value
+                    ? 'border-[#C7511F] text-[#C7511F] font-bold'
+                    : 'border-transparent text-[#565959] hover:text-[#C7511F]'
+                  }`}
+              >
+                {tab.label}
+                {!loading && count != null && (
+                  <span className={`text-[10px] font-semibold rounded-full px-1.5 py-0.5 leading-none
+                    ${activeSource === tab.value ? 'bg-[#C7511F] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Grid */}

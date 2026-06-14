@@ -335,6 +335,44 @@ def _caption_local(image_bytes: bytes, detections: List[Dict]) -> dict:
     return _parse_json_response(raw)
 
 
+# ── Detection-based heuristic fallback (no VLM needed) ───────────────────────
+def _detection_heuristic(detections: List[Dict]) -> dict:
+    """Grade purely from DINO detections when all VLM providers fail."""
+    confirmed = [d for d in detections if d.get("confidence", 0) >= 0.45]
+    uncertain = [d for d in detections if d.get("confidence", 0) < 0.45]
+
+    severe_count   = sum(1 for d in confirmed if "crack" in d.get("label","") or "break" in d.get("label","") or "missing" in d.get("label",""))
+    moderate_count = sum(1 for d in confirmed if "dent" in d.get("label","") or "stain" in d.get("label","") or "tear" in d.get("label",""))
+    minor_count    = len(confirmed) - severe_count - moderate_count
+
+    if not confirmed:
+        grade, confidence, summary = "A", 0.78, "No visible defects detected. Product appears to be in like-new condition."
+    elif severe_count:
+        grade, confidence, summary = "D", 0.72, f"Significant damage detected: {', '.join(d.get('label','damage') for d in confirmed[:3])}."
+    elif moderate_count:
+        grade, confidence, summary = "C", 0.70, f"Visible cosmetic defects detected: {', '.join(d.get('label','wear') for d in confirmed[:3])}."
+    elif minor_count:
+        grade, confidence, summary = "B", 0.74, f"Minor cosmetic wear detected: {', '.join(d.get('label','scratch') for d in confirmed[:2])}."
+    else:
+        grade, confidence, summary = "B", 0.68, "Slight signs of use detected. Product is functional with minor cosmetic wear."
+
+    defects = [
+        {"type": d.get("label", "other"), "severity": "severe" if d in confirmed[:severe_count] else "minor", "location": d.get("location", "surface")}
+        for d in confirmed
+    ]
+
+    return {
+        "grade": grade,
+        "confidence": confidence,
+        "defects": defects,
+        "completeness": 0.90 if not confirmed else max(0.60, 0.90 - 0.05 * len(confirmed)),
+        "condition_summary": summary,
+        "box_present": False,
+        "functional": grade != "D",
+        "_heuristic": True,
+    }
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 def caption(image_bytes: bytes, detections: List[Dict]) -> dict:
     """
@@ -377,19 +415,13 @@ def caption(image_bytes: bytes, detections: List[Dict]) -> dict:
         try:
             result = _caption_local(image_bytes, detections)
         except Exception as e2:
-            logger.error(f"[captioner] Local fallback also failed: {e2}. Using default.")
-            result = {
-                "grade": "C",
-                "confidence": 0.4,
-                "defects": [],
-                "completeness": 0.75,
-                "condition_summary": "Unable to assess condition automatically.",
-                "box_present": False,
-                "functional": True,
-            }
+            logger.error(f"[captioner] Local fallback also failed: {e2}. Using detection-based heuristic.")
+            result = _detection_heuristic(detections)
 
     result["latency_ms"] = round((time.monotonic() - t0) * 1000)
 
-    cache[key] = result
-    _save_cache(cache)
+    # Never cache the heuristic fallback — let the next request retry the VLM
+    if not result.get("_heuristic"):
+        cache[key] = result
+        _save_cache(cache)
     return result

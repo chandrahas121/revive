@@ -1,6 +1,9 @@
 {
   "listing_id": "lst_priya_shoes_001",
   "chosen_path": "resell_p2p",
+  "route_label": "Resell Nearby",
+  "customer_message": "Your item will be resold to someone nearby",
+  "tier": 1,
   "ev_breakdown": {
     "resell_p2p": 312.50,
     "resell_warehouse": -38.75,
@@ -16,6 +19,37 @@
   "co2_saved_kg": 122.85,
   "demand_score": 0.74,
   "local_buyers": 47,
-  "demand_note": "47 buyers within 8 km searched for Footwear this month",
-  "green_credits_earned": 307
+  "demand_note": "47 buyers within 8 km searched for Footwear this month · you're in the demand cluster!",
+  "nearest_cluster": "Koramangala",
+  "dist_to_cluster_km": 0.0,
+  "green_credits_earned": 307,
+  "mcda_note": "EV optimizer: resell_p2p wins with EV=₹312 vs liquidate=₹15 (20× recovery ratio)",
+  "_demand_gate_example": {
+    "item_id": "lst_priya_shoes_001",
+    "action": "SELL",
+    "reason": "Local demand sufficient (EV=₹312) — proceed to Stage 2 routing",
+    "demand_score": 0.74,
+    "sell_probability": 0.72,
+    "expected_local_value": 312.50,
+    "holding_cost_per_day": 2.5,
+    "days_listed": 0,
+    "local_buyers": 47,
+    "demand_note": "47 buyers within 8 km searched for Footwear this month"
+  },
+  "_heatmap_example": {
+    "type": "FeatureCollection",
+    "category": "Footwear",
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": { "type": "Point", "coordinates": [77.5946, 12.9716] },
+        "properties": { "geohash": "tbxx1", "label": "Koramangala", "demand_score": 0.729, "local_buyers": 97, "category": "Footwear" }
+      },
+      {
+        "type": "Feature",
+        "geometry": { "type": "Point", "coordinates": [77.6245, 12.9352] },
+        "properties": { "geohash": "tbxx2", "label": "HSR Layout", "demand_score": 0.63, "local_buyers": 85, "category": "Footwear" }
+      }
+    ]
+  }
 }

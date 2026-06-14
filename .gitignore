@@ -75,3 +75,5 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+Amazon_Revive_design/
+images/  

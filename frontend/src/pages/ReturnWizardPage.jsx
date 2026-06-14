@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { estimateGreenCredits } from '../utils/tier';
 
 const RETURN_REASONS = [
   { id: 'size',    label: 'Didn\'t fit / wrong size' },
@@ -14,23 +15,6 @@ const RETURN_REASONS = [
   { id: 'other',   label: 'Other' },
 ];
 
-const HANDOVER_OPTIONS = [
-  {
-    key: 'hub',
-    title: 'Drop at Amazon Hub',
-    sub: 'Amazon kirana partner · usually within 200 m',
-    tag: 'Fastest refund',
-    tagStyle: 'bg-[#FF9900] text-white',
-  },
-  {
-    key: 'doorstep',
-    title: 'Doorstep Pickup',
-    sub: 'Our agent arrives in 1–2 days · scans on your doorstep',
-    tag: 'No effort needed',
-    tagStyle: 'bg-[#F0F2F2] text-gray-600',
-  },
-];
-
 const ReturnWizardPage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -39,8 +23,8 @@ const ReturnWizardPage = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reason, setReason] = useState('');
-  const [handover, setHandover] = useState('hub');
   const [submitting, setSubmitting] = useState(false);
+  const [kept, setKept] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -54,14 +38,26 @@ const ReturnWizardPage = () => {
       .finally(() => setLoading(false));
   }, [orderId, user, navigate]);
 
+  // Keep-it nudge — credits the buyer would earn by NOT returning (final_idea §5)
+  const orderValue = order?.listing_price ? parseFloat(order.listing_price) : 0;
+  const nudgeCredits = order
+    ? estimateGreenCredits(order.listing_category || 'Other', orderValue)
+    : 0;
+
   const handleSubmit = () => {
     if (!reason) return;
     setSubmitting(true);
+    // Grading fires automatically on the next screen (S3). Handover is chosen
+    // there, after the customer sees the grade — per final_idea Journey 1.
     setTimeout(() => {
-      navigate(`/return/${orderId}/result`, {
-        state: { order, reason, handover },
-      });
-    }, 600);
+      navigate(`/return/${orderId}/result`, { state: { order, reason } });
+    }, 500);
+  };
+
+  const handleKeepIt = () => {
+    setKept(true);
+    // In production this queues credits to vest at window close and cancels the return.
+    setTimeout(() => navigate('/orders'), 1800);
   };
 
   if (loading) {
@@ -92,13 +88,29 @@ const ReturnWizardPage = () => {
     );
   }
 
+  if (kept) {
+    return (
+      <div className="min-h-screen bg-[#EAEDED]">
+        <Header />
+        <main className="max-w-3xl mx-auto px-4 py-10">
+          <div className="bg-white border border-[#D5D9D9] rounded-lg p-8 text-center shadow-sm">
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">🌿</div>
+            <p className="text-lg font-bold text-[#0F1111] mb-1">Glad you're keeping it!</p>
+            <p className="text-sm text-gray-500">
+              {nudgeCredits} Green Credits will vest when your return window closes with no return.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#EAEDED]">
       <Header />
 
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
 
-        {/* Breadcrumb */}
         <button
           onClick={() => navigate('/orders')}
           className="text-[#007185] hover:text-[#c45500] hover:underline text-sm mb-4 inline-flex items-center gap-1"
@@ -122,7 +134,7 @@ const ReturnWizardPage = () => {
             </p>
             {order.listing_price && (
               <p className="text-sm text-gray-600 mt-0.5">
-                ₹{parseFloat(order.listing_price).toLocaleString('en-IN')}
+                ₹{orderValue.toLocaleString('en-IN')}
               </p>
             )}
             <p className="text-xs text-gray-400 mt-0.5">
@@ -160,57 +172,25 @@ const ReturnWizardPage = () => {
           </div>
         </div>
 
-        {/* How to hand over */}
-        <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm mb-4">
-          <div className="px-4 py-3 border-b border-[#D5D9D9] bg-gray-50">
-            <p className="font-bold text-[#0F1111] text-sm">How would you like to return it?</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              An Amazon-verified agent will AI-scan your item on handover — your refund fires instantly.
-            </p>
-          </div>
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {HANDOVER_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                onClick={() => setHandover(opt.key)}
-                className={`text-left p-4 rounded-lg border-2 transition-all focus:outline-none
-                  ${handover === opt.key
-                    ? 'border-[#FF9900] bg-[#FFF8EE]'
-                    : 'border-[#D5D9D9] hover:border-gray-400 bg-white'
-                  }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-[#0F1111] text-sm">{opt.title}</p>
-                  {handover === opt.key && (
-                    <span className="w-5 h-5 rounded-full bg-[#FF9900] flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">✓</span>
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5 leading-snug">{opt.sub}</p>
-                <span className={`inline-block mt-2.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${opt.tagStyle}`}>
-                  {opt.tag}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Optional self-scan */}
-          <div className="mx-4 mb-4 px-4 py-3 bg-[#F0F2F2] rounded-lg flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#0F1111]">
-                Scan it yourself first <span className="font-normal text-gray-500">(optional)</span>
+        {/* Keep-it nudge (final_idea §8 S2) */}
+        <div className="bg-gradient-to-r from-[#f0fdf4] to-white border border-green-200 rounded-lg p-4 mb-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl flex-shrink-0">🌿</span>
+            <div className="flex-grow min-w-0">
+              <p className="font-bold text-[#0F1111] text-sm">
+                Changed your mind? Keep it and earn {nudgeCredits} Green Credits
               </p>
               <p className="text-xs text-gray-500 mt-0.5 leading-snug">
-                Get your AI grade preview now — before you hand it over
+                Credits vest when your return window closes with nothing sent back —
+                redeemable on Amazon Revive second-life items.
               </p>
+              <button
+                onClick={handleKeepIt}
+                className="mt-2.5 px-4 py-1.5 text-xs font-bold text-green-800 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
+              >
+                Keep it — I changed my mind
+              </button>
             </div>
-            <button
-              onClick={() => navigate('/sell')}
-              className="flex-shrink-0 px-4 py-1.5 text-xs font-bold text-[#007185] border border-[#007185] rounded-lg hover:bg-[#007185] hover:text-white transition-colors whitespace-nowrap"
-            >
-              Scan now
-            </button>
           </div>
         </div>
 
@@ -219,16 +199,16 @@ const ReturnWizardPage = () => {
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">What happens next</p>
           <ol className="space-y-2.5">
             {[
-              { n: '1', text: handover === 'hub' ? 'Drop your item at the nearest Amazon Hub point (kirana store)' : 'Our agent will arrive at your doorstep in 1–2 days' },
-              { n: '2', text: 'The agent AI-scans the item in ~2 seconds — grade and routing decided instantly' },
-              { n: '3', text: 'Your refund is credited to Amazon Pay before you leave the hub' },
-              { n: '4', text: 'The item gets a second life — routed to the nearest buyer, not a warehouse 600 km away' },
-            ].map((step) => (
-              <li key={step.n} className="flex items-start gap-3">
+              'An Amazon-verified agent AI-scans the item in ~2 seconds — grade decided instantly',
+              'You\'ll see the grade, then choose how to hand the item over',
+              'Your refund is credited to Amazon Pay the moment the scan completes',
+              'The item gets a second life — routed to the nearest buyer, not a warehouse 600 km away',
+            ].map((text, i) => (
+              <li key={i} className="flex items-start gap-3">
                 <span className="w-5 h-5 rounded-full bg-[#232F3E] text-[#febd69] text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {step.n}
+                  {i + 1}
                 </span>
-                <span className="text-sm text-gray-600 leading-snug">{step.text}</span>
+                <span className="text-sm text-gray-600 leading-snug">{text}</span>
               </li>
             ))}
           </ol>
@@ -244,7 +224,7 @@ const ReturnWizardPage = () => {
               : 'bg-[#FF9900] hover:bg-[#e88b00] text-white shadow-sm'
             }`}
         >
-          {submitting ? 'Processing…' : !reason ? 'Select a return reason to continue' : 'Confirm Return →'}
+          {submitting ? 'Starting AI scan…' : !reason ? 'Select a return reason to continue' : 'Confirm Return → AI Scan'}
         </button>
 
         <p className="text-center text-xs text-gray-400 mt-2">

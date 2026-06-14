@@ -1,0 +1,17 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dj-database-url==2.1.0",
+    "django==4.2.13",
+    "django-cors-headers==4.3.1",
+    "djangorestframework==3.15.1",
+    "djangorestframework-simplejwt==5.3.1",
+    "openai>=2.41.1",
+    "pillow==10.3.0",
+    "psycopg2-binary==2.9.9",
+    "python-dotenv==1.0.1",
+]
