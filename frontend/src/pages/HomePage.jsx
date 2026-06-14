@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Header from '../components/Header'
-import Banner from '../components/Banner'
+import Banner, { TrustStrip } from '../components/Banner'
 import ProductFeed from '../components/ProductFeed'
 import api from '../api/client'
 
@@ -45,6 +45,7 @@ const HomePage = () => {
       <Header />
       <main className="max-w-screen-2xl mx-auto">
         {!searchQuery && !sourceFilter && <Banner />}
+        {!searchQuery && !sourceFilter && <TrustStrip />}
         {(searchQuery || sourceFilter) && (
           <div className="px-3 sm:px-4 pt-3 pb-1">
             <p className="text-xs sm:text-sm text-gray-600">
@@ -54,7 +55,7 @@ const HomePage = () => {
             </p>
           </div>
         )}
-        <ProductFeed products={products} loading={loading} />
+        <ProductFeed products={products} loading={loading} showHeading={!searchQuery} />
       </main>
     </div>
   )

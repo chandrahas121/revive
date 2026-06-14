@@ -41,8 +41,14 @@ const CheckoutPage = () => {
         <h1 className="text-xl sm:text-2xl font-bold text-[#0F1111] mb-4 sm:mb-6">Checkout</h1>
 
         {success && (
-          <div className="p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 font-medium mb-4 text-sm">
-            Order placed! Redirecting to your orders…
+          <div className="bg-white border border-[#D5D9D9] rounded-lg p-8 text-center shadow-sm mb-4">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: 'linear-gradient(135deg, #077a52, #0a8f63)' }}>
+              <svg className="w-7 h-7 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+              </svg>
+            </div>
+            <h2 className="text-xl font-black text-[#0F1111] mb-1">Order placed!</h2>
+            <p className="text-sm text-gray-500">Heading to your orders…</p>
           </div>
         )}
         {error && (
@@ -120,10 +126,31 @@ const CheckoutPage = () => {
             <div className="lg:w-72 flex-shrink-0 space-y-3 sm:space-y-4">
               <GreenCredits onRedeem={setRedeemedCredits} />
 
+              {/* Why Revive? */}
+              <div className="bg-white rounded-lg shadow-sm border border-[#D5D9D9] p-3 sm:p-4">
+                <p className="text-sm font-bold text-[#0F1111] mb-2.5">Why Revive?</p>
+                <ul className="space-y-2">
+                  {[
+                    ['AI-verified quality', 'Every item graded A–D'],
+                    ['Escrow protection', 'Payment held until delivery'],
+                    ['7-day returns', 'Instant Amazon Pay refund'],
+                    ['Earn Green Credits', 'Saved CO₂ on every order'],
+                  ].map(([b, s]) => (
+                    <li key={b} className="flex items-start gap-2 text-xs text-gray-600">
+                      <span className="text-[#077a52] font-bold mt-0.5">&#10003;</span>
+                      <div>
+                        <span className="font-semibold text-[#0F1111]">{b}</span>
+                        <span className="text-gray-400"> &mdash; {s}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               {/* Green credits promise — Pillar 5 */}
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
                 <p className="text-xs text-green-800 leading-snug">
-                  Keep this order → <strong>+15 Green Credits</strong> vest when your 7-day return window closes.
+                  Keep this order &rarr; <strong>+15 Green Credits</strong> vest when your 7-day return window closes.
                 </p>
               </div>
 

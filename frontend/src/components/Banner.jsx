@@ -27,13 +27,72 @@ const SLIDES = [
   },
 ];
 
+const TRUST_CELLS = [
+  {
+    icon: (
+      <svg className="w-5 h-5 text-[#077a52] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    bold: 'AI-verified condition',
+    sub: 'Every item graded A–D',
+  },
+  {
+    icon: (
+      <svg className="w-5 h-5 text-[#077a52] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round"/>
+      </svg>
+    ),
+    bold: 'Buyer protection',
+    sub: 'Escrow until you confirm',
+  },
+  {
+    icon: (
+      <svg className="w-5 h-5 text-[#077a52] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M1 4v6h6M23 20v-6h-6" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    bold: '7-day returns',
+    sub: 'Instant Amazon Pay refund',
+  },
+  {
+    icon: (
+      <svg className="w-5 h-5 text-[#077a52] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 2a10 10 0 1 1 0 20M6.3 6.3a10 10 0 0 0 0 11.4M12 2v20" strokeLinecap="round"/>
+        <path d="M2 12h10" strokeLinecap="round"/>
+      </svg>
+    ),
+    bold: 'Earn Green Credits',
+    sub: 'Saved CO₂ on every order',
+  },
+];
+
+const TrustStrip = () => (
+  <div className="bg-white border-b border-[#D5D9D9]">
+    <div className="max-w-screen-xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-[#D5D9D9]">
+      {TRUST_CELLS.map((c) => (
+        <div key={c.bold} className="flex items-center gap-2.5 px-3 sm:px-4 py-3">
+          {c.icon}
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-[#0F1111] leading-snug">{c.bold}</p>
+            <p className="text-[11px] text-gray-500 leading-snug hidden sm:block">{c.sub}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 const Banner = () => {
   const navigate = useNavigate();
 
   return (
     <div className="relative">
       {/* Bottom fade into page background */}
-      <div className="absolute w-full h-16 sm:h-24 bg-gradient-to-t from-gray-100 to-transparent bottom-0 z-20 pointer-events-none" />
+      <div className="absolute w-full h-16 sm:h-24 bottom-0 z-20 pointer-events-none" style={{ background: 'linear-gradient(to top, #EAEDED, transparent)' }} />
 
       <Carousel
         autoPlay
@@ -80,4 +139,5 @@ const Banner = () => {
   );
 };
 
+export { TrustStrip };
 export default Banner;

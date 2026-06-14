@@ -124,21 +124,21 @@ const Header = () => {
       </div>
 
       {/* ── Desktop nav bar ── */}
-      <div className="hidden md:flex items-center bg-[#232F3E] text-white text-xs sm:text-sm overflow-x-auto whitespace-nowrap px-2 py-1 gap-0.5">
+      <div className="hidden md:flex items-center bg-[#232F3E] text-white text-xs sm:text-sm overflow-x-auto whitespace-nowrap px-2 py-0.5 gap-0.5">
         {navItems.map((item) => (
           <button
             key={item.label}
             onClick={item.action}
-            className={`px-2 sm:px-3 py-1 rounded hover:bg-white/10 flex-shrink-0
+            className={`px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 transition-colors
               ${item.highlight ? 'font-semibold text-[#febd69]' : ''}`}
           >
             {item.label}
           </button>
         ))}
         <span className="text-gray-600 px-1 flex-shrink-0 hidden lg:inline">|</span>
-        <button className="px-2 sm:px-3 py-1 rounded hover:bg-white/10 flex-shrink-0 hidden lg:inline">Electronics</button>
-        <button className="px-2 sm:px-3 py-1 rounded hover:bg-white/10 flex-shrink-0 hidden lg:inline">Fashion</button>
-        <button className="px-2 sm:px-3 py-1 rounded hover:bg-white/10 flex-shrink-0 hidden lg:inline">Home &amp; Garden</button>
+        <button className="px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Electronics</button>
+        <button className="px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Fashion</button>
+        <button className="px-2 sm:px-3 py-1.5 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Home &amp; Garden</button>
       </div>
 
       {/* ── Mobile drawer ── */}

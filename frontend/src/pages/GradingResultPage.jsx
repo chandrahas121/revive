@@ -188,23 +188,23 @@ const GradingResultPage = () => {
               </div>
 
               {/* Grade tier scale */}
-              <div className="border-t border-[#f0f0f0] px-4 py-3 bg-gray-50">
-                <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Grade Scale</p>
-                <div className="flex gap-1.5">
+              <div className="border-t border-[#f0f0f0] px-4 py-3 bg-[#F7F8F8]">
+                <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-widest">Grade Scale</p>
+                <div className="flex gap-1">
                   {['A', 'B', 'C', 'D'].map((g) => (
                     <div
                       key={g}
-                      className={`flex-1 rounded py-1.5 text-center text-xs font-bold border transition-all
-                        ${g === grade
-                          ? 'border-current shadow-sm scale-105'
-                          : 'border-transparent opacity-40'
-                        }`}
-                      style={g === grade
-                        ? { background: TIER_MAP[g].gradeBg, color: TIER_MAP[g].ring, borderColor: TIER_MAP[g].ring }
-                        : { background: TIER_MAP[g].gradeBg, color: TIER_MAP[g].ring }
-                      }
+                      className={`flex-1 rounded-md py-2 text-center text-[11px] font-bold transition-all
+                        ${g === grade ? 'ring-2 shadow-sm' : 'opacity-35'}`}
+                      style={{
+                        background: TIER_MAP[g].gradeBg,
+                        color: TIER_MAP[g].ring,
+                        ringColor: g === grade ? TIER_MAP[g].ring : 'transparent',
+                        outline: g === grade ? `2px solid ${TIER_MAP[g].ring}` : 'none',
+                      }}
                     >
-                      {g} — {TIER_MAP[g].label}
+                      <div className="text-base font-black leading-none mb-0.5">{g}</div>
+                      <div className="text-[9px] font-semibold opacity-80">{TIER_MAP[g].label}</div>
                     </div>
                   ))}
                 </div>
@@ -240,12 +240,12 @@ const GradingResultPage = () => {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                     Expected Value (EV) breakdown
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {[
-                      { path: 'Local Resale',     ev: tier.grade === 'D' ? -20 : 1840,  active: grade === 'A' || grade === 'B' },
-                      { path: 'Refurbish',         ev: tier.grade === 'D' ? 200 : 890,   active: grade === 'C' },
-                      { path: 'Donate',            ev: 0,                                  active: grade === 'D' },
-                      { path: 'Warehouse Return',  ev: -40,                               active: false },
+                      { path: 'Local Resale',    ev: grade === 'D' ? -20 : 1840, bar: grade === 'D' ? 0 : 100 },
+                      { path: 'Refurbish',        ev: grade === 'D' ? 200 : 890,  bar: grade === 'D' ? 11 : 48  },
+                      { path: 'Donate',           ev: 0,                           bar: 0                         },
+                      { path: 'Warehouse Return', ev: -40,                         bar: 0                         },
                     ].map((row) => {
                       const isChosen = (grade === 'A' || grade === 'B') && row.path === 'Local Resale'
                         || grade === 'C' && row.path === 'Refurbish'
@@ -253,16 +253,26 @@ const GradingResultPage = () => {
                       return (
                         <div
                           key={row.path}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm
+                          className={`px-3 py-2.5 rounded-lg text-sm
                             ${isChosen ? 'bg-[#FFF8EE] border border-[#FF9900]' : 'bg-gray-50'}`}
                         >
-                          <span className="flex items-center gap-2 text-gray-700">
-                            <span className={isChosen ? 'font-bold text-[#0F1111]' : ''}>{row.path}</span>
-                            {isChosen && <span className="text-[10px] font-bold bg-[#FF9900] text-white px-1.5 py-0.5 rounded">CHOSEN</span>}
-                          </span>
-                          <span className={`font-bold ${row.ev > 0 ? 'text-green-700' : row.ev === 0 ? 'text-gray-400' : 'text-red-500'}`}>
-                            {row.ev > 0 ? `₹${row.ev.toLocaleString('en-IN')}` : row.ev === 0 ? '—' : `₹${row.ev}`}
-                          </span>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="flex items-center gap-2 text-gray-700">
+                              <span className={isChosen ? 'font-bold text-[#0F1111]' : ''}>{row.path}</span>
+                              {isChosen && <span className="text-[10px] font-bold bg-[#FF9900] text-white px-1.5 py-0.5 rounded">CHOSEN</span>}
+                            </span>
+                            <span className={`font-bold ${row.ev > 0 ? 'text-green-700' : row.ev === 0 ? 'text-gray-400' : 'text-red-500'}`}>
+                              {row.ev > 0 ? `₹${row.ev.toLocaleString('en-IN')}` : row.ev === 0 ? '—' : `₹${row.ev}`}
+                            </span>
+                          </div>
+                          {row.bar > 0 && (
+                            <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${isChosen ? 'bg-[#FF9900]' : 'bg-gray-400'}`}
+                                style={{ width: `${row.bar}%` }}
+                              />
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -274,7 +284,12 @@ const GradingResultPage = () => {
             {/* Refund confirmation */}
             <div className={`transition-all duration-500 delay-100 ${showRefund ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
               <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
-                <div className="bg-green-600 px-4 py-3 flex items-center gap-3">
+                <div className="px-4 py-3 flex items-center gap-3" style={{ background: 'linear-gradient(110deg, #077a52, #0a8f63)' }}>
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                    </svg>
+                  </div>
                   <div>
                     <p className="text-white font-black text-base">Refund Issued!</p>
                     <p className="text-green-100 text-xs">
