@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, ShoppingCart, Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +24,19 @@ const Header = () => {
   const [searchText, setSearchText] = useState(searchParams.get('q') || '');
   const [menuOpen, setMenuOpen] = useState(false);
   const [credits, setCredits] = useState(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const handler = (e) => {
+      if (accountRef.current && !accountRef.current.contains(e.target)) {
+        setAccountOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [accountOpen]);
 
   useEffect(() => {
     if (!user) { setCredits(null); return; }
@@ -39,12 +52,6 @@ const Header = () => {
     const src = searchParams.get('source');
     if (src) params.set('source', src);
     navigate(`/?${params.toString()}`);
-    closeMenu();
-  };
-
-  const handleAuthClick = () => {
-    if (user) logout();
-    else navigate('/login');
     closeMenu();
   };
 
@@ -106,20 +113,34 @@ const Header = () => {
         {/* Right actions */}
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0 text-white">
           {/* Account */}
-          <div
-            className="cursor-pointer px-1 sm:px-2 py-1 border border-transparent hover:border-white rounded-sm transition-colors flex-shrink-0"
-            onClick={handleAuthClick}
-          >
-            <p className="text-gray-300 text-[11px] leading-none mb-0.5 hidden sm:block">
-              {user ? `Hello, ${user.name.split(' ')[0]}` : 'Hello, sign in'}
-            </p>
-            <p className="font-bold text-[13px] leading-none hidden sm:block">
-              {user ? 'Account & Sign out' : 'Account & Lists'}
-              <span className="ml-0.5">▾</span>
-            </p>
-            <p className="font-bold text-sm leading-none sm:hidden">
-              {user ? 'Hi' : 'Sign in'}
-            </p>
+          <div ref={accountRef} className="relative flex-shrink-0">
+            <div
+              className="cursor-pointer px-1 sm:px-2 py-1 border border-transparent hover:border-white rounded-sm transition-colors"
+              onClick={() => {
+                if (user) setAccountOpen((o) => !o);
+                else { navigate('/login'); closeMenu(); }
+              }}
+            >
+              <p className="text-gray-300 text-[11px] leading-none mb-0.5 hidden sm:block">
+                {user ? `Hello, ${user.name.split(' ')[0]}` : 'Hello, sign in'}
+              </p>
+              <p className="font-bold text-[13px] leading-none hidden sm:block">
+                Account &amp; Lists <span className="ml-0.5">▾</span>
+              </p>
+              <p className="font-bold text-sm leading-none sm:hidden">
+                {user ? 'Hi' : 'Sign in'}
+              </p>
+            </div>
+            {user && accountOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white text-[#0F1111] rounded shadow-xl z-50 min-w-[170px] py-1 border border-gray-200">
+                <button
+                  onClick={() => { logout(); setAccountOpen(false); closeMenu(); }}
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Green Credits chip */}

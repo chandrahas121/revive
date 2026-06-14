@@ -314,6 +314,10 @@ const ProductDetailPage = () => {
                 <VirtualTryOn
                   garmentImage={listing.image}
                   garmentTitle={product.title}
+                  price={price}
+                  mrp={mrp}
+                  grade={listing.grade}
+                  gradeLabel={listing.grade_display}
                 />
               )}
 
