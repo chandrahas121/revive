@@ -81,6 +81,51 @@ class GradeView(APIView):
         return Response(result)
 
 
+class TryOnView(APIView):
+    """
+    POST /api/tryon/
+    Body (multipart): person_image (file), garment_image_url (str), garment_description (str)
+    Returns { result_image_b64: str, latency_ms: int }
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        import time
+        import urllib.request
+
+        person_file = request.FILES.get('person_image')
+        if not person_file:
+            return Response({'error': 'person_image is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        garment_url = request.data.get('garment_image_url', '')
+        garment_description = request.data.get('garment_description', 'clothing item')
+
+        if not garment_url:
+            return Response({'error': 'garment_image_url is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            person_bytes = person_file.read()
+
+            # Fetch garment image from URL
+            req = urllib.request.Request(garment_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                garment_bytes = resp.read()
+
+            t0 = time.time()
+            from ml.tryon import virtual_tryon_b64
+            result_b64 = virtual_tryon_b64(person_bytes, garment_bytes, garment_description)
+            latency_ms = int((time.time() - t0) * 1000)
+
+            return Response({'result_image_b64': result_b64, 'latency_ms': latency_ms})
+
+        except Exception as e:
+            logger.error(f"[tryon] Failed: {e}")
+            return Response(
+                {'error': str(e) or 'Virtual try-on service is temporarily unavailable.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+
 class HeatmapView(APIView):
     """
     POST /api/grade/heatmap/

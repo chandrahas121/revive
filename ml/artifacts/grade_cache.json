@@ -101,5 +101,26 @@
     "image_hash": "caa3e2eb77082e6b260e0002",
     "n_dino_detections": 4,
     "from_cache": false
+  },
+  "edabd4e05dd4c2b60e694440": {
+    "listing_id": "0dfe96be-2f8e-4ae9-ba84-669260ac7659",
+    "grade": "C",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "moderate",
+        "location": "screen-center"
+      }
+    ],
+    "completeness": 0.672,
+    "condition_summary": "The device has moderate scratches on the screen but is otherwise in good condition.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 29452,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "edabd4e05dd4c2b60e694440",
+    "n_dino_detections": 0,
+    "from_cache": false
   }
 }
