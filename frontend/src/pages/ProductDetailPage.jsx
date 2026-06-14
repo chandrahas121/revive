@@ -2,8 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import HealthCard from '../components/stitch/HealthCard'
+import VirtualTryOn from '../components/stitch/VirtualTryOn'
 import api from '../api/client'
 import { useCart } from '../context/CartContext'
+
+const CLOTHING_KEYWORDS = ['clothing', 'fashion', 'apparel', 'garment', 'textile', 'wear', 'shirt', 'dress', 'jacket', 'pants', 'jeans', 'top', 'blouse', 'skirt', 'coat', 'shoes', 'footwear']
+
+const isClothing = (category = '') =>
+  CLOTHING_KEYWORDS.some((kw) => category.toLowerCase().includes(kw))
 
 const GRADE_STYLE = {
   A: 'bg-green-100 text-green-800 border-green-200',
@@ -279,6 +285,13 @@ const ProductDetailPage = () => {
               >
                 View Product Health Card
               </button>
+
+              {isClothing(product.category) && (
+                <VirtualTryOn
+                  garmentImage={listing.image}
+                  garmentTitle={product.title}
+                />
+              )}
 
               <hr className="border-[#D5D9D9]" />
 
