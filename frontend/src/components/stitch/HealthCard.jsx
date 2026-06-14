@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import React, { useState } from 'react';
 
 const GRADE_CONFIG = {
   A: { label: 'Excellent', sub: 'Like new — no visible defects', accent: '#16a34a', faded: '#f0fdf4', border: '#86efac', score: 95 },

@@ -87,7 +87,7 @@ const HomePage = () => {
       <Header />
       <main className="max-w-screen-2xl mx-auto">
         {!searchQuery && !sourceFilter && <Banner />}
-        {!searchQuery && !sourceFilter && <TrustStrip />}
+        {/* {!searchQuery && !sourceFilter && <TrustStrip />} */}
         {!searchQuery && !sourceFilter && <RecommendationRail />}
         {(searchQuery || sourceFilter) && (
           <div className="px-3 sm:px-4 pt-3 pb-1">
