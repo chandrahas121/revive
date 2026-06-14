@@ -14,10 +14,10 @@ const STATUS_CONFIG = {
 };
 
 const GRADE_CONFIG = {
-  A: 'bg-green-100 text-green-800 border-green-200',
-  B: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  C: 'bg-orange-100 text-orange-800 border-orange-200',
-  D: 'bg-red-100 text-red-800 border-red-200',
+  A: 'bg-[#e6f4ea] text-[#107a45]',
+  B: 'bg-[#fbf1d9] text-[#b06f00]',
+  C: 'bg-[#fbe9dd] text-[#bd4a17]',
+  D: 'bg-[#fbe5e3] text-[#b3261e]',
 };
 
 const FILTER_TABS = [
@@ -83,7 +83,7 @@ const ListingRow = ({ listing, navigate }) => {
           <div className="flex flex-wrap items-center gap-2 mt-2">
             {/* Grade */}
             {listing.grade && (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${gradeCfg}`}>
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded ${gradeCfg}`}>
                 Grade {listing.grade}
               </span>
             )}
@@ -220,21 +220,23 @@ const MyListingsPage = () => {
           </div>
         )}
 
-        {/* Filter tabs */}
+        {/* Filter pills */}
         {listings.length > 0 && (
           <div className="flex gap-2 mb-4">
             {FILTER_TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors
+                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold border transition-colors
                   ${activeTab === tab.key
-                    ? 'bg-[#232F3E] text-[#febd69] border-[#232F3E]'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                    ? 'text-[#febd69] border-[#3d5166]'
+                    : 'bg-white text-[#0F1111] border-[#D5D9D9] hover:border-[#565959]'
                   }`}
+                style={activeTab === tab.key ? { background: '#222f3e' } : {}}
               >
                 {tab.label}
-                <span className={`ml-1.5 text-xs ${activeTab === tab.key ? 'text-[#febd69]' : 'text-gray-400'}`}>
+                <span className={`text-[10px] font-semibold rounded-full px-1.5 py-0.5 leading-none
+                  ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
                   {counts[tab.key]}
                 </span>
               </button>

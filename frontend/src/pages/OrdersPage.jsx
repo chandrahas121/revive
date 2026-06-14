@@ -14,10 +14,10 @@ const STATUS_STYLE = {
 };
 
 const GRADE_STYLE = {
-  A: 'bg-green-100 text-green-800',
-  B: 'bg-yellow-100 text-yellow-800',
-  C: 'bg-orange-100 text-orange-800',
-  D: 'bg-red-100 text-red-800',
+  A: 'bg-[#e6f4ea] text-[#107a45]',
+  B: 'bg-[#fbf1d9] text-[#b06f00]',
+  C: 'bg-[#fbe9dd] text-[#bd4a17]',
+  D: 'bg-[#fbe5e3] text-[#b3261e]',
 };
 
 const OrdersPage = () => {
@@ -65,7 +65,8 @@ const OrdersPage = () => {
             <p className="text-gray-400 text-sm mb-6">Your Revive purchases will appear here.</p>
             <button
               onClick={() => navigate('/')}
-              className="px-6 py-2 bg-[#febd69] hover:bg-[#f3a847] text-[#131921] font-bold rounded text-sm"
+              className="px-6 py-2 text-[#131921] font-bold rounded text-sm border border-[#f0c040] shadow-sm"
+              style={{ background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
             >
               Start Shopping
             </button>
@@ -94,7 +95,7 @@ const OrdersPage = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     {order.is_p2p && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#232F3E] text-[#febd69]">REVIVE</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: '#222f3e', color: '#febd69' }}>REVIVE</span>
                     )}
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${STATUS_STYLE[order.status] || 'bg-gray-100 text-gray-600'}`}>
                       {order.status}
@@ -119,8 +120,8 @@ const OrdersPage = () => {
                   <div className="flex-grow min-w-0">
                     <p className="font-semibold text-[#0F1111] text-sm line-clamp-2">{order.listing_title}</p>
                     {order.listing_grade && (
-                      <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded border ${GRADE_STYLE[order.listing_grade] || ''}`}>
-                        Grade {order.listing_grade} — {order.listing_grade_display}
+                      <span className={`inline-block mt-1 text-[10px] font-black px-2 py-0.5 rounded ${GRADE_STYLE[order.listing_grade] || ''}`}>
+                        Grade {order.listing_grade}{order.listing_grade_display ? ` — ${order.listing_grade_display}` : ''}
                       </span>
                     )}
                     {order.return_window_closes && order.status !== 'delivered' && (
@@ -132,18 +133,19 @@ const OrdersPage = () => {
                       <p className="text-xs text-blue-600 mt-1">Payment in escrow — released on delivery confirmation</p>
                     )}
 
-                    {/* Return Item button — shown for delivered/confirmed orders */}
+                    {/* Action buttons */}
                     {['delivered', 'confirmed', 'pending'].includes(order.status) && (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex items-center gap-2">
                         <button
                           onClick={() => navigate(`/return/${order.id}`)}
-                          className="px-3 py-1.5 text-xs font-bold text-white bg-[#232F3E] hover:bg-[#131921] rounded-lg transition-colors"
+                          className="px-3 py-1.5 text-xs font-bold rounded text-[#febd69] border border-[#3d5166] hover:border-[#febd69] transition-colors"
+                          style={{ background: '#222f3e' }}
                         >
                           Return Item
                         </button>
                         <button
                           onClick={() => navigate(`/product/${order.listing_id || order.id}`)}
-                          className="px-3 py-1.5 text-xs font-semibold text-[#007185] border border-[#007185] rounded-lg hover:bg-[#007185] hover:text-white transition-colors"
+                          className="px-3 py-1.5 text-xs font-bold bg-white border border-[#D5D9D9] text-[#0F1111] hover:border-[#565959] rounded transition-colors"
                         >
                           View Item
                         </button>

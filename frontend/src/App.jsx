@@ -10,6 +10,7 @@ import MyListingsPage from './pages/MyListingsPage'
 import ReturnWizardPage from './pages/ReturnWizardPage'
 import GradingResultPage from './pages/GradingResultPage'
 import DashboardPage from './pages/DashboardPage'
+import CreditsWalletPage from './pages/CreditsWalletPage'
 import SellIt from './components/stitch/SellIt'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/return/:orderId"       element={<ReturnWizardPage />} />
         <Route path="/return/:orderId/result" element={<GradingResultPage />} />
         <Route path="/dashboard"             element={<DashboardPage />} />
+        <Route path="/credits"               element={<CreditsWalletPage />} />
       </Routes>
     </Router>
   )

@@ -407,8 +407,8 @@ def grade_image(
         "from_cache": False,
     }
 
-    # 6. Write to cache
-    if use_cache:
+    # 6. Write to cache (skip if VLM fell back to detection heuristic)
+    if use_cache and not llm_result.get("_heuristic"):
         from ml.captioner import _load_cache, _save_cache
         cache = _load_cache()
         cache[image_hash[:24]] = result

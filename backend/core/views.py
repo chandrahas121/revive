@@ -180,15 +180,19 @@ class ListingListView(APIView):
             grade_result.get('condition_summary', '')
         )
 
+        mrp_val = data.get('mrp') or (data['price'] * Decimal('2'))
+        geohash5 = data.get('geohash5', '') or (request.user.geohash5 if request.user else '')
+
         product = Product.objects.create(
             asin=f'P2P-{uuid.uuid4().hex[:8].upper()}',
             title=data['title'],
             category=data['category'],
-            mrp=data['price'] * Decimal('2'),
+            mrp=mrp_val,
             reference_image_url=image_url,
             description=data.get('description', ''),
         )
 
+        # Stage 1: create listing with grade, then run routing
         listing = Listing.objects.create(
             product=product,
             source=Listing.Source.P2P,
@@ -196,10 +200,35 @@ class ListingListView(APIView):
             condition_summary=condition_summary,
             completeness=grade_result.get('completeness', 1.0),
             price=data['price'],
+            geohash5=geohash5,
             status=Listing.Status.LISTED,
             seller=request.user,
             image_url=image_url,
         )
+
+        # Stage 2: smart routing — persist chosen_path / tier / ev_data on the listing
+        route_result = {}
+        try:
+            from ml.route import route_item
+            route_result = route_item(
+                listing_id=str(listing.pk),
+                grade=grade_result.get('grade', 'B'),
+                category=data['category'],
+                defects=grade_result.get('defects', []),
+                geohash5=geohash5,
+                mrp=float(mrp_val),
+            )
+            listing.chosen_path = route_result.get('chosen_path', '')
+            listing.tier = route_result.get('tier', 1)
+            listing.ev_data = route_result.get('ev_breakdown', {})
+            # If route says sell price differs, update listing price
+            routed_price = route_result.get('price')
+            if routed_price and routed_price > 0:
+                listing.price = Decimal(str(routed_price))
+            listing.save()
+            logger.info(f"Routed listing {listing.pk}: path={listing.chosen_path} tier={listing.tier}")
+        except Exception as e:
+            logger.warning(f"route_item() failed for listing {listing.pk}: {e}")
 
         response_data = ListingSerializer(listing).data
         response_data['grade_result'] = {
@@ -210,6 +239,7 @@ class ListingListView(APIView):
             'completeness': grade_result.get('completeness'),
             'from_cache': grade_result.get('from_cache', False),
         }
+        response_data['route_result'] = route_result
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
@@ -223,6 +253,58 @@ class ListingDetailView(APIView):
         except Listing.DoesNotExist:
             return Response({'error': 'Listing not found.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(ListingSerializer(listing).data)
+
+
+class RecommendView(APIView):
+    """
+    GET /api/recommend/?n=8  — "Certified Refurbished For You" rail (Pillar 5).
+
+    Hybrid intent: ALS + CLIP + grade + proximity. The Django venv has no
+    numpy/torch, so this is the numpy-free ranker: grade boost + proximity
+    (same geohash region) + source preference (Renewed/P2P) over A/B-grade
+    second-life listings. Cold-start safe — needs zero interaction history.
+    """
+    permission_classes = [AllowAny]
+
+    _GRADE_BOOST = {'A': 1.0, 'B': 0.8, 'C': 0.4, 'D': 0.0}
+    _SOURCE_BOOST = {'renewed': 0.30, 'p2p': 0.20, 'warehouse': 0.10, 'return': 0.10}
+
+    def get(self, request):
+        try:
+            n = min(int(request.query_params.get('n', 8)), 20)
+        except (TypeError, ValueError):
+            n = 8
+
+        user_geo = request.user.geohash5 if getattr(request, 'user', None) and request.user.is_authenticated else ''
+
+        qs = (Listing.objects
+              .filter(status='listed', grade__in=['A', 'B'])
+              .select_related('product', 'seller'))
+
+        scored = []
+        for l in qs[:200]:
+            grade_boost = self._GRADE_BOOST.get(l.grade, 0.4)
+            source_boost = self._SOURCE_BOOST.get(l.source, 0.1)
+            prox = 0.25 if (user_geo and l.geohash5 and user_geo[:4] == l.geohash5[:4]) else 0.0
+            score = 0.55 * grade_boost + 0.30 * source_boost + 0.15 * prox
+
+            reasons = []
+            if prox > 0:        reasons.append('available near you')
+            if l.source == 'renewed': reasons.append('Amazon Renewed')
+            elif l.source == 'p2p':   reasons.append('Amazon-verified P2P')
+            reasons.append(f'Grade {l.grade} certified')
+            scored.append((score, l, ' · '.join(reasons[:2])))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top = scored[:n]
+
+        results = []
+        for score, l, reason in top:
+            data = ListingSerializer(l).data
+            data['rec_score'] = round(score, 4)
+            data['rec_reason'] = reason
+            results.append(data)
+        return Response({'results': results, 'count': len(results)})
 
 
 class MyListingsView(APIView):

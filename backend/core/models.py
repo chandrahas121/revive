@@ -64,6 +64,10 @@ class Listing(models.Model):
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name='listings'
     )   # set for P2P listings
     image_url = models.URLField(max_length=500, blank=True)
+    # Pillar 2 — routing result (populated by route_item() after grading)
+    chosen_path = models.CharField(max_length=30, blank=True, default='')
+    tier        = models.IntegerField(default=1)
+    ev_data     = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
