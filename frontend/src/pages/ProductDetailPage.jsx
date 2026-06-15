@@ -10,8 +10,16 @@ import { useCart } from '../context/CartContext'
 
 const CLOTHING_KEYWORDS = ['clothing', 'fashion', 'apparel', 'garment', 'textile', 'shirt', 'dress', 'jacket', 'pants', 'jeans', 'blouse', 'skirt', 'coat']
 
+// Footwear is "clothing" for the size selector / try-on, but NOT for Fit-Twin —
+// shoes don't use the S–XXL garment fit model, so "How this fits" is apparel-only.
+const FOOTWEAR_KEYWORDS = ['shoe', 'footwear', 'sneaker', 'boot', 'sandal', 'loafer']
+
 const isClothing = (category = '') =>
   CLOTHING_KEYWORDS.some((kw) => category.toLowerCase().includes(kw))
+
+// Apparel = garments only (clothing keywords, minus footwear).
+const isApparel = (category = '') =>
+  isClothing(category) && !FOOTWEAR_KEYWORDS.some((kw) => category.toLowerCase().includes(kw))
 
 const GRADE_STYLE = {
   A: 'bg-green-100 text-green-800 border-green-200',
@@ -625,7 +633,7 @@ const ProductDetailPage = () => {
 
 
 
-              {isClothing(product.category) && (
+              {isApparel(product.category) && (
                 <FitTwin
                   category={product.category}
                   itemId={product.fit_item_id}
