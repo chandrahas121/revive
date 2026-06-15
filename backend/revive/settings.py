@@ -132,15 +132,21 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # boto3 picks up AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY automatically from env.
 _S3_BUCKET = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
 _S3_REGION = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1')
+_CLOUDFRONT_DOMAIN = os.environ.get('AWS_CLOUDFRONT_DOMAIN', '')
 
 if _S3_BUCKET:
-    MEDIA_URL = f'https://{_S3_BUCKET}.s3.{_S3_REGION}.amazonaws.com/'
+    if _CLOUDFRONT_DOMAIN:
+        MEDIA_URL = f'https://{_CLOUDFRONT_DOMAIN}/'
+    else:
+        MEDIA_URL = f'https://{_S3_BUCKET}.s3.{_S3_REGION}.amazonaws.com/'
+        
     STORAGES = {
         'default': {
             'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
             'OPTIONS': {
                 'bucket_name': _S3_BUCKET,
                 'region_name': _S3_REGION,
+                'custom_domain': _CLOUDFRONT_DOMAIN or None,
                 'file_overwrite': False,          # never silently overwrite uploads
                 'object_parameters': {
                     'CacheControl': 'max-age=86400',  # browser caches images for 1 day
