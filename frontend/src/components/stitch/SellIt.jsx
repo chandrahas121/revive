@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import Header from '../Header';
 import api, { generateHealthCard } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -19,11 +20,26 @@ const GRADE_CONFIG = {
 };
 
 const PATH_CONFIG = {
-  resell_p2p:       { label: 'Resell Nearby (P2P)',    color: '#15803d', bg: '#dcfce7', icon: '📍' },
-  resell_warehouse: { label: 'Resell City-Wide',       color: '#1d4ed8', bg: '#dbeafe', icon: '🏪' },
-  refurbish:        { label: 'Refurbish & Resell',     color: '#7c3aed', bg: '#ede9fe', icon: '🔧' },
-  donate:           { label: 'Donate to NGO',          color: '#b45309', bg: '#fef3c7', icon: '🤝' },
-  recycle:          { label: 'Responsible Recycling',  color: '#6b7280', bg: '#f3f4f6', icon: '♻️' },
+  resell_p2p: { 
+    label: 'Resell Nearby (P2P)', color: '#15803d', bg: '#dcfce7', 
+    icon: <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+  },
+  resell_warehouse: { 
+    label: 'Resell City-Wide', color: '#1d4ed8', bg: '#dbeafe', 
+    icon: <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+  },
+  refurbish: { 
+    label: 'Refurbish & Resell', color: '#7c3aed', bg: '#ede9fe', 
+    icon: <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+  },
+  donate: { 
+    label: 'Donate to NGO', color: '#b45309', bg: '#fef3c7', 
+    icon: <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+  },
+  recycle: { 
+    label: 'Responsible Recycling', color: '#6b7280', bg: '#f3f4f6', 
+    icon: <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+  },
 };
 
 const GradePreview = ({ result, onDismiss }) => {
@@ -129,6 +145,7 @@ const AngleDefectMaps = ({ result }) => {
 };
 
 const ListingSuccess = ({ listing, routeResult, tier, onViewListing }) => {
+  const navigate = useNavigate();
   const tierInfo = TIER_INFO[tier];
 
   // Tier 3 — scheduled for professional SPN inspection, not instantly live

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ShieldCheck, Star, Heart, Share2, Tag, Truck, RefreshCw, Smartphone, ChevronLeft } from 'lucide-react'
 import Header from '../components/Header'
 import HealthCard from '../components/stitch/HealthCard'
 import VirtualTryOn from '../components/stitch/VirtualTryOn'
@@ -273,8 +274,9 @@ const ProductDetailPage = () => {
       <Header />
       <div className="p-8 sm:p-10 text-center">
         <p className="text-gray-500 mb-4 text-sm">Listing not found.</p>
-        <button onClick={() => navigate('/')} className="px-4 py-2 bg-[#febd69] rounded font-semibold text-sm">
-          Back to Marketplace
+        <button onClick={() => navigate(-1)} className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm mb-4 inline-flex items-center gap-2 transition-colors">
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+          Back to results
         </button>
       </div>
     </div>

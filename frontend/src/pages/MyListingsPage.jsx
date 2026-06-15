@@ -189,7 +189,12 @@ const MyListingsPage = () => {
     setBusyId(id);
     try {
       const res = await manageListing(id, action);
-      setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: res.data.status } : l)));
+      if (action === 'delist') {
+        // Permanently deleted — remove from list
+        setListings((prev) => prev.filter((l) => l.id !== id));
+      } else {
+        setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: res.data.status } : l)));
+      }
     } catch {
       setError('Could not update the listing. Please try again.');
     } finally {

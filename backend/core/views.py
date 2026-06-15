@@ -126,7 +126,15 @@ class ListingListView(APIView):
         condition = request.query_params.get('condition')
 
         if category:
-            qs = qs.filter(product__category__icontains=category)
+            c = category.lower()
+            if c == 'electronics':
+                qs = qs.filter(product__category__in=['Phone', 'Laptop', 'Tablet', 'Camera', 'Monitor', 'Electronics'])
+            elif c == 'fashion':
+                qs = qs.filter(product__category__in=['Apparel', 'Footwear', 'Clothing', 'Fashion'])
+            elif c in ['home', 'home & garden', 'home & kitchen']:
+                qs = qs.filter(product__category__in=['Home & Kitchen', 'Home & Garden', 'Furniture', 'Home'])
+            else:
+                qs = qs.filter(product__category__icontains=category)
         if not source:
             qs = qs.filter(source='new')
         elif source == 'revive':
@@ -189,7 +197,7 @@ class ListingListView(APIView):
                 logger.warning(f"near-me sort failed, falling back to recency: {e}")
 
         if not source or source == 'new':
-            qs = qs.order_by('-product__rating_count', '-product__rating')
+            qs = qs.order_by('?')
         else:
             qs = qs.order_by('-created_at')
 
@@ -473,14 +481,13 @@ class ManageListingView(APIView):
     permission_classes = [IsAuthenticated]
 
     _ALLOWED = {
-        'delist': Listing.Status.DELISTED,
         'pause':  Listing.Status.PAUSED,
         'relist': Listing.Status.LISTED,
     }
 
     def post(self, request, pk):
         action = (request.data.get('action') or '').lower()
-        if action not in self._ALLOWED:
+        if action not in self._ALLOWED and action != 'delist':
             return Response({'error': "action must be one of: delist, pause, relist"},
                             status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -491,6 +498,9 @@ class ManageListingView(APIView):
         if listing.status == Listing.Status.SOLD:
             return Response({'error': 'Sold items cannot be changed.'},
                             status=status.HTTP_400_BAD_REQUEST)
+        if action == 'delist':
+            listing.delete()
+            return Response({'id': pk, 'status': 'deleted', 'message': 'Listing permanently removed.'})
         listing.status = self._ALLOWED[action]
         listing.save(update_fields=['status', 'updated_at'])
         return Response({'id': listing.pk, 'status': listing.status,

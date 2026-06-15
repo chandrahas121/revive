@@ -23,9 +23,9 @@ const GRADE_PILL = {
 const CATEGORY_TILES = [
   { label: 'Shop Revive', sub: 'AI-graded second-life', icon: <Recycle className="w-5 h-5 text-[#007185]" />, source: 'revive' },
   { label: 'Amazon Renewed', sub: 'Certified refurbished', icon: <CheckCircle className="w-5 h-5 text-[#007185]" />, source: 'renewed' },
-  { label: 'Electronics', sub: 'Phones, laptops & more', icon: <Smartphone className="w-5 h-5 text-[#007185]" />, q: 'Electronics' },
-  { label: 'Fashion', sub: 'Pre-loved styles', icon: <Shirt className="w-5 h-5 text-[#007185]" />, q: 'Fashion' },
-  { label: 'Home & Garden', sub: 'Furnish for less', icon: <Armchair className="w-5 h-5 text-[#007185]" />, q: 'Home' },
+  { label: 'Electronics', sub: 'Phones, laptops & more', icon: <Smartphone className="w-5 h-5 text-[#007185]" />, category: 'Electronics' },
+  { label: 'Fashion', sub: 'Pre-loved styles', icon: <Shirt className="w-5 h-5 text-[#007185]" />, category: 'Fashion' },
+  { label: 'Home & Garden', sub: 'Furnish for less', icon: <Armchair className="w-5 h-5 text-[#007185]" />, category: 'Home' },
   { label: 'Sell Unused Items', sub: 'Earn from your closet', icon: <IndianRupee className="w-5 h-5 text-[#007185]" />, link: '/sell' },
 ]
 
@@ -34,7 +34,8 @@ const CategoryNav = () => {
   const goTo = (tile) => {
     if (tile.link) return navigate(tile.link)
     if (tile.source) return navigate(`/?source=${tile.source}`)
-    return navigate(`/?q=${encodeURIComponent(tile.q)}`)
+    if (tile.category) return navigate(`/?category=${encodeURIComponent(tile.category)}`)
+    return navigate(`/?q=${encodeURIComponent(tile.q || '')}`)
   }
   return (
     <div className="px-3 sm:px-4 mt-4">
@@ -110,6 +111,7 @@ const HomePage = () => {
   }, [location, status, request])
 
   const searchQuery = searchParams.get('q') || ''
+  const categoryFilter = searchParams.get('category') || ''
   const sourceFilter = searchParams.get('source') || ''
   const conditionFilter = searchParams.get('condition') || ''
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
@@ -121,11 +123,11 @@ const HomePage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-
   useEffect(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (searchQuery) params.set('q', searchQuery)
+    if (categoryFilter) params.set('category', categoryFilter)
     if (sourceFilter) params.set('source', sourceFilter)
     if (conditionFilter) params.set('condition', conditionFilter)
     params.set('page', String(page))
@@ -159,27 +161,27 @@ const HomePage = () => {
       })
       .catch(() => { setProducts([]); setTotal(0); setNumPages(1) })
       .finally(() => setLoading(false))
-  }, [searchQuery, sourceFilter, conditionFilter, page, location])
+  }, [searchQuery, categoryFilter, sourceFilter, conditionFilter, page, location])
 
 
   return (
     <div className="bg-[#EAEDED] min-h-screen">
       <Header />
       <main className="max-w-screen-2xl mx-auto">
-        {!searchQuery && !sourceFilter && <Banner />}
-        {/* {!searchQuery && !sourceFilter && <TrustStrip />} */}
-        {!searchQuery && !sourceFilter && <CategoryNav />}
-        {!searchQuery && !sourceFilter && <RecommendationRail />}
-        {(searchQuery || sourceFilter) && (
+        {!searchQuery && !sourceFilter && !categoryFilter && <Banner />}
+        {!searchQuery && !sourceFilter && !categoryFilter && <CategoryNav />}
+        {!searchQuery && !sourceFilter && !categoryFilter && <RecommendationRail />}
+        {(searchQuery || sourceFilter || categoryFilter) && (
           <div className="px-3 sm:px-4 pt-3 pb-1">
             <p className="text-xs sm:text-sm text-gray-600">
               {searchQuery && <><span className="font-semibold">Search:</span> "{searchQuery}" </>}
+              {categoryFilter && <><span className="font-semibold">Category:</span> {categoryFilter} </>}
               {sourceFilter && <><span className="font-semibold">Source:</span> {sourceFilter} </>}
               — {loading ? '…' : `${total} found`}
             </p>
           </div>
         )}
-        <ProductFeed products={products} loading={loading} showHeading={!searchQuery}
+        <ProductFeed products={products} loading={loading} showHeading={!searchQuery && !categoryFilter}
           page={page} numPages={numPages} total={total} onPageChange={goToPage} />
       </main>
     </div>

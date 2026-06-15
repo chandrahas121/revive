@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { estimateGreenCredits } from '../utils/tier';
+import { ChevronLeft } from 'lucide-react';
 
 const RETURN_REASONS = [
   { id: 'size',    label: 'Didn\'t fit / wrong size' },
@@ -113,9 +114,10 @@ const ReturnWizardPage = () => {
 
         <button
           onClick={() => navigate('/orders')}
-          className="text-[#007185] hover:text-[#c45500] hover:underline text-sm mb-4 inline-flex items-center gap-1"
+          className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm mb-4 inline-flex items-center gap-2 transition-colors"
         >
-          ← Back to Your Orders
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+          Back to Your Orders
         </button>
 
         <h1 className="text-2xl font-bold text-[#0F1111] mb-5">Return or Replace Items</h1>

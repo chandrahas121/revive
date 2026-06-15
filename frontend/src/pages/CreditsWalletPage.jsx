@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import Header from '../components/Header';
 import { getCredits, donateCredits, vestCredits } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -60,7 +61,10 @@ const CreditsWalletPage = () => {
       <Header />
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-4">
 
-        <button onClick={() => navigate('/')} className="text-[#007185] hover:underline text-sm inline-flex items-center gap-1">← Back</button>
+        <button onClick={() => navigate('/')} className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm mb-2 inline-flex items-center gap-2 transition-colors">
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+          Back
+        </button>
 
         <h1 className="text-2xl font-bold text-[#0F1111]">Green Credits</h1>
 

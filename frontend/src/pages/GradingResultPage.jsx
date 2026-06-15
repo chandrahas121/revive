@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { ShieldCheck, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Header from '../components/Header';
 import { inspectReturn, routeItem, generateHealthCard, processReturn } from '../api/client';
 import { getTier, TIER_INFO, estimateGreenCredits } from '../utils/tier';
@@ -212,8 +213,9 @@ const GradingResultPage = () => {
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
 
         <button onClick={() => navigate('/orders')}
-          className="text-[#007185] hover:underline text-sm mb-4 inline-flex items-center gap-1">
-          ← Back to Your Orders
+          className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm mb-4 inline-flex items-center gap-2 transition-colors">
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+          Back to Your Orders
         </button>
 
         <h1 className="text-2xl font-bold text-[#0F1111] mb-1">AI Condition Inspection</h1>
@@ -226,7 +228,9 @@ const GradingResultPage = () => {
         {phase === 'capture' && (
           <div className="bg-white border border-[#D5D9D9] rounded-lg p-5 sm:p-6 shadow-sm">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-[#FFF8EE] flex items-center justify-center flex-shrink-0 text-lg">📸</div>
+              <div className="w-9 h-9 rounded-full bg-[#febd69]/20 border border-[#febd69]/40 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-[#131921]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              </div>
               <div>
                 <p className="font-bold text-[#0F1111] text-sm">Scan {productTitle} from multiple angles</p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-snug">
@@ -252,7 +256,7 @@ const GradingResultPage = () => {
                       </>
                     ) : (
                       <>
-                        <span className="text-2xl mb-1">📷</span>
+                        <svg className="w-7 h-7 mb-1 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                         <span className="text-xs font-semibold text-gray-700">{slot.label}{slot.required && <span className="text-red-400"> *</span>}</span>
                         <span className="text-[10px] text-gray-400 px-1 leading-tight mt-0.5">{slot.hint}</span>
                       </>
@@ -268,7 +272,7 @@ const GradingResultPage = () => {
                 onChange={(e) => setVideoFile(e.target.files[0] || null)} />
               <button type="button" onClick={() => videoInput.current?.click()}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#febd69] hover:bg-yellow-50 transition-colors text-left">
-                <span className="text-xl">🎥</span>
+                <svg className="w-5 h-5 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#0F1111]">
                     {videoFile ? `Video added: ${videoFile.name}` : 'Add a 15s video'}
@@ -441,19 +445,27 @@ const GradingResultPage = () => {
 
             {/* Routing outcome */}
             <div className={`transition-all duration-500 ${showRoute ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
-              <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 sm:p-5 shadow-sm flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-lg" style={{ background: tierInfo.bg }}>♻️</div>
-                <div>
-                  <p className="font-bold text-[#0F1111] text-base">{routeMessage}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {route?.disposition === 'RESTOCK_NEW'
-                      ? 'Verified unopened — it goes back to the normal catalogue as New.'
-                      : route?.disposition === 'RENEWED_SPN'
-                        ? 'It heads to an authorized center for refurbishment, then lists as Amazon Renewed.'
-                        : route?.disposition === 'RECYCLE_DONATE'
-                          ? 'It exits the marketplace responsibly via a verified partner.'
-                          : 'It stays in your city instead of travelling to a warehouse — activated when a nearby buyer appears.'}
-                  </p>
+              <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
+                <div className="bg-[#131921] px-4 py-2.5 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[#febd69]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  <span className="text-[#febd69] font-bold text-sm">Second-Life Route</span>
+                </div>
+                <div className="p-4 flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#febd69]/15 border border-[#febd69]/30 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-[#131921]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#0F1111] text-sm">{routeMessage}</p>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      {route?.disposition === 'RESTOCK_NEW'
+                        ? 'Verified unopened — it goes back to the normal catalogue as New.'
+                        : route?.disposition === 'RENEWED_SPN'
+                          ? 'It heads to an authorized center for refurbishment, then lists as Amazon Renewed.'
+                          : route?.disposition === 'RECYCLE_DONATE'
+                            ? 'It exits the marketplace responsibly via a verified partner.'
+                            : 'It stays in your city instead of travelling to a warehouse — activated when a nearby buyer appears.'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -461,13 +473,18 @@ const GradingResultPage = () => {
             {/* Refund */}
             <div className={`transition-all duration-500 delay-100 ${showRefund ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
               <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
-                <div className="bg-green-600 px-4 py-3">
-                  <p className="text-white font-black text-base">Refund Initiated</p>
-                  <p className="text-green-100 text-xs">₹{refundAmount.toLocaleString('en-IN')} on its way to your Amazon Pay wallet — arrives in 2–3 hours</p>
+                <div className="bg-[#131921] px-4 py-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#febd69]/20 border border-[#febd69]/50 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-[#febd69]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-white font-black text-sm">Refund Initiated</p>
+                    <p className="text-[#febd69]/80 text-xs">₹{refundAmount.toLocaleString('en-IN')} on its way to your Amazon Pay wallet — arrives in 2–3 hours</p>
+                  </div>
                 </div>
                 <div className="px-4 py-3 flex items-center justify-between text-sm">
                   <span className="text-gray-500">Refund amount</span>
-                  <span className="font-bold text-green-700">₹{refundAmount.toLocaleString('en-IN')}</span>
+                  <span className="font-bold text-[#0F1111]">₹{refundAmount.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -504,11 +521,13 @@ const GradingResultPage = () => {
 
                 {tier === 2 && (
                   <div className="p-4">
-                    <div className="flex items-start gap-3 p-3 rounded-lg border-2 border-[#1d4ed8] bg-[#dbeafe]">
-                      <span className="text-xl">🧑‍🔧</span>
+                    <div className="flex items-start gap-3 p-3 rounded-lg border border-[#D5D9D9] bg-[#F7F8F8]">
+                      <div className="w-9 h-9 rounded-full bg-[#febd69]/15 border border-[#febd69]/30 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-[#131921]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      </div>
                       <div>
                         <p className="font-bold text-[#0F1111] text-sm">A Flex agent will collect this from your doorstep</p>
-                        <p className="text-xs text-gray-600 mt-0.5 leading-snug">For electronics ₹2,000–₹10,000, an agent verifies the device at handover — we'll schedule that now. (Kirana drop isn't available for this category.)</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-snug">For electronics ₹2,000–₹10,000, an agent verifies the device at handover — we'll schedule that now. (Kirana drop isn't available for this category.)</p>
                       </div>
                     </div>
                   </div>
@@ -516,11 +535,13 @@ const GradingResultPage = () => {
 
                 {tier === 3 && (
                   <div className="p-4">
-                    <div className="flex items-start gap-3 p-3 rounded-lg border-2 border-[#7c3aed] bg-[#ede9fe]">
-                      <span className="text-xl">🔬</span>
+                    <div className="flex items-start gap-3 p-3 rounded-lg border border-[#D5D9D9] bg-[#F7F8F8]">
+                      <div className="w-9 h-9 rounded-full bg-[#febd69]/15 border border-[#febd69]/30 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-[#131921]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+                      </div>
                       <div>
                         <p className="font-bold text-[#0F1111] text-sm">We'll arrange a professional inspection</p>
-                        <p className="text-xs text-gray-600 mt-0.5 leading-snug">For items above ₹10,000, a Flex agent picks this up for a full SPN diagnostic — issuing a 90-day Health Card before it's relisted.</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-snug">For items above ₹10,000, a Flex agent picks this up for a full SPN diagnostic — issuing a 90-day Health Card before it's relisted.</p>
                       </div>
                     </div>
                   </div>

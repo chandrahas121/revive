@@ -205,9 +205,9 @@ const Header = () => {
           </button>
         ))}
         <span className="text-gray-600 px-1 flex-shrink-0 hidden lg:inline select-none">|</span>
-        <button onClick={() => navigate('/?q=Electronics')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Electronics</button>
-        <button onClick={() => navigate('/?q=Fashion')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Fashion</button>
-        <button onClick={() => navigate('/?q=Home')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Home &amp; Garden</button>
+        <button onClick={() => navigate('/?category=Electronics')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Electronics</button>
+        <button onClick={() => navigate('/?category=Fashion')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Fashion</button>
+        <button onClick={() => navigate('/?category=Home')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Home & Garden</button>
       </div>
 
       {/* ── Mobile drawer ── */}
@@ -237,13 +237,10 @@ const Header = () => {
           {/* Category links */}
           <div className="border-t border-white/10 py-1">
             <p className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Shop by Category</p>
-            {['Electronics', 'Fashion', 'Home & Garden'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => { navigate(`/?q=${cat}`); closeMenu(); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                {cat}
+            {['Electronics', 'Fashion', 'Home'].map((cat) => (
+              <button key={cat} onClick={() => { navigate(`/?category=${encodeURIComponent(cat)}`); closeMenu(); }}
+                className="w-full text-left px-4 py-3 border-b border-gray-700 text-[#f1f1f1] hover:bg-gray-800 transition-colors">
+                {cat === 'Home' ? 'Home & Garden' : cat}
               </button>
             ))}
           </div>

@@ -124,7 +124,7 @@ const OrdersPage = () => {
                         Grade {order.listing_grade}{order.listing_grade_display ? ` — ${order.listing_grade_display}` : ''}
                       </span>
                     )}
-                    {order.return_window_closes && order.status !== 'delivered' && (
+                    {order.return_window_closes && !['returned', 'cancelled', 'delivered'].includes(order.status) && (
                       <p className="text-xs text-gray-400 mt-1.5">
                         Return window closes {new Date(order.return_window_closes).toLocaleDateString('en-IN')}
                       </p>
