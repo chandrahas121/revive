@@ -26,6 +26,13 @@ import math
 import os
 from pathlib import Path
 
+# Load backend/.env so REDIS_URL is available when running from repo root
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / 'backend' / '.env')
+except ImportError:
+    pass
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -150,12 +157,18 @@ def push_to_redis(demand_index: dict) -> int:
     """Push demand index to Redis. Returns number of keys written."""
     try:
         import redis
-        r = redis.Redis(
-            host=os.environ.get("REDIS_HOST", "localhost"),
-            port=int(os.environ.get("REDIS_PORT", 6379)),
-            decode_responses=True,
-            socket_connect_timeout=2,
-        )
+        redis_url = os.environ.get("REDIS_URL", "")
+        if redis_url:
+            # Upstash / cloud Redis — connect via full URL (supports rediss:// TLS)
+            r = redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=5)
+        else:
+            # Local Redis fallback
+            r = redis.Redis(
+                host=os.environ.get("REDIS_HOST", "localhost"),
+                port=int(os.environ.get("REDIS_PORT", 6379)),
+                decode_responses=True,
+                socket_connect_timeout=2,
+            )
         r.ping()
         count = 0
         pipe = r.pipeline()
