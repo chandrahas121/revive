@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # must be first
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # serves static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -123,10 +124,83 @@ CORS_ALLOW_CREDENTIALS = True   # required for cookies to be sent cross-origin
 
 # ─── Static / Media ─────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
-MEDIA_URL = '/media/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# S3 image storage — active when AWS_STORAGE_BUCKET_NAME env var is set.
+# Falls back to local filesystem (media/ folder) when not set.
+# boto3 picks up AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY automatically from env.
+_S3_BUCKET = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
+_S3_REGION = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1')
+
+if _S3_BUCKET:
+    MEDIA_URL = f'https://{_S3_BUCKET}.s3.{_S3_REGION}.amazonaws.com/'
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {
+                'bucket_name': _S3_BUCKET,
+                'region_name': _S3_REGION,
+                'file_overwrite': False,          # never silently overwrite uploads
+                'object_parameters': {
+                    'CacheControl': 'max-age=86400',  # browser caches images for 1 day
+                },
+            },
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+else:
+    MEDIA_URL = '/media/'
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+
+# ─── Caching ─────────────────────────────────────────────────────────────────
+# Uses Redis (via REDIS_URL) in production (Railway/Render set this automatically).
+# Falls back to in-process memory cache locally — no Redis install needed for dev.
+_REDIS_URL = os.environ.get('REDIS_URL', '')
+if _REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': _REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'SOCKET_CONNECT_TIMEOUT': 2,
+                'SOCKET_TIMEOUT': 2,
+                'IGNORE_EXCEPTIONS': True,   # never crash the app if Redis is down
+            },
+            'KEY_PREFIX': 'revive',
+            'TIMEOUT': 300,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'revive-cache',
+        }
+    }
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ─── Production security (auto-enabled when DEBUG=False) ─────────────────────
+# Railway/Render/Vercel sit behind a TLS-terminating reverse proxy, so we tell
+# Django to trust the X-Forwarded-Proto header they add.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60  # short for first deploy; raise to 31536000 after confirming HTTPS works
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}},

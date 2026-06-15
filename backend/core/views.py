@@ -5,6 +5,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.db.models import Q
 from django.utils import timezone
@@ -201,18 +202,30 @@ class ListingListView(APIView):
         else:
             qs = qs.order_by('-created_at')
 
+        # Cache the response for 60 seconds — storefront is read-heavy (99% of traffic).
+        # Key encodes all filter params so different filters get separate cache entries.
+        _cache_key = (
+            f"listings|{source}|{category}|{grade}|{condition}|"
+            f"{(search or '').strip()[:40]}|{page}|{page_size}"
+        )
+        cached = cache.get(_cache_key)
+        if cached is not None:
+            return Response(cached)
+
         total = qs.count()
         num_pages = max(1, -(-total // page_size))   # ceil division
         page = min(page, num_pages)
         start = (page - 1) * page_size
         results = ListingSerializer(qs[start:start + page_size], many=True).data
-        return Response({
+        payload = {
             'results': results,
             'count': total,
             'page': page,
             'page_size': page_size,
             'num_pages': num_pages,
-        })
+        }
+        cache.set(_cache_key, payload, 60)
+        return Response(payload)
 
     def post(self, request):
         serializer = CreateListingSerializer(data=request.data)
@@ -353,6 +366,11 @@ class ListingDetailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
+        _cache_key = f"listing_detail|{pk}"
+        cached = cache.get(_cache_key)
+        if cached is not None:
+            return Response(cached)
+
         try:
             listing = Listing.objects.select_related('product', 'seller').get(pk=pk)
         except Listing.DoesNotExist:
@@ -381,6 +399,8 @@ class ListingDetailView(APIView):
             'breakdown': {str(k): breakdown[k] for k in (5, 4, 3, 2, 1)},
         }
         data['reviews'] = ReviewSerializer(reviews[:30], many=True).data
+        # Cache listing detail for 5 minutes — invalidated explicitly on status change.
+        cache.set(_cache_key, data, 300)
         return Response(data)
 
 
@@ -503,6 +523,7 @@ class ManageListingView(APIView):
             return Response({'id': pk, 'status': 'deleted', 'message': 'Listing permanently removed.'})
         listing.status = self._ALLOWED[action]
         listing.save(update_fields=['status', 'updated_at'])
+        cache.delete(f"listing_detail|{listing.pk}")
         return Response({'id': listing.pk, 'status': listing.status,
                          'message': f'Listing {action}ed.'})
 
@@ -545,6 +566,7 @@ class OrderListCreateView(APIView):
         if listing.source != 'new':
             listing.status = Listing.Status.SOLD
             listing.save()
+            cache.delete(f"listing_detail|{listing.pk}")
 
         # Pillar 5: keeping this order earns Green Credits — create a PENDING earn
         # that vests when the return window closes (cancelled if the buyer returns).
