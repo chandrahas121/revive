@@ -39,9 +39,6 @@ const RecommendationRail = () => {
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Item' }} />
             </div>
             <div className="p-2">
-              <div className="flex items-center gap-1 mb-1">
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${GRADE_PILL[l.grade] || ''}`}>Grade {l.grade}</span>
-              </div>
               <p className="text-xs text-[#0F1111] line-clamp-2 leading-snug h-8">{l.product.title}</p>
               <p className="text-sm font-bold text-[#0F1111] mt-1">₹{parseFloat(l.price).toLocaleString('en-IN')}</p>
               <p className="text-[10px] text-[#007185] mt-0.5 line-clamp-1">{l.rec_reason}</p>

@@ -45,8 +45,10 @@ const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLif
   const offPct = showMrp ? Math.round((1 - parseFloat(price) / parseFloat(mrp)) * 100) : 0;
 
   // Pillar-4 browse-time return cues (real review intel, pre-empt returns early).
-  const fitPill = fitSignal && fitSignal.direction && fitSignal.direction !== 'true_to_size'
-    ? FIT_PILL[fitSignal.direction] : null;
+  // The fit-skew pill is intentionally NOT shown on the catalog photo tile — the
+  // sizing story belongs on the product page ("What buyers say" + FitTwin), not
+  // stamped on every thumbnail. Keep only the low-return keep-rate cue here.
+  const fitPill = null;
   const returnRisk = reviewSummary && typeof reviewSummary.return_risk === 'number'
     ? reviewSummary.return_risk : null;
   const keepRate = returnRisk != null && returnRisk < 0.2 ? Math.round((1 - returnRisk) * 10) : null;

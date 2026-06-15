@@ -67,7 +67,11 @@ const FitTwin = ({ category, itemId, brand, size, availableSizes, sizeSystem, on
   }
   if (!data || !data.available) return null;
 
-  const dir = DIRECTION[data.direction] || DIRECTION.true_to_size;
+  // The product's OWN review-mined skew (fitSignal) is the source of truth and is
+  // shared with the "What buyers say" card + checkout nudge — prefer it over the
+  // cross-dataset FitTwin direction so the three surfaces never contradict.
+  const effectiveDirection = (fitSignal && fitSignal.direction) || data.direction;
+  const dir = DIRECTION[effectiveDirection] || DIRECTION.true_to_size;
   const rec = data.recommended_size;          // stable, data-driven best fit
   // does the shopper's currently-picked size match the recommendation? (client-side,
   // so the badge updates instantly without re-fetching or changing the headline)

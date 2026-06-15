@@ -125,6 +125,10 @@ const AngleDefectMaps = ({ result }) => {
 // Success screen — tier-aware. Sellers get money, NOT credits (final_idea Rule 4).
 const ListingSuccess = ({ listing, routeResult, tier, onViewListing }) => {
   const tierInfo = TIER_INFO[tier];
+  // The refurbish + listing status is the "advanced" stage — it only makes sense once
+  // the agent has actually collected the item. So after publishing we first show the
+  // regular "agent pickup scheduled" state and reveal that status only after pickup.
+  const [pickupDone, setPickupDone] = useState(false);
 
   // Tier 3 — scheduled for professional SPN inspection, not instantly live
   if (tier === 3) {
@@ -167,15 +171,66 @@ const ListingSuccess = ({ listing, routeResult, tier, onViewListing }) => {
   const path = routeResult?.chosen_path;
   const pathCfg = PATH_CONFIG[path] || PATH_CONFIG.resell_p2p;
   const price = listing?.price || routeResult?.price;   // the actual listed (seller-adjusted) price
+  const needsRefurb = path === 'refurbish';
 
+  // ── Stage 1 — agent pickup scheduled (regular flow, before any status) ─────────
+  if (!pickupDone) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-[#232F3E] rounded-lg px-5 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center text-xl">🚚</div>
+            <div>
+              <p className="font-black text-lg">Agent pickup scheduled</p>
+              <p className="text-gray-300 text-xs mt-0.5">An Amazon agent will collect your item from your doorstep in 1–2 days</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 shadow-sm space-y-3 text-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+              {listing?.image ? <img src={listing.image} alt="" className="w-full h-full object-contain" /> : '📦'}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-[#0F1111] leading-snug line-clamp-1">{listing?.title || 'Your item'}</p>
+              <p className="text-xs text-gray-500">Pickup window · 1–2 days · {tierInfo.label}</p>
+            </div>
+          </div>
+          <p className="text-gray-600 leading-relaxed border-t border-[#f0f0f0] pt-3">
+            Once the agent collects and verifies it, we'll {needsRefurb ? 'send it for refurbishment and then' : ''} list
+            it on Revive and show you its live status here. You'll get a UPI transfer after the buyer's return window closes.
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          {/* Demo control: simulate the agent completing the pickup. */}
+          <button onClick={() => setPickupDone(true)}
+            className="flex-1 py-3 bg-[#febd69] hover:bg-[#f3a847] text-[#131921] font-bold text-sm rounded-lg">
+            Agent collected the item →
+          </button>
+          <button onClick={() => (window.location.href = '/')}
+            className="flex-1 py-3 border border-gray-300 text-gray-700 font-semibold text-sm rounded-lg hover:bg-gray-50">
+            Back to Marketplace
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Stage 2 — pickup done → refurbish + listing status ─────────────────────────
   return (
     <div className="space-y-4">
       <div className="bg-green-600 rounded-lg px-5 py-4 text-white">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">✓</div>
           <div>
-            <p className="font-black text-lg">Your item is live!</p>
-            <p className="text-green-100 text-xs mt-0.5">Keep it at home — we'll notify you the moment someone buys it</p>
+            <p className="font-black text-lg">{needsRefurb ? 'Picked up — refurbishment in progress' : 'Picked up — your item is live!'}</p>
+            <p className="text-green-100 text-xs mt-0.5">
+              {needsRefurb
+                ? 'It will list on Revive as soon as refurbishment completes'
+                : 'We\'ll notify you the moment someone buys it'}
+            </p>
           </div>
         </div>
       </div>
@@ -269,7 +324,9 @@ const SellIt = () => {
 
   // Risk tier (value-based) still drives guarantee/inspection wording, but is
   // NOT shown to the customer as "Tier N" (Q5). Photo prompts are category-driven.
-  const tier = getTier(mrp);
+  // Tier follows the actual SELLING price (current value), not the original MRP —
+  // before grading there's no price yet, so we fall back to the MRP as an estimate.
+  const tier = getTier(price || suggestedPrice || mrp);
   const tierInfo = TIER_INFO[tier];
   const electronics = isElectronics(category);
   const hasBattery = category === 'Phone' || category === 'Laptop';   // monitors have no battery/IMEI
@@ -354,7 +411,7 @@ const SellIt = () => {
     // not just at the top of a long form — a silent block looked like "nothing happens".
     const fail = (msg) => { setError(msg); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {} };
     if (!title.trim())  { fail('Please add a title.'); return; }
-    if (!mrp)           { fail('Original price is required — it determines the inspection tier.'); return; }
+    if (!mrp)           { fail('Original price is required — it anchors the AI price estimate.'); return; }
     if (!price)         { fail('Asking price is required.'); return; }
     if (parseFloat(price) <= 0) { fail('Asking price must be greater than 0.'); return; }
     if (missingRequired.length) { fail(`Please add all required photos: ${missingRequired.join(', ')}`); return; }
@@ -491,7 +548,7 @@ const SellIt = () => {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Original price (MRP) <span className="text-red-500">*</span>
-                <span className="text-gray-400 font-normal ml-1">— sets your inspection tier</span>
+                <span className="text-gray-400 font-normal ml-1">— helps the AI price your item</span>
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-gray-500">₹</span>

@@ -218,14 +218,23 @@ _DEMO = [
 ]
 
 
-def upsert_demo_catalog():
+def upsert_demo_catalog(skip_categories=None):
     """Create/refresh the guaranteed branded products + their NEW listings.
     Returns the list of Product objects (with very high rating_count so the
-    curation + popularity sort surface them first)."""
+    curation + popularity sort surface them first).
+
+    `skip_categories` lets the seeder leave whole categories to the REAL Amazon
+    catalog instead. The electronics demo uses this: curated phones/laptops/
+    monitors carried reused stock photos + borrowed (category-matched) reviews,
+    which read as inaccurate next to the real ASINs that ship their own image and
+    their own 1:1 reviews — so we skip them and let the real data stand alone."""
+    skip = set(skip_categories or ())
     rc = 250000
     products = []
     for i, (title, category, brand, mrp, img_key) in enumerate(_DEMO):
         rc -= 1500  # descending, all far above real-data rating counts
+        if category in skip:
+            continue
         prod, _ = Product.objects.update_or_create(
             asin=f"DEMO-{i:03d}",
             defaults=dict(

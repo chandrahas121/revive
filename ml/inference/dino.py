@@ -169,13 +169,21 @@ _MAX_DEFECT_AREA_PCT = 0.35
 _processor = None
 _model = None
 _device = "cpu"
+_load_attempted = False   # so a failed load isn't retried on every grade call
 
 
 def _load_model() -> None:
-    """Load Grounding DINO tiny on first call. Thread-safe via GIL."""
-    global _processor, _model, _device
-    if _model is not None:
+    """Load Grounding DINO tiny on first call. Thread-safe via GIL.
+
+    If the load fails (e.g. transformers/weights mismatch in this env), we record
+    the attempt and DON'T retry on subsequent calls — otherwise every grading
+    request re-downloads + re-initialises 978 weights only to fail again, which is
+    what was making AI grading take ~1.5 min. After a failed attempt detect_defects
+    returns [] immediately (grading proceeds on CLIP + heuristics)."""
+    global _processor, _model, _device, _load_attempted
+    if _model is not None or _load_attempted:
         return
+    _load_attempted = True
 
     try:
         import torch

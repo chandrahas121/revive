@@ -2,7 +2,8 @@
 // Tier logic + Green Credits estimation — mirrors final_idea.md §3 Rule 3,
 // §4 Pillar 2 tier table, §5 Green Credits formula, and the ml/route.py backend.
 //
-// Tier is derived from the item's value (MRP, or asking price as a proxy):
+// Tier is derived from the item's CURRENT value — the selling / resale price, not
+// the original MRP (a 4-year-old ₹90k laptop now worth ₹12k is tiered on ₹12k):
 //   Tier 1 — below ₹2,000   — apparel, books, toys, home goods, accessories
 //   Tier 2 — ₹2,000–₹10,000 — phones, laptops, monitors, speakers, tablets
 //   Tier 3 — above ₹10,000  — high-value electronics, cameras

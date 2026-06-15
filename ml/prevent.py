@@ -231,11 +231,32 @@ def score_risk(
             "fit_direction": direction or "",
         })
 
+    # ── Bracketeering: same product added in ≥2 distinct sizes ───────────────────
+    # A "size hedge" (buy S+M+L, keep one, return the rest) is a top return driver.
+    # `size` collapses letter sizes to 0, so detect on the raw size_label instead.
+    from collections import defaultdict
+    sizes_by_product: Dict[str, set] = defaultdict(set)
+    for it in cart_items:
+        lbl = str(it.get("size_label") or "").strip()
+        if lbl:
+            sizes_by_product[str(it.get("product_id"))].add(lbl)
+    bracket_pid = next((pid for pid, s in sizes_by_product.items() if len(s) >= 2), None)
+    bracket_nudge = ""
+    if bracket_pid:
+        n_sizes = len(sizes_by_product[bracket_pid])
+        bracket_nudge = (
+            f"You've added {n_sizes} different sizes of the same item. Ordering several "
+            f"sizes to send the rest back delays your refund and adds return waste — use "
+            f"the fit guide to pick your best size and keep just one."
+        )
+
     if not item_risks:
         return {
             "risk": 0.0,
             "flagged_item_id": None,
             "nudge_text": "",
+            "bracket_nudge": bracket_nudge,
+            "bracket_product_id": bracket_pid,
             "credit_promise": 0,
             "breakdown": [],
         }
@@ -271,6 +292,8 @@ def score_risk(
         "risk": round(overall_risk, 3),
         "flagged_item_id": flagged["product_id"],
         "nudge_text": nudge,
+        "bracket_nudge": bracket_nudge,
+        "bracket_product_id": bracket_pid,
         "credit_promise": credit_promise,
         "breakdown": item_risks,
     }

@@ -25,6 +25,26 @@ from .serializers import (
 )
 
 
+def _interleave_by_category(listings):
+    """Round-robin a pre-sorted listing list across product categories so the grid
+    shows a varied mix (phone, laptop, tee, shoe, monitor, phone…) instead of one
+    category fully before the next. Each category keeps its incoming order."""
+    from collections import OrderedDict
+    buckets = OrderedDict()
+    for l in listings:
+        buckets.setdefault(l.product.category, []).append(l)
+    pools = list(buckets.values())
+    out, idxs = [], [0] * len(pools)
+    remaining = sum(len(p) for p in pools)
+    while remaining:
+        for j, p in enumerate(pools):
+            if idxs[j] < len(p):
+                out.append(p[idxs[j]])
+                idxs[j] += 1
+                remaining -= 1
+    return out
+
+
 def _set_auth_cookies(response, refresh_token_obj):
     jwt_settings = settings.SIMPLE_JWT
     response.set_cookie(
@@ -165,7 +185,7 @@ class ListingListView(APIView):
                     blat, blng = float(lat), float(lng)
                 else:
                     blat, blng = geohash_decode(near_geohash)
-                listings = list(qs[:500])
+                listings = list(qs.order_by('-product__rating_count', '-product__rating')[:500])
 
                 def _dist(l):
                     if not l.geohash5:
@@ -174,6 +194,12 @@ class ListingListView(APIView):
                     return _haversine_km(blat, blng, slat, slng)
 
                 listings.sort(key=_dist)
+                # Most NEW (Amazon-fulfilled) items have no seller geohash, so they
+                # all tie on distance and would clump by category. Interleave across
+                # categories (each category stays in nearest→popular order) so the
+                # grid shows a varied mix on every page, like the no-location path.
+                if not category:
+                    listings = _interleave_by_category(listings)
                 total = len(listings)
                 num_pages = max(1, -(-total // page_size))
                 page = min(page, num_pages)
@@ -190,6 +216,22 @@ class ListingListView(APIView):
 
         if not source or source == 'new':
             qs = qs.order_by('-product__rating_count', '-product__rating')
+            # Homepage (no category filter): popularity order alone would list every
+            # phone, then every laptop, then all clothing. Interleave across categories
+            # so the grid leads with a varied mix while keeping each category's own
+            # popularity order. Done in Python (catalog is small); category pages keep
+            # the straight DB order.
+            if not category:
+                ordered = _interleave_by_category(list(qs[:1000]))
+                total = len(ordered)
+                num_pages = max(1, -(-total // page_size))
+                page = min(page, num_pages)
+                start = (page - 1) * page_size
+                results = ListingSerializer(ordered[start:start + page_size], many=True).data
+                return Response({
+                    'results': results, 'count': total, 'page': page,
+                    'page_size': page_size, 'num_pages': num_pages,
+                })
         else:
             qs = qs.order_by('-created_at')
 
@@ -312,6 +354,8 @@ class ListingListView(APIView):
                 defects=grade_result.get('defects', []),
                 geohash5=geohash5,
                 mrp=float(mrp_val),
+                # Tier is set by the actual selling price, not the original MRP.
+                tier_value=float(listing.price),
             )
             listing.chosen_path = route_result.get('chosen_path', '')
             listing.tier = route_result.get('tier', 1)
@@ -615,6 +659,9 @@ class ReturnProcessView(APIView):
                 defects=defects,
                 geohash5=geohash5,
                 mrp=float(product.mrp),
+                # A returned item's tier follows what the buyer actually paid (its
+                # current value), not the catalog MRP.
+                tier_value=float(order.listing.price),
                 product_id=product.asin,
                 title=product.title,
                 brand=product.brand,

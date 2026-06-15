@@ -1,0 +1,333 @@
+\documentclass[11pt]{article}
+
+% ---- Packages ----
+\usepackage[a4paper,top=1in,bottom=1in,left=1in,right=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}               % Times New Roman
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{ragged2e}
+\usepackage[hidelinks]{hyperref}
+\usepackage{float}  
+
+% ---- Brand Colors ----
+\definecolor{amznNavy}{HTML}{232F3E}
+\definecolor{amznOrange}{HTML}{FF9900}
+\definecolor{amznSlate}{HTML}{37475A}
+\definecolor{placeGray}{HTML}{555555}
+\definecolor{tipGray}{HTML}{999999}
+\definecolor{tblLight}{HTML}{F5F5F5}
+\definecolor{ruleOrange}{HTML}{FF9900}
+
+% ---- Header / Footer ----
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhead[R]{\footnotesize\itshape\color{amznSlate} HackOn with Amazon | Solution Document}
+\fancyfoot[C]{\footnotesize\color{placeGray} Confidential --- For Jury Evaluation Only}
+
+\fancypagestyle{firststyle}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\footnotesize\color{placeGray} Confidential --- For Jury Evaluation Only}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+
+% ---- Section heading styles ----
+\titleformat{\section}
+  {\color{amznNavy}\bfseries\Large}
+  {\thesection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{16pt}{6pt}
+
+\titleformat{\subsubsection}[runin]
+  {\color{amznSlate}\bfseries\normalsize}
+  {}{0em}{}
+\titlespacing*{\subsubsection}{0pt}{8pt}{6pt}
+
+\setcounter{secnumdepth}{1}
+
+
+
+% ---- Helper macros ----
+\newcommand{\placeholder}[1]{{\color{placeGray} #1}}
+\newcommand{\tip}[1]{{\itshape\color{tipGray} $\rightarrow$ #1}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+% ---- Table column types ----
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\begin{document}
+
+% ============== COVER PAGE ==============
+\thispagestyle{firststyle}
+
+\begin{center}
+\includegraphics[width=\textwidth]{banner.png}
+
+\vspace{18pt}
+
+{\bfseries\fontsize{34}{38}\selectfont
+\textcolor{amznNavy}{HackOn} \textcolor{amznOrange}{with Amazon}}
+
+\vspace{8pt}
+
+{\Large\color{amznSlate} A Universe of Opportunity}
+
+\vspace{4pt}
+
+{\small\color{amznSlate} 48-Hour Hackathon \ \ $|$ \ \ Solution Document}
+\end{center}
+
+\vspace{6pt}
+{\color{ruleOrange}\rule{\textwidth}{1.2pt}}
+
+\vspace{20pt}
+
+% ---- Meta table ----
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{|>{\color{amznNavy}\bfseries}p{0.32\textwidth}|X|}
+\hline
+Team Name & \placeholder{Vijaya} \\ \hline
+Hackathon Theme & \placeholder{Second Life Commerce: AI Powered Returns \& Sustainable Resale} \\ \hline
+Date & \placeholder{15th June 2026} \\ \hline
+\end{tabularx}
+
+\vspace{22pt}
+
+{\bfseries\large\color{amznNavy} Team Members}
+
+\vspace{4pt}
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{|L{0.30\textwidth}|L{0.24\textwidth}|X|}
+\hline
+\rowcolor{amznNavy}
+{\color{white}\bfseries Name} & {\color{white}\bfseries College / University} & {\color{white}\bfseries Email} \\ \hline
+Bojja Sunhith Reddy & IIIT Bangalore & Sunhith.Reddy@iiitb.ac.in \\ \hline
+\rowcolor{tblLight}
+Harsh Mohta & IIIT Bangalore & Harsh.Mohta@iiitb.ac.in \\ \hline
+Chinthakunta Sai Venkata Chandrahas Reddy & IIIT Bangalore & Chandrahas.CSVR@iiitb.ac.in \\ \hline
+\end{tabularx}
+
+\clearpage
+% ============== SECTION 1 ==============
+\section{Problem Statement \& Relevance}
+\tip{Project REVIVE --- ``Every product deserves a second life''}
+
+
+\subsection{The Problem}
+\placeholder{Every returned or unused product faces one decision --- what happens to it next --- yet no intelligent system in e-commerce makes that call today. In 2025, U.S. retail returns hit \$849.9 billion (15.8\% of all retail sales), and online return rates of 19.3\% run more than double the 8.7\% seen in stores. For the long tail of everyday goods, the cost of shipping an item 600 km back to a warehouse, inspecting it, and restocking it exceeds its own value --- so it is liquidated or landfilled by default.}
+
+\subsection{Why It Matters}
+\placeholder{The scale is global and accelerating. The reverse-logistics market grows from \$700B (2023) to a projected \$954B by 2029 (36\% growth). Returns are no longer a fringe cost --- 82\% of shoppers say return policies directly dictate their purchase decisions.}
+
+\placeholder{Customer behavior has made it worse. 63\% of online consumers bracket orders (up from 40\% in 2018), and 43\% of Gen Z admit to wardrobing, averaging 7.7 returns a year. The system was never built for this volume.}
+
+\placeholder{The environmental cost is severe. The reverse supply chain emits up to 24 million metric tons of CO\textsubscript{2} annually, and repeated handling renders 22\% of fashion returns completely unsellable.}
+
+\placeholder{The cost of inaction is also regulatory. The EU's Ecodesign for Sustainable Products Regulation (ESPR), in force since July 2024, outlaws destruction of returned goods (large enterprises by 2026, SMEs by 2030) and mandates Digital Product Passports. Doing nothing soon becomes non-compliant.}
+
+\subsection{Theme Alignment}
+\placeholder{The Amazon HackOn theme asks how technology can extend a product's life and build a customer-centric circular economy. REVIVE attacks the exact moment that decision is made --- the instant an item is returned or sits unused in a drawer. Our unique angle is that we are not building another resale marketplace, because marketplaces already exist. We are building the intelligent decision layer that sits inside Amazon and answers, in under two seconds, what an item is, what condition it is in, and what its most valuable and least wasteful second life should be --- whether that means restock as new, resell locally, refurbish, donate, or recycle. It keeps products inside the city rather than shipping them 600 km back to a warehouse, turning the most carbon-intensive step of returns into the one we eliminate.}
+
+\subsection{What Makes This Novel}
+
+\placeholder{Existing systems treat a return as a logistics problem (how do we move it back?) or a marketplace problem (where do we relist it?). REVIVE's core insight is that the missing piece is a decision engine, not a faster truck or another storefront. Four design choices make our approach genuinely different.}
+
+\subsubsection*{\color{amznSlate} 1. Category and value are separated into two independent axes:}
+\placeholder{We ask two simple questions about every item instead of forcing one rating to do everything. First, what kind of product is it --- that decides which photos to take and how to grade it, so a shoe is checked for sole wear while a phone is checked for a working screen. Second, how valuable and fraud-prone is it --- that decides how much verification it needs and how long a guarantee it gets. An AI vision engine then grades the item from A to F and marks every scratch or defect with a box in under two seconds, replacing slow and subjective hand inspection.}
+
+\subsubsection*{\color{amznSlate} 2. A Disposition Gate, not blind resale:}
+\placeholder{Mirroring how Amazon FBA and major retailers actually operate, a verified sealed return goes back to the New catalog at full price, only opened or used items become Open-box, Used, or Renewed, and dead items are recycled. Not every return deserves a second life, and deciding which ones do is the hard part nobody automates.}
+
+\subsubsection*{\color{amznSlate} 3. Demand-gravity routing keeps items local:}
+\placeholder{A two-stage engine first waits for local demand, using a geohash demand-gravity model fed by real order and search history, then runs an expected-value optimizer to pick the cheapest path to a buyer who is often within 5 km. It is benchmarked at roughly 64\% cheaper and 4$\times$ faster than a warehouse round-trip, saving about 590 km and 4.2 kg CO\textsubscript{2} per locally routed item.}
+
+\subsubsection*{\color{amznSlate} 4. Trust is engineered in, and bad purchases are prevented upstream:}
+\placeholder{Every item ships with a verifiable Product Health Card, carrying a signed condition grade, defect photos, functional status, and a tamper‑evident hash, which solves the trust deficit of peer‑to‑peer resale. Green Credits then reward customers for keeping an order rather than returning it, and those credits can be used in the Revive store, which helps fuel the Revive store.}
+
+% ============== SECTION 2 ==============
+\section{Customer \& Solution}
+
+\subsection{Target Customer}
+
+\placeholder{REVIVE serves three everyday users who all hit the same broken wall.}
+
+\begin{itemize}[leftmargin=2em,itemsep=6pt,topsep=4pt]
+  \item \textbf{The returning shopper, like Priya.} \placeholder{She sends back a Rs.500 pair of shoes and just wants a fast refund without feeling she caused waste.}
+  \item \textbf{The casual seller, like Rahul.} \placeholder{He has a perfectly good baby monitor sitting idle and wants to sell it locally without haggling, strangers, or guesswork on price.}
+  \item \textbf{The small seller.} \placeholder{They process roughly 200 returns a month and need the manual work of inspecting, grading, pricing, and re-listing each item taken off their plate.}
+\end{itemize}
+
+\placeholder{What they all need is a single trusted system that instantly decides what an item is worth, where it should go next, and proves its condition to the next owner.}
+
+\subsection{How We Solve It}
+\placeholder{REVIVE is an AI decision engine for returned and unused products. The moment an item enters the system, it identifies the exact product from the catalog, grades its condition in under two seconds, decides the most valuable and least wasteful second life for it, and lists it with a verifiable proof of condition. Instead of shipping everything 600 km back to a warehouse, it keeps products inside the city and routes them to a nearby buyer. We are not building another resale marketplace --- we are building the intelligent decision layer that sits between a product and its next owner.}
+
+\vspace{6pt}
+\textbf{Key features:}
+
+\begin{itemize}[leftmargin=2em,itemsep=6pt,topsep=4pt]
+
+  \item \textbf{Instant catalog match and AI grading:} \placeholder{The system recognizes the exact product from the catalog and pulls its real specs and price, so condition is judged against the true item rather than a seller's guess. An AI vision engine then grades the item from A to F and marks every scratch or defect with a box in under two seconds. This matters because manual inspection is slow, inconsistent, and the single biggest bottleneck for any seller handling returns at volume.}
+
+  \item \textbf{Virtual try-on and FitTwin:} \placeholder{Shoppers use virtual try‑on to decide between different colours and variants of an item before buying, and FitTwin finds their right size by learning from other users with a similar body profile. We also catch bracketing at the source, so when a shopper keeps several sizes of the same item in the cart at checkout, a pop‑up tells them we noticed and offers to take them back to the product page to confirm the best fit before they order. Since most apparel returns come from wrong colour, variant, or fit choices, fixing that doubt at the point of purchase stops the return from ever happening, which is the cheapest return to handle.}
+
+  \item \textbf{Smart disposition and local routing:} \placeholder{A Disposition Gate decides each item's best second life, whether that is restock as new, open‑box, used, renewed, or recycle, so a sealed return goes back to full‑price stock instead of being dumped into a "used" bin. A demand‑gravity engine then routes the item to a buyer nearby instead of sending it on a long warehouse round‑trip, which cuts cost, speeds up resale, and sharply lowers the carbon footprint of the return.}
+
+  \item \textbf{Product Health Card:} \placeholder{Every item ships with a signed and tamper‑evident record of its grade, defect photos, and condition. This is what makes local and peer‑to‑peer resale trustworthy, because the buyer can see exactly what they are getting and verify it has not been faked, removing the main reason people avoid buying used.}
+
+  \item \textbf{Green Credits:} \placeholder{When a customer keeps an order instead of returning it, they earn Green Credits. These credits can be redeemed only in the Revive store, so customers are rewarded for not returning, it pushes them to buy from the Revive store, and good products stay out of the returns pile in the first place.}
+
+\end{itemize}
+
+
+\subsection{User Workflow}
+
+\placeholder{The two diagrams below capture the full REVIVE flow. The first shows the end-to-end journey from the moment a user returns or lists an item through catalog match, AI grading, the Disposition Gate, and finally smart routing to the next owner. The second zooms into the two-stage routing engine itself, showing how the demand-gravity model hunts for a local buyer before the expected-value optimizer picks the cheapest and fastest delivery path.}
+
+\vspace{10pt}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{revive_v2_workflow.png}
+  \caption{\color{placeGray}\itshape End-to-end REVIVE workflow --- from item entry through AI grading, Disposition Gate, and smart routing to sale. Risk tiers are assigned by value: Tier 1 (below Rs.2,000) receives lightweight verification, Tier 2 (Rs.2,000--Rs.10,000) receives standard verification and a short guarantee, and Tier 3 (above Rs.10,000) receives full verification, extended guarantee, and priority routing.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.62\textwidth]{revive_v2_routing_detail.png}
+  \caption{\color{placeGray}\itshape Two-stage routing detail --- Stage 1 demand-gravity gate polls for a local buyer; Stage 2 EV optimizer picks the optimal route or donate path.}
+\end{figure}
+
+
+\subsection{Working Prototype}
+\placeholder{[[Insert 2-3 screenshots of your working product]]}
+
+{\bfseries Demo:} \placeholder{[Video/Deployed URL]}
+
+\tip{End-to-end working prototype with evidence = highest Implementation score.}
+
+% ============== SECTION 3 ==============
+\section{Tech Architecture \& Scaling}
+\tip{Jury focus: Tech Architecture (complexity, algorithms, APIs, code quality) + Scalability (depth, interconnectedness)}
+
+\subsection{Architecture}
+\placeholder{[[Insert system architecture diagram]]}
+
+\subsection{Tech Stack}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|L{0.22\textwidth}|L{0.40\textwidth}|X|}
+\hline
+\rowcolor{amznNavy}
+{\color{white}\bfseries Layer} & {\color{white}\bfseries Technology} & {\color{white}\bfseries Why} \\ \hline
+Frontend & [e.g., React] & [Reason] \\ \hline
+\rowcolor{tblLight}
+Backend & [e.g., FastAPI] & [Reason] \\ \hline
+Data/ML & [e.g., DynamoDB, Bedrock] & [Reason] \\ \hline
+\rowcolor{tblLight}
+Infra & [e.g., Lambda, S3] & [Reason] \\ \hline
+\end{tabularx}
+
+\subsection{Key Algorithms \& Complexity}
+
+\placeholder{REVIVE is not a CRUD app with a database behind it. The hard part is making five different machine-learning decisions about a physical object in a couple of seconds, and doing it cheaply enough to run on millions of items. Here is what actually powers that, in plain terms, and why we picked each approach.}
+
+
+\subsubsection*{\color{amznSlate} Catching the lookalike, not just the category:}
+\placeholder{Checking a photo is two questions --- is this even a shoe, and is this the shoe that was listed. CLIP answers the first fast but cannot tell two similar shoes apart, so DINOv2 answers the second by comparing the upload to the catalog reference image with cosine similarity, sharp enough to catch a different model of the same product. Each comparison is a single vector dot product, so the cost is tiny and constant per image. Putting a cheap broad check in front of a precise one catches lookalike fraud that one model alone would miss, and a perceptual hash then rejects duplicate or recycled photos in one comparison.}
+
+\subsubsection*{\color{amznSlate} Fusing three weak vision signals into one reliable grade:}
+\placeholder{No single model reliably grades a used product, so we combine three. A zero-shot detector (Grounding DINO) boxes defects without a trained class for every scratch, a vision language model describes the item in words, and a CLIP pass checks completeness like whether the box and accessories are present. A small fusion head blends these into a cosmetic grade from A to F and a separate functional status, because a phone can look flawless and still not power on. The whole pipeline runs in under two seconds, which lets a seller process two hundred returns without touching one by hand.}
+
+\subsubsection*{\color{amznSlate} A physics gravity model that makes routing scale:}
+\placeholder{Instead of scanning every listing in the country to find a nearby buyer, we encode each location into a geohash cell, which turns a map into a grid of buckets. Demand for a category in a cell is then pulled toward an item using a gravity score, demand / (1 + dist\textsuperscript{2} / 25), so nearby demand counts a lot and far-away demand fades out fast. Because the lookup is a hash into Redis, finding local demand is roughly constant time, and we only ever look at a handful of neighbouring cells rather than the whole map. That is the difference between an algorithm that works for a demo and one that works for a country.}
+
+\subsubsection*{\color{amznSlate} Cheap waiting now, one real decision later:}
+\placeholder{Routing runs in two stages on purpose. Stage one is a light demand gate that just waits and re-checks every few hours while the item sits at home, costing almost nothing. Stage two is the real decision, and it only fires once --- the moment a buyer actually exists. At that point an expected-value optimizer compares a small fixed set of routes, local peer-to-peer, kirana relay, central node, or donate, and picks the one with the best economic and environmental payoff. Because the option set is small and fixed, the heavy thinking happens once per item rather than continuously.}
+
+\subsubsection*{\color{amznSlate} Stopping the return before it happens:}
+\placeholder{At checkout a gradient-boosted model reads behavioural signals --- like adding three sizes of the same shoe to the cart --- and flags a likely return. Instead of blocking the sale, it nudges the shopper, and FitTwin recommends a size by finding other shoppers with a similar body profile, which is the same collaborative-filtering idea that powers product recommendations, applied to fit. Preventing a return is the cheapest possible outcome, because the item never moves at all.}
+
+\subsubsection*{\color{amznSlate} Trust you can verify, not just believe:}
+\placeholder{Every graded item gets a Product Health Card stored as a signed record with a SHA-256 hash, so any later tampering is detectable. The buyer is not trusting the seller --- they are trusting math.}
+
+\vspace{6pt}
+\placeholder{Put together, the thought leadership is in the combinations rather than any one model. We pair a cheap gate with a precise one for verification, fuse three weak vision signals into one reliable grade, and borrow a physics gravity model plus geohash bucketing to make local routing scale to millions of items instead of choking on them.}
+
+
+\subsection{Scaling Strategy}
+\placeholder{[How does this handle 100x-1000x growth? Describe horizontal scaling, caching, or distribution approach.]}
+
+\tip{Solutions restricted to local functionality score low. Show global scalability.}
+
+% ============== SECTION 4 ==============
+\section{Future Vision}
+
+\subsection{Where This Goes}
+
+\placeholder{REVIVE starts as a smarter way to handle returns, but the decision engine underneath it is the real product. In one to three years it becomes the default second-life layer for commerce --- the system that any returned or unused item passes through to learn what it is, what condition it is in, and where it should go next. Every item carries a verifiable Product Health Card, which is the same idea regulators are now mandating as a Digital Product Passport, so REVIVE is positioned not just as a retail feature but as the trust and routing infrastructure for the circular economy. The big-picture vision is simple to state. Today the moment a product is returned, the smartest system in the chain is a shipping label. We want ``give it a second life'' to become a one-tap default that is faster, cheaper, and lower-carbon than shipping the item back, turning returns from a multi-billion-dollar liability into a strategic recommerce asset.}
+
+\subsection{Roadmap}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\textwidth}{|L{0.18\textwidth}|X|L{0.36\textwidth}|}
+\hline
+\rowcolor{amznNavy}
+{\color{white}\bfseries Horizon} & {\color{white}\bfseries Milestone} & {\color{white}\bfseries Impact} \\ \hline
+\textbf{0 to 3 months} & Launch in one or two metros for fashion and electronics returns. AI grading, Disposition Gate, and local peer-to-peer routing live end to end. & First pilot sellers onboarded, grading under two seconds per item, and a measurable share of returns kept inside the city instead of going to a warehouse. \\ \hline
+\rowcolor{tblLight}
+\textbf{3 to 6 months} & Add Sell It for unused personal items, turn on return prevention with FitTwin and virtual try-on, launch Green Credits, and stand up the kirana relay network. & Thousands of sellers active, a visible drop in return rate on apparel, and Green Credits being earned and redeemed in the Revive store. \\ \hline
+\textbf{6 to 12 months} & Integrate with Amazon Renewed so second-life items appear in normal search, add authorized refurbishment partners for high-value goods, and make the Health Card Digital Product Passport ready for EU ESPR rules. & Scaled across multiple cities, large recovery value returned to sellers and Amazon, and meaningful carbon and waste avoided per item routed locally. \\ \hline
+\end{tabularx}
+
+\subsection{Multi-Segment Expansion}
+
+\placeholder{The engine does the same five things for any physical object --- identify it, grade it, decide its best second life, route it to a nearby owner, and certify its condition. That makes the expansion path broad and natural, and we sequence it from easiest to most valuable.}
+
+\subsubsection*{\color{amznSlate} Step 1 --- Widen inside retail:}
+\placeholder{Start with fashion and electronics, then extend the category profiles to home and kitchen, appliances, toys, and books. Each new category is mostly a new grading rubric on top of the same engine, so growth is fast and low risk.}
+
+\subsubsection*{\color{amznSlate} Step 2 --- Open the engine to other sellers:}
+\placeholder{Offer the decision layer as an API to brand direct-to-consumer stores and third-party marketplaces that have the same returns problem but no intelligence layer of their own. REVIVE becomes returns-and-recommerce as a service, not just an Amazon feature.}
+
+\subsubsection*{\color{amznSlate} Step 3 --- Move into enterprise asset recovery:}
+\placeholder{Apply the same grade-and-route logic to IT asset disposition, where companies retire laptops, phones, and equipment in bulk and badly need automated grading, data-wipe certificates, and resale routing. This is high value and underserved.}
+
+\subsubsection*{\color{amznSlate} Step 4 --- Expand into durable, high-trust segments:}
+\placeholder{Automotive used parts, rental and subscription returns for furniture and apparel, and certified resale of durable medical equipment all share one trait --- the buyer will only transact if condition is proven, which is exactly what the Health Card delivers.}
+
+\subsubsection*{\color{amznSlate} Step 5 --- Become cross-border circular infrastructure:}
+\placeholder{As EU ESPR mandates force global manufacturers to adopt Digital Product Passports, REVIVE's signed Health Card and ledger position it as the verification and routing backbone for circular commerce across markets, starting from dense Indian metros and tier-2 cities and extending outward.}
+
+\vspace{6pt}
+\placeholder{The thread through all of it is that we are not building one vertical --- we are building the decision layer that every second-life market is missing, and each new segment reuses the same core engine.}
+
+\subsection{Value Impact}
+
+\placeholder{The addressable problem is enormous. Reverse logistics is already a \$700B market in 2023 and is projected to reach \$954B by 2029. In the US alone, returns reached \$849.9B in 2025 at a 19.3\% online return rate, and the reverse supply chain emits up to 24 million metric tons of CO\textsubscript{2} a year. Every one of those returns is an item REVIVE can make a smarter decision about, so the user base is effectively every online shopper and every seller who handles returns.}
+
+\placeholder{Per-item savings are where it compounds. For a low-value long-tail item, the legacy system recovers close to zero because the 600 km warehouse round-trip costs more than the product is worth, so it is written off. REVIVE instead routes it to a local buyer at roughly 64\% lower logistics cost and about 4$\times$ faster, recovers a grade-adjusted resale value where the old path recovered nothing, and avoids around 590 km of transport and 4.2 kg of CO\textsubscript{2} per item kept local. Rigorous local routing of this kind has been shown to deliver up to 33\% higher economic return and 65\% better environmental outcomes than standard heuristics.}
+
+\placeholder{Efficiency gains scale on the seller side. A small seller handling 200 returns a month replaces slow, subjective manual inspection with grading in under two seconds per item. Automated visual inspection of this type lifts defect-detection accuracy by up to 90\% and productivity by around 50\%, which turns a major bottleneck into a near-instant step.}
+
+\placeholder{At scale the numbers become material. For every one million returns kept local rather than warehoused, REVIVE avoids on the order of 590 million km of transport and roughly 4,000 tonnes of CO\textsubscript{2}, while converting write-offs into recovered resale value. Revenue potential comes from four stacked streams --- recovered resale value that was previously lost, commission on each second-life sale, a measurable drop in return rate from prevention and FitTwin, and higher customer retention from Green Credits that are spent back inside the Revive store. Even a small percentage of a near-trillion-dollar reverse-logistics market represents billions in recovered value and millions of tonnes of avoided emissions.}
+
+\vspace{8pt}
+{\small\color{tipGray}\itshape Figures above are drawn from cited market and operational research and are presented as illustrative estimates rather than guarantees.}
+
+\vspace{18pt}
+{\color{amznSlate}\rule{\textwidth}{0.8pt}}
+
+\vspace{6pt}
+{\bfseries Links:} \ \href{https://github.com/chandrahas121/amazon-hackon}{\color{amznSlate} https://github.com/chandrahas121/amazon-hackon} \ \ $|$ \ \ \placeholder{Demo Video [URL]} \ \ $|$ \ \ \href{https://amazon-hackon-mu.vercel.app/}{\color{amznSlate} https://amazon-hackon-mu.vercel.app/}
+
+\end{document}

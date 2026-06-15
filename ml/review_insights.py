@@ -254,6 +254,34 @@ def _coerce(summary: dict, category: str, fit_signal: Optional[Dict]) -> Dict[st
     }
 
 
+def _reconcile_fit(summary: Dict[str, Any], fit_signal: Optional[Dict]) -> Dict[str, Any]:
+    """Force the summary's sizing claim to agree with the deterministic, review-mined
+    fit signal — the SAME signal that drives the FitTwin "Buyers report…" line and the
+    checkout nudge. The LLM occasionally states the wrong direction (e.g. says "runs
+    large, size down" when the reviews say it runs small); the regex over the real
+    review text is the single source of truth, so we overwrite fit_verdict/nudge_line
+    here. With no skew (true to size / no signal) we drop any size-up/down claim."""
+    direction = (fit_signal or {}).get("direction")
+    if direction == "runs_small":
+        line = "Buyers report this runs small — consider sizing up."
+    elif direction == "runs_large":
+        line = "Buyers report this runs large — consider sizing down."
+    else:
+        # true_to_size or no fit signal: don't assert a sizing skew at all.
+        if direction == "true_to_size":
+            summary["fit_verdict"] = "Buyers find this fits true to size."
+        else:
+            summary["fit_verdict"] = ""
+        # strip any leftover "size up/down" nudge the LLM produced
+        nl = (summary.get("nudge_line") or "")
+        if re.search(r"size\s+(?:up|down)|runs?\s+(?:small|large|big)", nl, re.I):
+            summary["nudge_line"] = ""
+        return summary
+    summary["fit_verdict"] = line
+    summary["nudge_line"] = line
+    return summary
+
+
 def review_panel(asin: str, title: str, category: str,
                  reviews: List[Dict]) -> Dict[str, Any]:
     """Run (or load cached) the review panel for one product. Always returns the
@@ -262,7 +290,11 @@ def review_panel(asin: str, title: str, category: str,
 
     cache = _load_cache()
     if asin and asin in cache:
-        return cache[asin]
+        # Reconcile even cached entries so a stale/wrong LLM fit claim never survives.
+        result = dict(cache[asin])
+        if category in _FIT_CATEGORIES:
+            result = _reconcile_fit(result, fit_signal)
+        return result
 
     sample = _review_text(reviews)[:18]
     if not sample:
@@ -287,6 +319,9 @@ def review_panel(asin: str, title: str, category: str,
     except Exception as e:
         logger.info(f"[review_insights] panel fail-open for {asin}: {e}")
         result = _heuristic_summary(category, fit_signal)
+
+    if category in _FIT_CATEGORIES:
+        result = _reconcile_fit(result, fit_signal)
 
     if asin:
         cache[asin] = result

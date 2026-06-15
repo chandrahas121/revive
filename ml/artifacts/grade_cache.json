@@ -866,5 +866,207 @@
     "powers_on": null,
     "seal_intact": null,
     "latency_ms": 6547
+  },
+  "8174675e5cc682f1fb1eb2a1_2d5012": {
+    "grade": "A",
+    "confidence": 0.9,
+    "defects": [],
+    "completeness": 1.0,
+    "condition_summary": "The sneakers appear to be in excellent, like-new condition with no visible defects.",
+    "box_present": false,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 3172
+  },
+  "8174675e5cc682f1fb1eb2a1_g2d5012": {
+    "listing_id": "89f9efc9-5626-4097-ba0e-be43d8909b17",
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [],
+    "completeness": 0.638,
+    "condition_summary": "The sneakers appear to be in excellent, like-new condition with no visible defects.",
+    "functional": true,
+    "box_present": false,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "top",
+    "angle_label": "Top",
+    "latency_ms": 51109,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "8174675e5cc682f1fb1eb2a1",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "29f65522df18a46610996000_112949": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "left-side",
+        "angle": "side",
+        "angle_label": "Side"
+      },
+      {
+        "type": "crease",
+        "severity": "moderate",
+        "location": "upper-left",
+        "angle": "side",
+        "angle_label": "Side"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The shoes show minor scuffing on the left side and moderate creasing on the upper left area, but are otherwise in very good condition.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 3641
+  },
+  "29f65522df18a46610996000_g112949": {
+    "listing_id": "3bba6b24-7ce6-49cf-9f6d-4f19221a5329",
+    "grade": "B",
+    "confidence": 0.72,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "left-side",
+        "angle": "side",
+        "angle_label": "Side"
+      },
+      {
+        "type": "crease",
+        "severity": "moderate",
+        "location": "upper-left",
+        "angle": "side",
+        "angle_label": "Side"
+      }
+    ],
+    "completeness": 0.658,
+    "condition_summary": "The shoes show minor scuffing on the left side and moderate creasing on the upper left area, but are otherwise in very good condition.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "side",
+    "angle_label": "Side",
+    "latency_ms": 60781,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "29f65522df18a46610996000",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "4c3ff074cef6032c7b0c55c7_5ae6ca": {
+    "grade": "C",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "moderate",
+        "location": "sole",
+        "angle": "sole",
+        "angle_label": "Soles"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The soles of these shoes show moderate wear, with visible tread and sole separation from the upper.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 3688
+  },
+  "4c3ff074cef6032c7b0c55c7_g5ae6ca": {
+    "listing_id": "19874574-1f8b-4c7a-9d1d-ad9ab842038f",
+    "grade": "C",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "moderate",
+        "location": "sole",
+        "angle": "sole",
+        "angle_label": "Soles"
+      }
+    ],
+    "completeness": 0.603,
+    "condition_summary": "The soles of these shoes show moderate wear, with visible tread and sole separation from the upper.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "sole",
+    "angle_label": "Soles",
+    "latency_ms": 61046,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "4c3ff074cef6032c7b0c55c7",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "c0c7bb9704baa4e1590ebd13_8e12e5": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "compression",
+        "severity": "minor",
+        "location": "center",
+        "angle": "insole",
+        "angle_label": "Insole"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The insole/footbed shows minor compression in the center, but is otherwise in very good condition.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4313
+  },
+  "c0c7bb9704baa4e1590ebd13_g8e12e5": {
+    "listing_id": "999882bb-8f21-4189-b8e8-ec88600bd5b3",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "compression",
+        "severity": "minor",
+        "location": "center",
+        "angle": "insole",
+        "angle_label": "Insole"
+      }
+    ],
+    "completeness": 0.599,
+    "condition_summary": "The insole/footbed shows minor compression in the center, but is otherwise in very good condition.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "insole",
+    "angle_label": "Insole",
+    "latency_ms": 61750,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "c0c7bb9704baa4e1590ebd13",
+    "n_dino_detections": 0,
+    "from_cache": false
   }
 }

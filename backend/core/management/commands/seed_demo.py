@@ -25,6 +25,7 @@ Run:
 Logins: buyer demo@revive.in / demo12345 · sellers *.seller@revive.in / seller12345
 """
 from datetime import timedelta, date
+from decimal import Decimal
 from pathlib import Path
 import json
 import os
@@ -211,6 +212,75 @@ def _load_reviews(bucket: str):
     return out
 
 
+# ── Demo hero phone ──────────────────────────────────────────────────────────
+# One curated, recognisable phone the presenter orders + returns live. Uses the
+# locally-supplied product photo (frontend/public/iqoo_neo_7_pro.jpg, served at
+# /iqoo_neo_7_pro.jpg) so the image is exactly right on screen, and carries its
+# OWN hand-written reviews (asin IQOO_ASIN) so they read as real for this product.
+IQOO_ASIN = "IQOO-NEO7PRO"
+IQOO_IMAGE = "/iqoo_neo_7_pro.jpg"
+
+_IQOO_REVIEWS = [
+    dict(rating=5, title="Insane performance for the price",
+         text="Snapdragon 8+ Gen 1 absolutely flies. PUBG and BGMI at max settings "
+              "with zero lag, and it barely warms up. Best value flagship-killer right now.",
+         author_id="iqoo-rv-01", verified=True, helpful=42, timestamp=1686700000000),
+    dict(rating=5, title="120W charging is a game changer",
+         text="0 to 100 in about 25 minutes. I just plug it in while getting ready and "
+              "it's full. The 120Hz AMOLED display is gorgeous too.",
+         author_id="iqoo-rv-02", verified=True, helpful=31, timestamp=1687300000000),
+    dict(rating=4, title="Great phone, software has a few ads",
+         text="Performance and battery are top notch. Funtouch OS shows occasional "
+              "recommendations you have to turn off, but once cleaned up it's smooth.",
+         author_id="iqoo-rv-03", verified=True, helpful=18, timestamp=1688100000000),
+    dict(rating=5, title="Camera is better than I expected",
+         text="The 50MP main sensor takes sharp, punchy daylight shots and night mode is "
+              "usable. Not a Pixel but for this segment it's very good.",
+         author_id="iqoo-rv-04", verified=True, helpful=12, timestamp=1689000000000),
+    dict(rating=4, title="Battery easily lasts a full day",
+         text="Getting 6-7 hours screen-on time with heavy use. The 5000mAh cell plus "
+              "fast charging means range anxiety is gone.",
+         author_id="iqoo-rv-05", verified=True, helpful=9, timestamp=1690200000000),
+    dict(rating=5, title="No regrets, upgraded from a OnePlus",
+         text="Feels faster than my old OnePlus Nord, lighter in hand, and the haptics "
+              "are crisp. Display gets bright enough outdoors.",
+         author_id="iqoo-rv-06", verified=True, helpful=7, timestamp=1691400000000),
+    dict(rating=3, title="Good phone but it's a fingerprint magnet",
+         text="Performance is great, no complaints there. The glossy back picks up "
+              "smudges instantly so use the included case.",
+         author_id="iqoo-rv-07", verified=True, helpful=5, timestamp=1692600000000),
+    dict(rating=5, title="Display + speakers are excellent for content",
+         text="Stereo speakers are loud and clear, and the AMOLED panel makes Netflix "
+              "pop. Great media phone for the money.",
+         author_id="iqoo-rv-08", verified=True, helpful=4, timestamp=1693800000000),
+]
+
+
+def _upsert_iqoo_hero():
+    """Create/refresh the iQOO Neo 7 Pro hero phone (local image) + its NEW listing.
+    Returns the Product so it joins the normal review + listing pipeline."""
+    prod, _ = Product.objects.update_or_create(
+        asin=IQOO_ASIN,
+        defaults=dict(
+            title="iQOO Neo 7 Pro 5G (12GB RAM, 256GB, Dark Storm)",
+            category="Phone", brand="iQOO", mrp=Decimal("34999"),
+            reference_image_url=IQOO_IMAGE,
+            description=("iQOO Neo 7 Pro 5G with Snapdragon 8+ Gen 1, 6.78\" 120Hz "
+                         "AMOLED display, 50MP OIS main camera, 5000mAh battery with "
+                         "120W FlashCharge, and an independent gaming chip. Brand-new, "
+                         "full manufacturer warranty."),
+            rating=4.4, rating_count=2873),
+    )
+    Listing.objects.update_or_create(
+        product=prod, source=Listing.Source.NEW,
+        defaults=dict(grade="", price=prod.mrp, completeness=1.0,
+                      condition_summary="", status=Listing.Status.LISTED,
+                      image_url=IQOO_IMAGE, condition_label="New",
+                      seller=None, tier=0, disposition="", risk_tier=""),
+    )
+    return prod
+
+
 def _guarantee(tier):
     if tier == 3:
         return 90, "Amazon SPN"
@@ -290,6 +360,10 @@ class Command(BaseCommand):
         seeded = []   # (product, attached records, category) → review-panel input
         for bucket, category in REVIEW_BUCKETS.items():
             pool = _load_reviews(bucket)
+            if bucket == "phone":
+                # The iQOO hero ships its own reviews (keyed by IQOO_ASIN) so it gets
+                # an exact 1:1 attach like any real ASIN.
+                pool = pool + [{**r, "asin": IQOO_ASIN} for r in _IQOO_REVIEWS]
             targets = by_cat.get(category, [])
             if not pool or not targets:
                 self.stdout.write(f"  reviews[{bucket}]: no data/targets — skipped")
@@ -414,10 +488,14 @@ class Command(BaseCommand):
         CreditTransaction.objects.filter(user=demo).delete()
 
         self.stdout.write("Building catalog (curated + real Amazon)...")
-        products = upsert_demo_catalog()   # curated branded products, one NEW listing each
+        # Curated phones/laptops/monitors used reused stock photos + borrowed reviews,
+        # so we skip them and let the REAL Amazon electronics (real image + own 1:1
+        # reviews) stand alone. Curated apparel/footwear/extras stay for brand variety.
+        curated = upsert_demo_catalog(skip_categories=RENEWED_CATS)
         real = upsert_real_catalog()       # real Amazon ASINs (real image/title/price/reviews)
-        products = products + real
-        self.stdout.write(f"  catalog: {len(products) - len(real)} curated + {len(real)} real "
+        iqoo = _upsert_iqoo_hero()         # one recognisable hero phone with local photo
+        products = curated + real + [iqoo]
+        self.stdout.write(f"  catalog: {len(curated)} curated + {len(real)} real + 1 hero "
                           f"= {len(products)} products")
 
         # 2b) Attach REAL Amazon reviews (UCSD Amazon Reviews 2023). Real products get
@@ -535,7 +613,7 @@ class Command(BaseCommand):
         # have arbitrary titles, so pick the highest-value item in each category
         # (the brand literals are kept only as a hint for the curated catalog).
         return_targets = [
-            _pick("Phone", "iPhone 14"),
+            _pick("Phone", "iQOO Neo 7"),
             _pick("Laptop", "Inspiron"),
             _pick("Monitor", "BenQ"),
             _pick("Apparel", "T-Shirt"),

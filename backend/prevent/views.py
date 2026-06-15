@@ -94,6 +94,7 @@ class RiskView(APIView):
     def _resolve(self, cart):
         from core.models import Listing
         items = []
+        self._product_to_listing = {}   # product_id str -> first listing_id (for bracket link)
         for line in cart or []:
             if not isinstance(line, dict):
                 continue
@@ -106,15 +107,21 @@ class RiskView(APIView):
             except (Listing.DoesNotExist, ValueError, TypeError):
                 continue
             p = lst.product
+            pid = str(p.id)
+            if pid not in self._product_to_listing:
+                self._product_to_listing[pid] = lst.id
             try:
                 size = float(line.get("size"))   # numeric sizes feed the size-delta model
             except (TypeError, ValueError):
                 size = 0                          # letter sizes (S/M/L) carry no numeric delta
             items.append({
-                "product_id": str(p.id),
+                "product_id": pid,
                 "category": p.category,
                 "brand": p.brand,
                 "size": size,
+                # Raw size label (S/M/L or numeric) kept as-is so bracketeering across
+                # letter sizes is detectable even though `size` collapses them to 0.
+                "size_label": str(line.get("size") or "").strip(),
                 "is_gift": bool(line.get("is_gift", False)),
                 "mrp": float(p.mrp),
                 "fit_signal": p.fit_signal,
@@ -131,6 +138,9 @@ class RiskView(APIView):
         except Exception as e:
             logger.warning("score_risk() failed: %s", e)
             result = {"risk": 0.0, "flagged_item_id": None, "nudge_text": "", "breakdown": []}
+        # Map bracket_product_id → listing_id so the frontend can link to the product page.
+        bpid = result.get("bracket_product_id")
+        result["bracket_listing_id"] = self._product_to_listing.get(str(bpid)) if bpid else None
         return Response(result)
 
 

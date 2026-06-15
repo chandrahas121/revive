@@ -15,10 +15,14 @@ const CheckoutPage = () => {
   const [placing, setPlacing] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
-  const [dismissedSizeNudge, setDismissedSizeNudge] = useState(false)
   const [risk, setRisk] = useState(null)
 
   const finalTotal = Math.max(0, cartTotal - redeemedCredits * 0.1)
+
+  // Green Credits are the second-life / sustainability reward — they only apply when
+  // the cart contains a Revive/Renewed item. A brand-new product (e.g. the iQOO) earns
+  // none, so we hide the redeem widget + the "keep this → +credits" promise for it.
+  const hasSecondLife = cart.some((it) => it.source && it.source !== 'new')
 
   // Pillar-4 return-risk: ask the backend to score the cart (it resolves each line
   // listing→product and folds in the mined review fit-signal), then surface the
@@ -36,18 +40,6 @@ const CheckoutPage = () => {
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartIdsKey])
-
-  // Products the shopper has added in MORE THAN ONE size — a classic "size hedge"
-  // that drives returns. We nudge them to the product's fit guide instead.
-  const multiSizeProducts = useMemo(() => {
-    const byProduct = {}
-    for (const it of cart) {
-      const key = it.title || it.id
-      if (!byProduct[key]) byProduct[key] = { title: it.title, sizes: new Set(), linkId: it.id }
-      if (it.size != null && it.size !== '') byProduct[key].sizes.add(String(it.size))
-    }
-    return Object.values(byProduct).filter((g) => g.sizes.size >= 2)
-  }, [cart])
 
   const handlePlaceOrder = async () => {
     if (!user) { navigate('/login'); return }
@@ -122,36 +114,11 @@ const CheckoutPage = () => {
                   </h2>
                 </div>
 
-                {/* Review-derived return nudge (Pillar 4): "Buyers say this runs small…" */}
-                {risk && (risk.nudge_text || risk.bracket_nudge) && (
+                {/* Single return-prevention nudge (Pillar 4): bracketeering banner +
+                    the review-derived sizing line, de-duplicated inside <ReturnNudge>. */}
+                {risk && risk.bracket_nudge && (
                   <div className="px-3 sm:px-4 pt-3">
                     <ReturnNudge risk={risk} />
-                  </div>
-                )}
-
-                {/* Return prevention nudge — Pillar 4: shown only when the shopper
-                    has added the same product in more than one size. */}
-                {multiSizeProducts.length > 0 && !dismissedSizeNudge && (
-                  <div className="px-3 sm:px-4 py-2.5 bg-[#FFFBF0] border-b border-amber-100 flex items-start gap-2.5">
-                    <div className="flex-grow min-w-0">
-                      <p className="text-xs font-semibold text-[#0F1111]">
-                        We noticed you've added multiple sizes of{' '}
-                        <strong>{multiSizeProducts[0].title}</strong>
-                        {multiSizeProducts.length > 1 ? ' (and other items)' : ''}. Unsure which to keep?
-                      </p>
-                      <button
-                        onClick={() => navigate(`/product/${multiSizeProducts[0].linkId}`)}
-                        className="text-[11px] font-semibold text-[#007185] hover:underline mt-0.5"
-                      >
-                        See the best size for you on the product page →
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setDismissedSizeNudge(true)}
-                      className="flex-shrink-0 text-[11px] font-semibold text-[#007185] hover:underline whitespace-nowrap mt-0.5"
-                    >
-                      Dismiss
-                    </button>
                   </div>
                 )}
 
@@ -160,7 +127,7 @@ const CheckoutPage = () => {
                   const itemQty = item.qty || 1
                   const maxQty = item.maxStock || (isUnique ? 1 : 10)
                   return (
-                  <div key={item.id} className="flex gap-3 sm:gap-4 p-3 sm:p-4">
+                  <div key={item.lineKey || item.id} className="flex gap-3 sm:gap-4 p-3 sm:p-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
                       {item.image && (
                         <img src={item.image} alt={item.title} className="w-full h-full object-contain" />
@@ -168,8 +135,11 @@ const CheckoutPage = () => {
                     </div>
                     <div className="flex-grow min-w-0">
                       <p className="font-semibold text-xs sm:text-sm text-[#0F1111] line-clamp-2">{item.title}</p>
+                      {item.size != null && item.size !== '' && (
+                        <span className="inline-block text-[10px] font-bold text-[#0F1111] bg-[#F0F2F2] border border-[#D5D9D9] rounded px-1.5 py-0.5 mt-0.5">Size: {item.size}</span>
+                      )}
                       {item.grade && (
-                        <span className="text-[10px] font-bold text-green-700">Grade {item.grade}</span>
+                        <span className="text-[10px] font-bold text-green-700 ml-1">Grade {item.grade}</span>
                       )}
                       <p className="font-bold text-[#0F1111] mt-1 text-sm">
                         ₹{(parseFloat(item.price) * itemQty).toLocaleString('en-IN')}
@@ -179,7 +149,7 @@ const CheckoutPage = () => {
                       <div className="flex items-center gap-0 mt-2">
                         <div className="inline-flex items-center border border-[#D5D9D9] rounded-lg overflow-hidden">
                           <button
-                            onClick={() => itemQty <= 1 ? removeFromCart(item.id) : updateQuantity(item.id, itemQty - 1)}
+                            onClick={() => itemQty <= 1 ? removeFromCart(item.lineKey) : updateQuantity(item.lineKey, itemQty - 1)}
                             className="w-8 h-8 flex items-center justify-center text-sm font-bold text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6] transition-colors border-r border-[#D5D9D9]"
                           >
                             {itemQty === 1 ? (
@@ -188,7 +158,7 @@ const CheckoutPage = () => {
                           </button>
                           <span className="w-10 text-center text-xs font-bold text-[#0F1111] bg-white py-1.5">{itemQty}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, itemQty + 1)}
+                            onClick={() => updateQuantity(item.lineKey, itemQty + 1)}
                             disabled={itemQty >= maxQty}
                             className={`w-8 h-8 flex items-center justify-center text-sm font-bold transition-colors border-l border-[#D5D9D9]
                               ${itemQty >= maxQty ? 'text-gray-300 bg-[#F0F2F2] cursor-not-allowed' : 'text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6]'}`}
@@ -198,7 +168,7 @@ const CheckoutPage = () => {
                         </div>
                         <span className="mx-2 text-gray-300">|</span>
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item.lineKey)}
                           className="text-[#007185] hover:underline hover:text-[#c45500] text-xs"
                         >
                           Delete
@@ -216,35 +186,16 @@ const CheckoutPage = () => {
           {/* ── Order summary sidebar ── */}
           {(cart.length > 0 || success) && (
             <div className="lg:w-72 flex-shrink-0 space-y-3 sm:space-y-4">
-              <GreenCredits onRedeem={setRedeemedCredits} cartTotal={cartTotal} />
+              {hasSecondLife && <GreenCredits onRedeem={setRedeemedCredits} cartTotal={cartTotal} />}
 
-              {/* Why Revive? */}
-              <div className="bg-white rounded-lg shadow-sm border border-[#D5D9D9] p-3 sm:p-4">
-                <p className="text-sm font-bold text-[#0F1111] mb-2.5">Why Revive?</p>
-                <ul className="space-y-2">
-                  {[
-                    ['AI-verified quality', 'Every item graded A–D'],
-                    ['Escrow protection', 'Payment held until delivery'],
-                    ['7-day returns', 'Instant Amazon Pay refund'],
-                    ['Earn Green Credits', 'Saved CO₂ on every order'],
-                  ].map(([b, s]) => (
-                    <li key={b} className="flex items-start gap-2 text-xs text-gray-600">
-                      <span className="text-[#077a52] font-bold mt-0.5">&#10003;</span>
-                      <div>
-                        <span className="font-semibold text-[#0F1111]">{b}</span>
-                        <span className="text-gray-400"> &mdash; {s}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Green credits promise — Pillar 5 */}
-              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
-                <p className="text-xs text-green-800 leading-snug">
-                  Keep this order &rarr; <strong>+15 Green Credits</strong> vest when your 7-day return window closes.
-                </p>
-              </div>
+              {/* Green credits promise — Pillar 5 (second-life purchases only) */}
+              {hasSecondLife && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+                  <p className="text-xs text-green-800 leading-snug">
+                    Keep this order &rarr; <strong>+15 Green Credits</strong> vest when your 7-day return window closes.
+                  </p>
+                </div>
+              )}
 
               <div className="bg-white rounded-lg shadow-sm border border-[#D5D9D9] p-3 sm:p-4 space-y-2 sm:space-y-3">
                 <h2 className="font-bold text-[#0F1111] text-sm sm:text-base">Order Summary</h2>

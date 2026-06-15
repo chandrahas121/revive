@@ -4,7 +4,6 @@ import Header from '../components/Header'
 import HealthCard from '../components/stitch/HealthCard'
 import VirtualTryOn from '../components/stitch/VirtualTryOn'
 import FitTwin from '../components/stitch/FitTwin'
-import LifecycleTimeline from '../components/LifecycleTimeline'
 import api, { getHealthCard, advanceListingStage } from '../api/client'
 import { useCart } from '../context/CartContext'
 
@@ -265,8 +264,18 @@ const ProductDetailPage = () => {
       .finally(() => setLoading(false))
   }, [id])
 
-  const inCart = cart.some((item) => Number(item.id) === Number(id))
-  const cartQty = getItemQty(id)
+  // For sized (clothing) items the cart line is per-size, so "in cart" / qty must be
+  // judged against the size the shopper is currently looking at — that way after
+  // adding size M the Add button stays available to ALSO add size L (which is exactly
+  // the size-hedge we want checkout to flag as bracketeering).
+  const sizedItem = isClothing(listing?.product?.category || '')
+  const lineMatch = (item) =>
+    Number(item.id) === Number(id) &&
+    (!sizedItem || String(item.size ?? '') === String(selectedSize ?? ''))
+  const currentLine = cart.find(lineMatch)
+  const inCart = !!currentLine
+  const cartQty = cart.filter(lineMatch).reduce((s, i) => s + (i.qty || 1), 0)
+  const currentKey = currentLine?.lineKey ?? id
   const isSecondLife = listing ? listing.source !== 'new' : false
   const maxStock = listing?.stock ?? (isSecondLife ? 1 : 10)
 
@@ -300,11 +309,11 @@ const ProductDetailPage = () => {
   }
 
   const handleIncrement = () => {
-    if (cartQty < maxStock) updateQuantity(id, cartQty + 1)
+    if (cartQty < maxStock) updateQuantity(currentKey, cartQty + 1)
   }
   const handleDecrement = () => {
-    if (cartQty > 1) updateQuantity(id, cartQty - 1)
-    else removeFromCart(id)
+    if (cartQty > 1) updateQuantity(currentKey, cartQty - 1)
+    else removeFromCart(currentKey)
   }
 
   if (loading) return (
@@ -445,19 +454,6 @@ const ProductDetailPage = () => {
                   AI Condition Notes
                 </p>
                 <p className="text-sm text-gray-700 leading-relaxed">{listing.condition_summary}</p>
-              </div>
-            )}
-
-            {/* v2 second-life lifecycle — where this item is in its journey */}
-            {lc && (
-              <div className="mb-4">
-                <p className="text-xs font-bold text-[#0F1111] mb-1.5">Second-life journey</p>
-                <LifecycleTimeline
-                  lifecycle={lc}
-                  onAdvance={handleAdvanceStage}
-                  advancing={advancing}
-                  showAdvance
-                />
               </div>
             )}
 
@@ -635,7 +631,7 @@ const ProductDetailPage = () => {
                     <p className="text-[11px] text-center text-amber-600">Maximum available stock reached</p>
                   )}
                   <button
-                    onClick={() => removeFromCart(id)}
+                    onClick={() => removeFromCart(currentKey)}
                     className="w-full text-center text-xs text-[#007185] hover:text-[#c45500] hover:underline py-1"
                   >
                     Remove from cart

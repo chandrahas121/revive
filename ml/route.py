@@ -738,6 +738,7 @@ def route_item(
     verified_match: bool = True,
     complete: bool = True,
     functional_pass: Optional[bool] = None,
+    tier_value: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Route a graded return item to its highest-value second life.
@@ -798,7 +799,12 @@ def route_item(
     }
 
     # ── Step 6: Risk tier (backend-only) ──────────────────────────────────────
-    tier = _get_tier(mrp, category)
+    # Tier is decided by the item's CURRENT value (the seller's asking / resale
+    # price), not its original MRP — a 4-year-old ₹90k laptop now worth ₹12k should
+    # not be forced into a ₹10k+ Tier-3 SPN inspection. `mrp` still anchors the
+    # resale-price prediction above; `tier_value` (when given) drives tiering only.
+    tier_basis = float(tier_value) if tier_value is not None else mrp
+    tier = _get_tier(tier_basis, category)
 
     # ── Step 6b: Stage 0 Disposition Gate (v2 §6) ─────────────────────────────
     # Decides whether the item restocks as NEW / open-box / used / renewed /
@@ -880,7 +886,7 @@ def route_item(
         "route_label":            _ROUTE_LABEL.get(chosen_path, chosen_path),
         "customer_message":       (disp["customer_message"] if disp else _CUSTOMER_MESSAGE.get(chosen_path, "")),
         "tier":                   tier,
-        "risk_tier":              (_risk_tier_fn(mrp, category) if _V2 else None),
+        "risk_tier":              (_risk_tier_fn(tier_basis, category) if _V2 else None),
         "disposition":            (disp["outcome"] if disp else None),
         "condition_label":        (disp["condition_label"] if disp else None),
         "enters_revive":          (disp["enters_revive"] if disp else True),

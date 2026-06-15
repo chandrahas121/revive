@@ -99,7 +99,7 @@ const Header = () => {
           <input
             className="flex-1 min-w-0 h-full px-3 text-sm text-black focus:outline-none"
             type="text"
-            placeholder="Search Revive listings..."
+            placeholder="Search Amazon..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
           />
@@ -183,11 +183,11 @@ const Header = () => {
       </div>
 
       {/* ── Desktop nav bar ── */}
-      <div className="hidden md:flex items-center bg-[#232F3E] text-white text-sm overflow-x-auto whitespace-nowrap px-1 py-1 gap-0">
+      <div className="hidden md:flex items-center bg-[#232F3E] text-white text-sm overflow-x-auto whitespace-nowrap px-1 py-1 gap-1">
         {/* ≡ All */}
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-1.5 px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 transition-colors font-bold"
+          className="flex items-center gap-1.5 px-3 py-2 mr-1 border border-transparent hover:border-white rounded-sm flex-shrink-0 transition-colors font-bold"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
