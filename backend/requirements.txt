@@ -24,3 +24,6 @@ implicit>=0.7.0
 openai>=1.10.0
 requests>=2.31.0
 qrcode[pil]>=7.4.0
+
+# Dependencies for Virtual Try-On via HuggingFace
+gradio_client>=0.16.0
