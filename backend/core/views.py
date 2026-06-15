@@ -6,6 +6,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.core.files.storage import default_storage
+from django.db.models import Q
 from django.utils import timezone
 
 from rest_framework import status
@@ -44,10 +45,7 @@ def _set_auth_cookies(response, refresh_token_obj):
     )
 
 
-# ─── Auth views ──────────────────────────────────────────────────────────────
-
 class RegisterView(APIView):
-    """POST /api/auth/register/"""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -64,7 +62,6 @@ class RegisterView(APIView):
 
 
 class LoginView(APIView):
-    """POST /api/auth/login/"""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -80,7 +77,6 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
-    """POST /api/auth/logout/"""
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -98,14 +94,11 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/me/"""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
-
-# ─── Listing views ────────────────────────────────────────────────────────────
 
 class ListingListView(APIView):
     """GET /api/listings/ — public list. POST /api/listings/ — create P2P listing (auth required)."""
@@ -115,43 +108,119 @@ class ListingListView(APIView):
             return [IsAuthenticated()]
         return [AllowAny()]
 
+    # Storefront-visible statuses. v2: staged second-life items (held-local /
+    # refurbishing / pickup-scheduled) are shown WITH a lifecycle badge so the flow
+    # is visible — they just aren't buyable yet (OrderListCreateView still requires
+    # status='listed'). Plain New items are always 'listed', so this is a no-op for them.
+    VISIBLE_STATUSES = ['listed', 'awaiting_demand', 'refurbishing', 'refurb_scheduled']
+
     def get(self, request):
-        qs = Listing.objects.filter(status='listed').select_related('product', 'seller')
+        qs = (Listing.objects.filter(status__in=self.VISIBLE_STATUSES)
+              .select_related('product', 'seller')
+              .prefetch_related('product__listings'))
 
         category = request.query_params.get('category')
         source = request.query_params.get('source')
         grade = request.query_params.get('grade')
         search = request.query_params.get('q')
+        condition = request.query_params.get('condition')
 
         if category:
             qs = qs.filter(product__category__icontains=category)
-        if source:
+        if not source:
+            qs = qs.filter(source='new')
+        elif source == 'revive':
+            qs = qs.filter(source__in=['p2p', 'return', 'warehouse'])
+        elif source == 'all':
+            pass
+        else:
             qs = qs.filter(source=source)
         if grade:
             qs = qs.filter(grade=grade)
+        if condition:
+            qs = qs.filter(condition_label__icontains=condition)
         if search:
-            qs = qs.filter(product__title__icontains=search)
+            s = search.strip()
+            if s:
+                qs = qs.filter(Q(product__title__icontains=s) | Q(product__brand__icontains=s))
 
-        qs = qs.order_by('-created_at')
-        return Response({'results': ListingSerializer(qs[:40], many=True).data, 'count': qs.count()})
+        # Numbered-page pagination params (Amazon-style) — shared by both branches.
+        try:
+            page = max(1, int(request.query_params.get('page', 1)))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = min(60, max(1, int(request.query_params.get('page_size', 24))))
+        except (TypeError, ValueError):
+            page_size = 24
+
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+        near_geohash = request.query_params.get('near') or ''
+        if (lat and lng) or near_geohash:
+            try:
+                from ml.geohash import geohash_encode, geohash_decode
+                from ml.route import _haversine_km
+                if lat and lng:
+                    blat, blng = float(lat), float(lng)
+                else:
+                    blat, blng = geohash_decode(near_geohash)
+                listings = list(qs[:500])
+
+                def _dist(l):
+                    if not l.geohash5:
+                        return 9_999.0
+                    slat, slng = geohash_decode(l.geohash5)
+                    return _haversine_km(blat, blng, slat, slng)
+
+                listings.sort(key=_dist)
+                total = len(listings)
+                num_pages = max(1, -(-total // page_size))
+                page = min(page, num_pages)
+                start = (page - 1) * page_size
+                data = []
+                for l in listings[start:start + page_size]:
+                    d = ListingSerializer(l).data
+                    d['distance_km'] = round(_dist(l), 1)
+                    data.append(d)
+                return Response({'results': data, 'count': total, 'near': True,
+                                 'page': page, 'page_size': page_size, 'num_pages': num_pages})
+            except Exception as e:
+                logger.warning(f"near-me sort failed, falling back to recency: {e}")
+
+        if not source or source == 'new':
+            qs = qs.order_by('-product__rating_count', '-product__rating')
+        else:
+            qs = qs.order_by('-created_at')
+
+        total = qs.count()
+        num_pages = max(1, -(-total // page_size))   # ceil division
+        page = min(page, num_pages)
+        start = (page - 1) * page_size
+        results = ListingSerializer(qs[start:start + page_size], many=True).data
+        return Response({
+            'results': results,
+            'count': total,
+            'page': page,
+            'page_size': page_size,
+            'num_pages': num_pages,
+        })
 
     def post(self, request):
         serializer = CreateListingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        # Read bytes first so grade_image() can run before/after storage save
         image_bytes = None
         image_url = ''
         image_file = request.FILES.get('image')
         if image_file:
             image_bytes = image_file.read()
-            image_file.seek(0)  # reset so default_storage can read it again
+            image_file.seek(0)
             filename = f"listings/{uuid.uuid4().hex}_{image_file.name}"
             path = default_storage.save(filename, image_file)
             image_url = request.build_absolute_uri(settings.MEDIA_URL + path)
 
-        # AI grading — runs synchronously, falls back gracefully
         grade_result = {
             'grade': 'B',
             'condition_summary': data.get('condition_summary', ''),
@@ -160,7 +229,14 @@ class ListingListView(APIView):
             'defects': [],
             'from_cache': False,
         }
-        if image_bytes:
+        grade_override = request.data.get('grade_override')
+        if grade_override in ('A', 'B', 'C', 'D', 'E', 'F'):
+            grade_result['grade'] = grade_override
+            try:
+                grade_result['completeness'] = float(request.data.get('completeness_override', 1.0))
+            except (TypeError, ValueError):
+                pass
+        elif image_bytes:
             try:
                 from ml.grade import grade_image
                 grade_result = grade_image(
@@ -174,7 +250,6 @@ class ListingListView(APIView):
             except Exception as e:
                 logger.warning(f"grade_image() failed, using defaults: {e}")
 
-        # If user wrote their own condition notes, prefer them; else use AI summary
         condition_summary = (
             data.get('condition_summary') or
             grade_result.get('condition_summary', '')
@@ -182,6 +257,18 @@ class ListingListView(APIView):
 
         mrp_val = data.get('mrp') or (data['price'] * Decimal('2'))
         geohash5 = data.get('geohash5', '') or (request.user.geohash5 if request.user else '')
+        lat, lng = data.get('lat'), data.get('lng')
+        if not geohash5 and lat is not None and lng is not None:
+            try:
+                from ml.geohash import geohash_encode
+                geohash5 = geohash_encode(float(lat), float(lng), 5)
+            except Exception as e:
+                logger.warning(f"geohash_encode failed: {e}")
+        if request.user and lat is not None and lng is not None:
+            request.user.lat, request.user.lng = float(lat), float(lng)
+            if geohash5:
+                request.user.geohash5 = geohash5
+            request.user.save(update_fields=['lat', 'lng', 'geohash5'])
 
         product = Product.objects.create(
             asin=f'P2P-{uuid.uuid4().hex[:8].upper()}',
@@ -192,7 +279,15 @@ class ListingListView(APIView):
             description=data.get('description', ''),
         )
 
-        # Stage 1: create listing with grade, then run routing
+        # v2: persist the seller's uploaded angle shots on the listing for the Revive card
+        listing_images = []
+        if image_url:
+            listing_images.append({'url': image_url, 'label': 'Main'})
+        extra = request.data.getlist('photos') if hasattr(request.data, 'getlist') else []
+        for u in extra:
+            if u:
+                listing_images.append({'url': u, 'label': 'Angle'})
+
         listing = Listing.objects.create(
             product=product,
             source=Listing.Source.P2P,
@@ -204,9 +299,9 @@ class ListingListView(APIView):
             status=Listing.Status.LISTED,
             seller=request.user,
             image_url=image_url,
+            images=listing_images,
         )
 
-        # Stage 2: smart routing — persist chosen_path / tier / ev_data on the listing
         route_result = {}
         try:
             from ml.route import route_item
@@ -221,10 +316,13 @@ class ListingListView(APIView):
             listing.chosen_path = route_result.get('chosen_path', '')
             listing.tier = route_result.get('tier', 1)
             listing.ev_data = route_result.get('ev_breakdown', {})
-            # If route says sell price differs, update listing price
-            routed_price = route_result.get('price')
-            if routed_price and routed_price > 0:
-                listing.price = Decimal(str(routed_price))
+            listing.risk_tier = route_result.get('risk_tier') or ''
+            listing.disposition = route_result.get('disposition') or ''
+            listing.condition_label = route_result.get('condition_label') or ''
+            # Keep the seller's submitted price: it already came from the AI grade +
+            # defects (via /api/grade/inspect/) and was adjusted within the ±20%
+            # band. Re-routing here has no defects (grade override path), so it must
+            # NOT overwrite the price the seller saw and chose.
             listing.save()
             logger.info(f"Routed listing {listing.pk}: path={listing.chosen_path} tier={listing.tier}")
         except Exception as e:
@@ -244,7 +342,6 @@ class ListingListView(APIView):
 
 
 class ListingDetailView(APIView):
-    """GET /api/listings/<pk>/"""
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
@@ -252,18 +349,16 @@ class ListingDetailView(APIView):
             listing = Listing.objects.select_related('product', 'seller').get(pk=pk)
         except Listing.DoesNotExist:
             return Response({'error': 'Listing not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ListingSerializer(listing).data)
+        data = ListingSerializer(listing).data
+        siblings = (Listing.objects.filter(product_id=listing.product_id, status='listed')
+                    .select_related('product', 'seller'))
+        order = {'new': 0, 'renewed': 1}
+        opts = sorted(siblings, key=lambda l: (order.get(l.source, 2), float(l.price)))
+        data['buying_options'] = ListingSerializer(opts, many=True).data
+        return Response(data)
 
 
 class RecommendView(APIView):
-    """
-    GET /api/recommend/?n=8  — "Certified Refurbished For You" rail (Pillar 5).
-
-    Hybrid intent: ALS + CLIP + grade + proximity. The Django venv has no
-    numpy/torch, so this is the numpy-free ranker: grade boost + proximity
-    (same geohash region) + source preference (Renewed/P2P) over A/B-grade
-    second-life listings. Cold-start safe — needs zero interaction history.
-    """
     permission_classes = [AllowAny]
 
     _GRADE_BOOST = {'A': 1.0, 'B': 0.8, 'C': 0.4, 'D': 0.0}
@@ -308,7 +403,6 @@ class RecommendView(APIView):
 
 
 class MyListingsView(APIView):
-    """GET /api/listings/mine/ — all listings created by the logged-in seller."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -321,10 +415,71 @@ class MyListingsView(APIView):
         return Response({'results': ListingSerializer(qs, many=True).data, 'count': qs.count()})
 
 
-# ─── Order views ──────────────────────────────────────────────────────────────
+class CatalogSuggestView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        q = (request.query_params.get('q') or '').strip()
+        category = request.query_params.get('category') or ''
+        grade = request.query_params.get('grade') or 'B'
+        if len(q) < 3:
+            return Response({'results': []})
+
+        qs = Product.objects.all()
+        if category:
+            qs = qs.filter(category__icontains=category)
+        qs = qs.filter(title__icontains=q)[:8]
+
+        try:
+            from ml.route import _predict_price
+        except Exception:
+            _predict_price = None
+
+        results = []
+        for p in qs:
+            mrp = float(p.mrp)
+            suggested = (_predict_price(grade, p.category, mrp) if _predict_price
+                         else round(mrp * 0.5, 2))
+            results.append({
+                'asin': p.asin, 'title': p.title, 'brand': p.brand,
+                'category': p.category, 'mrp': mrp,
+                'image': p.reference_image_url,
+                'rating': p.rating, 'rating_count': p.rating_count,
+                'suggested_price': round(float(suggested), 2),
+                'price_band': [round(float(suggested) * 0.85, 2), round(float(suggested) * 1.15, 2)],
+            })
+        return Response({'results': results})
+
+
+class ManageListingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    _ALLOWED = {
+        'delist': Listing.Status.DELISTED,
+        'pause':  Listing.Status.PAUSED,
+        'relist': Listing.Status.LISTED,
+    }
+
+    def post(self, request, pk):
+        action = (request.data.get('action') or '').lower()
+        if action not in self._ALLOWED:
+            return Response({'error': "action must be one of: delist, pause, relist"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            listing = Listing.objects.get(pk=pk, seller=request.user)
+        except Listing.DoesNotExist:
+            return Response({'error': 'Listing not found or not yours.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        if listing.status == Listing.Status.SOLD:
+            return Response({'error': 'Sold items cannot be changed.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        listing.status = self._ALLOWED[action]
+        listing.save(update_fields=['status', 'updated_at'])
+        return Response({'id': listing.pk, 'status': listing.status,
+                         'message': f'Listing {action}ed.'})
+
 
 class OrderListCreateView(APIView):
-    """GET /api/orders/ — user's orders. POST /api/orders/ — place an order."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -345,7 +500,6 @@ class OrderListCreateView(APIView):
         except Listing.DoesNotExist:
             return Response({'error': 'Listing not available.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Optional chosen size (clothing) — feeds the buyer's fit_size_profile.
         size = request.data.get('size')
         try:
             size = float(size) if size is not None else None
@@ -360,10 +514,18 @@ class OrderListCreateView(APIView):
             is_p2p=(listing.source == 'p2p'),
             return_window_closes=timezone.now() + timedelta(days=7),
         )
-        listing.status = Listing.Status.SOLD
-        listing.save()
+        if listing.source != 'new':
+            listing.status = Listing.Status.SOLD
+            listing.save()
 
-        # Refresh the size profile from kept orders (no measurements needed).
+        # Pillar 5: keeping this order earns Green Credits — create a PENDING earn
+        # that vests when the return window closes (cancelled if the buyer returns).
+        try:
+            from green.credits import award_keep_credits
+            award_keep_credits(order)
+        except Exception as e:
+            logger.warning(f"award_keep_credits failed for order {order.pk}: {e}")
+
         try:
             from prevent.fit_profile import update_fit_size_profile
             update_fit_size_profile(request.user)
@@ -371,3 +533,164 @@ class OrderListCreateView(APIView):
             pass
 
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+
+def _disposition_kwargs(grade_result: dict) -> dict:
+    """Translate grading signals into the Disposition Gate's flags so a sealed
+    return can Restock-as-New and a non-functional electronic routes to Renewed."""
+    gr = grade_result or {}
+    sealed = gr.get('seal_intact') is True
+    completeness = gr.get('completeness')
+    complete = (completeness is None) or (float(completeness) >= 0.8) or (gr.get('accessories_present') is True)
+    return {
+        'sealed': sealed,
+        'opened': not sealed,
+        'verified_match': True,
+        'complete': bool(complete),
+        'functional_pass': gr.get('functional'),   # True / False / None
+    }
+
+
+class ReturnProcessView(APIView):
+    """
+    POST /api/returns/process/  — turn a graded RETURN into a STAGED second-life listing.
+
+    The item does NOT go live instantly. The Disposition Gate decides the track and
+    the listing starts at the first lifecycle stage (Renewed→pickup scheduled,
+    Revive→held local awaiting demand, sealed→restock as new, dead→recycle/donate).
+
+    Body (JSON): order_id, grade, defects[], condition_summary, condition_signals{}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        order_id = request.data.get('order_id')
+        try:
+            order = (Order.objects.select_related('listing__product')
+                     .get(pk=order_id, user=request.user))
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not order.listing or not order.listing.product:
+            return Response({'error': 'Original item is no longer available.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        product = order.listing.product
+        grade = (request.data.get('grade') or order.listing.grade or 'B')
+        defects = request.data.get('defects') or []
+        signals = request.data.get('condition_signals') or {}
+        condition_summary = request.data.get('condition_summary') or order.listing.condition_summary
+        geohash5 = request.user.geohash5 or 'tbxx1'
+
+        route_result = {}
+        disposition = 'USED_P2P'
+        try:
+            from ml.route import route_item
+            route_result = route_item(
+                listing_id=f'ret_{order.pk}',
+                grade=grade,
+                category=product.category,
+                defects=defects,
+                geohash5=geohash5,
+                mrp=float(product.mrp),
+                product_id=product.asin,
+                title=product.title,
+                brand=product.brand,
+                condition_signals={
+                    'box_present': signals.get('box_present'),
+                    'accessories_present': signals.get('accessories_present'),
+                    'functional': signals.get('functional'),
+                    'tags_present': signals.get('tags_present'),
+                    'completeness': signals.get('completeness'),
+                },
+                **_disposition_kwargs(signals),
+            )
+            disposition = route_result.get('disposition') or 'USED_P2P'
+        except Exception as e:
+            logger.warning(f"route_item() failed in return process: {e}")
+
+        from .lifecycle import initial_status, lifecycle_payload
+        chosen_path = route_result.get('chosen_path', '')
+        price = route_result.get('price') or float(order.listing.price)
+
+        # Disposition → destination source + the lifecycle's first stage.
+        if disposition == 'RESTOCK_NEW':
+            src, st, price = Listing.Source.NEW, Listing.Status.LISTED, float(product.mrp)
+        elif disposition == 'RENEWED_SPN':
+            src, st = Listing.Source.RENEWED, initial_status(disposition, chosen_path)
+        elif disposition == 'RECYCLE_DONATE':
+            src = Listing.Source.RETURN
+            st = Listing.Status.DONATED if chosen_path == 'donate' else Listing.Status.RECYCLED
+        else:  # OPEN_BOX / USED_P2P
+            src, st = Listing.Source.RETURN, initial_status(disposition, chosen_path)
+
+        listing = Listing.objects.create(
+            product=product,
+            source=src,
+            grade=grade,
+            condition_summary=condition_summary,
+            completeness=signals.get('completeness') or order.listing.completeness or 1.0,
+            price=Decimal(str(round(float(price), 2))),
+            geohash5=geohash5,
+            status=st,
+            seller=None,   # Amazon-owned return, not a P2P seller listing
+            image_url=order.listing.image_url,
+            images=order.listing.images,
+            chosen_path=chosen_path,
+            tier=route_result.get('tier', 1),
+            ev_data=route_result.get('ev_breakdown', {}),
+            risk_tier=route_result.get('risk_tier') or '',
+            disposition=disposition,
+            condition_label=route_result.get('condition_label') or '',
+        )
+
+        order.status = Order.Status.RETURNED
+        order.save(update_fields=['status'])
+
+        # Pillar 5: a return cancels the pending "keep it" credits for this order.
+        try:
+            from green.credits import cancel_pending_credits
+            cancel_pending_credits(order)
+        except Exception as e:
+            logger.warning(f"cancel_pending_credits failed for order {order.pk}: {e}")
+
+        data = ListingSerializer(listing).data
+        data['route_result'] = route_result
+        data['lifecycle'] = lifecycle_payload(
+            status=listing.status, disposition=listing.disposition,
+            source=listing.source, chosen_path=listing.chosen_path)
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class AdvanceListingView(APIView):
+    """
+    POST /api/listings/<pk>/advance/  — DEMO control: move a listing to its next
+    lifecycle stage (refurb done / local demand met / sold) so the staged flow is
+    filmable in a short demo without waiting on real timers.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        try:
+            listing = Listing.objects.select_related('product').get(pk=pk)
+        except Listing.DoesNotExist:
+            return Response({'error': 'Listing not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from .lifecycle import next_status, lifecycle_payload
+        nxt = next_status(listing.status, disposition=listing.disposition,
+                          source=listing.source, chosen_path=listing.chosen_path)
+        if not nxt:
+            return Response({'error': 'Already at the final lifecycle stage.',
+                             'lifecycle': lifecycle_payload(
+                                 status=listing.status, disposition=listing.disposition,
+                                 source=listing.source, chosen_path=listing.chosen_path)},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        listing.status = nxt
+        listing.save(update_fields=['status', 'updated_at'])
+        return Response({
+            'id': listing.pk,
+            'status': listing.status,
+            'lifecycle': lifecycle_payload(
+                status=listing.status, disposition=listing.disposition,
+                source=listing.source, chosen_path=listing.chosen_path),
+        })

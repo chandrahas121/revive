@@ -87,6 +87,21 @@ def _serialize_card(card: HealthCard) -> dict:
         'guarantee_days':    card.guarantee_days,
         'guarantee_holder':  card.guarantee_holder,
         'card_hash':         card.card_hash,
+        # v2 §6.2 — source + product so the card is self-describing (Renewed vs Revive)
+        'source':            (card.listing.source if card.listing_id else ''),
+        'source_display':    (card.listing.get_source_display() if card.listing_id else ''),
+        'condition_label':   (card.listing.condition_label if card.listing_id else ''),
+        'seller_name':       ((card.listing.seller.get_full_name() or card.listing.seller.email.split('@')[0])
+                              if (card.listing_id and card.listing.seller) else None),
+        'product':           ({
+            'title':        card.listing.product.title,
+            'brand':        card.listing.product.brand,
+            'asin':         card.listing.product.asin,
+            'category':     card.listing.product.category,
+            'description':  card.listing.product.description,
+            'rating':       card.listing.product.rating,
+            'rating_count': card.listing.product.rating_count,
+        } if card.listing_id else None),
         'qr_data':           card.qr_data,
         'ledger': [
             {

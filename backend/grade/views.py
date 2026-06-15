@@ -270,18 +270,32 @@ class InspectAndRouteView(APIView):
         product_id     = request.data.get('product_id', 'return')
         operator       = request.data.get('operator', 'agent')
         geohash5       = request.data.get('geohash5', 'tbxx1')
+
+        # Angle/slot for each uploaded image (front, sole, box, screen_on, …) so the
+        # grader inspects the right thing per photo and the defect map is per-angle.
+        slots = request.data.getlist('slots') if hasattr(request.data, 'getlist') else (request.data.get('slots') or [])
+        slot_labels = list(slots)
+        try:
+            from ml.category_profiles import capture_prompts
+            _lbl = {p['key']: p['label'] for p in capture_prompts(category)}
+            slot_labels = [_lbl.get(s, s) for s in slots]
+        except Exception:
+            pass
         try:
             mrp = float(request.data.get('mrp', 1000.0))
         except (TypeError, ValueError):
             mrp = 1000.0
+
+        # v2: seller listing their OWN item (Sell It) passes skip_match=true, so the
+        # fraud/instance gate (meant for returns) is bypassed. Dedup still runs.
+        skip_match = str(request.data.get('skip_match', '')).lower() in ('true', '1', 'yes')
 
         # Read the cover image bytes once (used for the match gate + heatmap)
         cover_bytes = images[0].read() if images else None
         if cover_bytes is not None:
             images[0].seek(0)
 
-        # ── Fraud gate: does the photo match the product being returned? ───────
-        if cover_bytes is not None:
+        if cover_bytes is not None and not skip_match:
             try:
                 from ml.verify import verify_match
                 match = verify_match(cover_bytes, expected_category=category, expected_title=expected_title)
@@ -302,9 +316,53 @@ class InspectAndRouteView(APIView):
                     ),
                 }, status=status.HTTP_200_OK)
 
+            # ── Instance gate (v2 Q4): is it the SAME model, not just the same
+            #    category? Compare against the catalog reference via DINOv2/CLIP. ─
+            try:
+                from ml.catalog import get_reference_bytes
+                from ml.instance_match import instance_match
+                ref_bytes = get_reference_bytes(category)
+                inst = instance_match(cover_bytes, ref_bytes)
+                if inst.get('checked') and not inst.get('match'):
+                    return Response({
+                        'match': False,
+                        'instance_match': inst,
+                        'message': (
+                            f"This doesn't look like the same {expected_title or category} "
+                            "in our catalogue (different model/variant). Please scan the correct item."
+                        ),
+                    }, status=status.HTTP_200_OK)
+            except Exception as e:
+                logger.warning(f"instance_match failed, failing open: {e}")
+
+        # ── Duplicate-photo gate (v2 Q6): reject the same shot in many slots ────
+        # Only enforced for RETURNS (fraud control). A seller listing their OWN item
+        # (skip_match=true) is never hard-blocked here — different angles of large
+        # flat objects (laptops/monitors) can hash close together and must still grade.
+        if len(images) > 1 and not skip_match:
+            try:
+                from ml.image_dedup import find_duplicates
+                _all_bytes = []
+                for f in images:
+                    _all_bytes.append(f.read()); f.seek(0)
+                dups = find_duplicates(_all_bytes)
+                if dups:
+                    return Response({
+                        'match': True,
+                        'duplicate_photos': True,
+                        'duplicate_pairs': dups,
+                        'message': (
+                            "Some photos look identical. Please capture each angle "
+                            "separately (e.g. front, back, soles) so we can verify the item."
+                        ),
+                    }, status=status.HTTP_200_OK)
+            except Exception as e:
+                logger.warning(f"duplicate check failed, skipping: {e}")
+
         # ── Grade: video → multi-image → single ───────────────────────────────
         grade_result = None
         frames_sampled = len(images)
+        graded_bytes = []   # per-image bytes kept for the per-angle defect maps
         try:
             if video is not None:
                 import tempfile, os as _os
@@ -322,8 +380,10 @@ class InspectAndRouteView(APIView):
                     except Exception: pass
             elif len(images) > 1:
                 from ml.grade import grade_multi_image
-                image_byte_list = [f.read() for f in images]
-                grade_result = grade_multi_image(image_byte_list, product_id=product_id, operator=operator, category=category)
+                graded_bytes = [f.read() for f in images]
+                grade_result = grade_multi_image(
+                    graded_bytes, product_id=product_id, operator=operator,
+                    category=category, slots=slots, slot_labels=slot_labels)
                 frames_sampled = grade_result.get('frames_sampled', len(images))
         except Exception as e:
             logger.warning(f"multi/video grade failed, falling back to single image: {e}")
@@ -333,15 +393,41 @@ class InspectAndRouteView(APIView):
             grade_result = _run_grade(cover_bytes, product_id, category, operator)
             frames_sampled = 1
 
-        # Defect-box overlay on the cover photo
-        if cover_bytes is not None:
+        if not graded_bytes and cover_bytes is not None:
+            graded_bytes = [cover_bytes]
+
+        # ── Defect map(s): render per-angle, drawing each image's OWN defects ─────
+        # (Previously every aggregated defect was drawn on the cover image, which put
+        #  a sole-photo defect onto the front photo. Now each angle gets its own map.)
+        if graded_bytes:
             try:
                 from ml.heatmap import render_heatmap_b64
-                grade_result['heatmap_b64'] = render_heatmap_b64(cover_bytes, grade_result)
+                all_defects = grade_result.get('defects', [])
+                angle_heatmaps = []
+                for i, img_b in enumerate(graded_bytes):
+                    frame_defects = [d for d in all_defects if d.get('image_index', 0) == i]
+                    label = (slot_labels[i] if i < len(slot_labels)
+                             else (slots[i] if i < len(slots) else (f'Angle {i+1}')))
+                    b64 = render_heatmap_b64(img_b, {**grade_result, 'defects': frame_defects})
+                    entry = {'angle': slots[i] if i < len(slots) else '', 'angle_label': label,
+                             'b64': b64, 'n_defects': len(frame_defects)}
+                    angle_heatmaps.append(entry)
+                grade_result['angle_heatmaps'] = angle_heatmaps
+                # Backward-compat cover map: prefer the angle with the most defects.
+                cover = max(angle_heatmaps, key=lambda e: e['n_defects']) if angle_heatmaps else None
+                grade_result['heatmap_b64'] = (cover or angle_heatmaps[0])['b64'] if angle_heatmaps else None
             except Exception as e:
                 logger.warning(f"Heatmap generation failed: {e}")
 
         # ── Route ──────────────────────────────────────────────────────────────
+        # Translate the multi-angle grading signals into the Disposition Gate's flags
+        # so they actually DRIVE the disposition (sealed→Restock-New, not-functional
+        # electronics→Renewed), not just the price. Previously these were left at the
+        # gate's conservative defaults, so a sealed return could never restock as New.
+        _sealed = grade_result.get('seal_intact') is True
+        _completeness = grade_result.get('completeness')
+        _complete = (_completeness is None) or (float(_completeness) >= 0.8) \
+            or (grade_result.get('accessories_present') is True)
         try:
             from ml.route import route_item
             route_result = route_item(
@@ -352,6 +438,19 @@ class InspectAndRouteView(APIView):
                 geohash5=geohash5,
                 mrp=mrp,
                 product_id=str(product_id),
+                title=expected_title,
+                condition_signals={
+                    'box_present': grade_result.get('box_present'),
+                    'accessories_present': grade_result.get('accessories_present'),
+                    'functional': grade_result.get('functional'),
+                    'tags_present': grade_result.get('tags_present'),
+                    'completeness': grade_result.get('completeness'),
+                },
+                sealed=_sealed,
+                opened=not _sealed,
+                verified_match=True,
+                complete=bool(_complete),
+                functional_pass=grade_result.get('functional'),
             )
         except Exception as e:
             logger.warning(f"route_item() failed in inspect: {e}")

@@ -9,27 +9,34 @@ const GRADE_STYLES = {
   C: 'bg-[#fbe9dd] text-[#bd4a17]',
   D: 'bg-[#fbe5e3] text-[#b3261e]',
 };
+const GRADE_LABELS = { A: 'Like New', B: 'Very Good', C: 'Good', D: 'Acceptable' };
 
-const GRADE_LABELS = {
-  A: 'Like New',
-  B: 'Very Good',
-  C: 'Good',
-  D: 'Acceptable',
-};
-
+// v2: two second-life trust badges. Renewed = authorized-center refurb; else Revive.
 const SOURCE_LABEL = {
-  p2p:       { text: 'REVIVE',    style: 'bg-[#232F3E] text-[#febd69]' },
-  renewed:   { text: 'Renewed',   style: 'bg-[#007185] text-white' },
-  warehouse: { text: 'Warehouse', style: 'bg-[#565959] text-white' },
-  return:    { text: 'Returned',  style: 'bg-gray-400 text-white' },
+  renewed:   { text: 'Renewed by Amazon', style: 'bg-[#007185] text-white' },
+  p2p:       { text: 'Revive', style: 'bg-[#232F3E] text-[#febd69]' },
+  warehouse: { text: 'Revive', style: 'bg-[#232F3E] text-[#febd69]' },
+  return:    { text: 'Revive', style: 'bg-[#232F3E] text-[#febd69]' },
 };
+const inr = (v) => `₹${parseFloat(v).toLocaleString('en-IN')}`;
 
-const Product = ({ id, title, price, description, category, image, grade, source }) => {
+const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLife, rating, ratingCount, lifecycle }) => {
   const navigate = useNavigate();
   const { addToCart, cart } = useCart();
   const inCart = id != null && cart.some((item) => Number(item.id) === Number(id));
-  const stars = grade === 'A' ? 5 : grade === 'B' ? 4 : grade === 'C' ? 3 : 2;
-  const srcLabel = SOURCE_LABEL[source];
+  const srcLabel = !isNew ? SOURCE_LABEL[source] : null;
+
+  // v2 lifecycle: a staged second-life item (refurbishing / held-local) is visible
+  // but not yet buyable. Show its stage and disable purchase until it goes live.
+  const staged = lifecycle && !lifecycle.live && !lifecycle.sold;
+  const stageLabel = staged ? (lifecycle.stages?.find((s) => s.current)?.label || 'In progress') : null;
+
+  // New tiles use the real catalog rating; second-life derive stars from grade.
+  const rateStars = isNew
+    ? Math.round(rating || 0)
+    : (grade === 'A' ? 5 : grade === 'B' ? 4 : grade === 'C' ? 3 : 2);
+  const showMrp = !isNew && mrp && parseFloat(mrp) > parseFloat(price);
+  const offPct = showMrp ? Math.round((1 - parseFloat(price) / parseFloat(mrp)) * 100) : 0;
 
   const handleAdd = (e) => {
     e.stopPropagation();
@@ -41,72 +48,84 @@ const Product = ({ id, title, price, description, category, image, grade, source
       className="relative flex flex-col bg-white rounded shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer p-3 sm:p-4"
       onClick={() => navigate(`/product/${id}`)}
     >
-      {/* Source badge */}
       {srcLabel && (
         <span className={`absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full z-10 ${srcLabel.style}`}>
           {srcLabel.text}
         </span>
       )}
-
-      {/* Grade badge */}
-      {grade && (
+      {!isNew && grade && (
         <span className={`absolute top-2 right-2 text-[10px] font-black px-1.5 py-0.5 rounded z-10 ${GRADE_STYLES[grade] || ''}`}>
           {grade}
         </span>
       )}
+      {staged && (
+        <span className="absolute top-8 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10 bg-amber-100 text-amber-800 border border-amber-200">
+          ⏳ {stageLabel}
+        </span>
+      )}
 
-      {/* Image */}
       <div className="flex items-center justify-center mt-5 mb-2 h-36 sm:h-44">
-        <img
-          src={image}
-          alt={title}
-          className="max-h-full max-w-full object-contain"
-          onError={(e) => { e.target.src = 'https://via.placeholder.com/200x200?text=No+Image'; }}
-        />
+        <img src={image} alt={title} className="max-h-full max-w-full object-contain"
+          onError={(e) => { e.target.src = 'https://via.placeholder.com/200x200?text=No+Image'; }} />
       </div>
 
-      {/* Title */}
       <h4 className="my-1.5 text-xs sm:text-sm font-semibold line-clamp-2 flex-grow">{title}</h4>
 
-      {/* Stars */}
-      <div className="flex my-1">
-        {Array(stars).fill(null).map((_, i) => (
+      <div className="flex items-center gap-1 my-1">
+        {Array(rateStars).fill(null).map((_, i) => (
           <StarIcon key={`f${i}`} className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 fill-yellow-500" />
         ))}
-        {Array(5 - stars).fill(null).map((_, i) => (
+        {Array(5 - rateStars).fill(null).map((_, i) => (
           <StarIcon key={`e${i}`} className="h-3 w-3 sm:h-4 sm:w-4 text-gray-300 fill-gray-300" />
         ))}
+        {isNew && ratingCount > 0 && (
+          <span className="text-[11px] text-[#007185] ml-1">{ratingCount.toLocaleString('en-IN')}</span>
+        )}
       </div>
 
-      {/* Price */}
-      <div className="mb-0.5 font-bold text-sm sm:text-base">
-        ₹{parseFloat(price).toLocaleString('en-IN')}
+      <div className="mb-0.5 font-bold text-sm sm:text-base flex items-baseline gap-1.5">
+        {inr(price)}
+        {showMrp && (
+          <>
+            <span className="text-[11px] text-gray-400 font-normal line-through">{inr(mrp)}</span>
+            <span className="text-[11px] text-[#007600] font-semibold">({offPct}% off)</span>
+          </>
+        )}
       </div>
 
-      {/* Condition pill + grade label */}
-      {grade && (
-        <div className="flex items-center gap-1.5 mb-2">
+      {!isNew && grade && (
+        <div className="flex items-center gap-1.5 mb-1">
           <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${GRADE_STYLES[grade] || ''}`}>{grade}</span>
           <span className="text-[11px] text-gray-500">{GRADE_LABELS[grade]}</span>
         </div>
       )}
 
-      {/* Free delivery */}
+      {isNew && secondLife && (
+        <p className="text-[11px] text-[#007185] font-medium mb-1">
+          {secondLife.labels.join(' / ')} from {inr(secondLife.from_price)}
+        </p>
+      )}
+
       <p className="text-[11px] text-[#007600] font-medium mb-2">FREE delivery Tomorrow</p>
 
-      {/* Add to cart */}
-      <button
-        onClick={handleAdd}
-        disabled={inCart}
-        className={`mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border transition-colors
-          ${inCart
-            ? 'bg-gray-100 text-gray-400 cursor-default border-gray-200'
-            : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'
-          }`}
-        style={inCart ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
-      >
-        {inCart ? 'Added to Cart' : 'Add to Cart'}
-      </button>
+      {staged ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/product/${id}`); }}
+          className="mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border border-amber-300 bg-amber-50 text-amber-800"
+        >
+          {lifecycle.track === 'renewed' ? 'Refurbishing — track it' : 'Held nearby — track it'}
+        </button>
+      ) : (
+        <button
+          onClick={handleAdd}
+          disabled={inCart}
+          className={`mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border transition-colors
+            ${inCart ? 'bg-gray-100 text-gray-400 cursor-default border-gray-200' : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'}`}
+          style={inCart ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+        >
+          {inCart ? 'Added to Cart' : 'Add to Cart'}
+        </button>
+      )}
     </div>
   );
 };

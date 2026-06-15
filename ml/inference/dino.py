@@ -186,7 +186,10 @@ def _load_model() -> None:
 
         model_id = "IDEA-Research/grounding-dino-tiny"
         _processor = AutoProcessor.from_pretrained(model_id)
-        _model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(_device)
+        _model = AutoModelForZeroShotObjectDetection.from_pretrained(
+            model_id, 
+            low_cpu_mem_usage=False
+        ).to(_device)
         _model.eval()
         logger.info("[DINO] Model loaded.")
     except Exception as e:
@@ -398,8 +401,11 @@ def detect_defects(image_bytes: bytes, category: Optional[str] = None) -> List[D
             )[0]
 
         raw_detections = []
+        # transformers ≥4.51 returns integer ids in "labels"; the human-readable
+        # phrases move to "text_labels". Prefer text_labels so defect names stay strings.
+        labels = results.get("text_labels") or results.get("labels")
         for score, label, box in zip(
-            results["scores"], results["labels"], results["boxes"]
+            results["scores"], labels, results["boxes"]
         ):
             conf = round(float(score), 3)
             label_str = label if isinstance(label, str) else str(label)

@@ -7,6 +7,9 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     return_rate = models.FloatField(default=0.0)
     geohash5 = models.CharField(max_length=10, blank=True, default='')
+    # v2: live location capture (browser geolocation) → feeds local demand / "Near me"
+    lat = models.FloatField(null=True, blank=True)
+    lng = models.FloatField(null=True, blank=True)
 
     # Pillar 4 — Fit-Twin body measurements + learned size profile
     height_in = models.FloatField(blank=True, null=True)
@@ -32,6 +35,9 @@ class Product(models.Model):
     mrp = models.DecimalField(max_digits=10, decimal_places=2)
     reference_image_url = models.URLField(max_length=500)
     description = models.TextField(blank=True)
+    # v2: real catalog signals (from Amazon Reviews 2023 import)
+    rating = models.FloatField(default=0.0)
+    rating_count = models.IntegerField(default=0)
     # Pillar 4 — link to the clothing-fit dataset item this product represents
     fit_item_id = models.CharField(max_length=40, blank=True, default='')
 
@@ -43,28 +49,38 @@ class Listing(models.Model):
     """A specific item available for sale — the core inventory unit."""
 
     class Source(models.TextChoices):
+        NEW = 'new', 'New'                          # v2: normal Amazon New catalog
         RETURN = 'return', 'Amazon Return'
         P2P = 'p2p', 'P2P (Individual)'
         WAREHOUSE = 'warehouse', 'Amazon Warehouse'
         RENEWED = 'renewed', 'Amazon Renewed'
 
     class Grade(models.TextChoices):
-        A = 'A', 'Grade A – Excellent'
-        B = 'B', 'Grade B – Good'
-        C = 'C', 'Grade C – Fair'
-        D = 'D', 'Grade D – Poor'
+        A = 'A', 'Grade A – Like New'
+        B = 'B', 'Grade B – Very Good'
+        C = 'C', 'Grade C – Good'
+        D = 'D', 'Grade D – Heavy cosmetic damage (functional)'
+        E = 'E', 'Grade E – Functional defect / for parts'   # v2 (Q8)
+        F = 'F', 'Grade F – Not resellable (recycle)'        # v2 (Q8)
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending Grading'
         LISTED = 'listed', 'Listed'
+        PAUSED = 'paused', 'Paused'           # v2 (Q3) — temporarily hidden
+        DELISTED = 'delisted', 'Delisted'     # v2 (Q3) — removed by seller
         SOLD = 'sold', 'Sold'
         DONATED = 'donated', 'Donated'
         RECYCLED = 'recycled', 'Recycled'
         WAREHOUSE_BOUND = 'warehouse_bound', 'Warehouse Bound'
+        # v2 lifecycle stages — a returned/listed item is NOT instantly live; it
+        # progresses through a disposition-driven track (see core/lifecycle.py):
+        REFURB_SCHEDULED = 'refurb_scheduled', 'Refurb pickup scheduled'  # Renewed track
+        REFURBISHING     = 'refurbishing', 'Refurbishing at SPN center'   # Renewed track
+        AWAITING_DEMAND  = 'awaiting_demand', 'Held local · awaiting demand'  # Revive track
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='listings')
     source = models.CharField(max_length=20, choices=Source.choices, default=Source.WAREHOUSE)
-    grade = models.CharField(max_length=1, choices=Grade.choices, default=Grade.A)
+    grade = models.CharField(max_length=1, choices=Grade.choices, default=Grade.A, blank=True)
     condition_summary = models.TextField(blank=True)
     completeness = models.FloatField(default=1.0)   # 0.0–1.0 from CLIP
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -74,10 +90,15 @@ class Listing(models.Model):
         User, null=True, blank=True, on_delete=models.SET_NULL, related_name='listings'
     )   # set for P2P listings
     image_url = models.URLField(max_length=500, blank=True)
+    images = models.JSONField(default=list, blank=True)   # v2: seller-uploaded angle shots [{url,label}]
     # Pillar 2 — routing result (populated by route_item() after grading)
     chosen_path = models.CharField(max_length=30, blank=True, default='')
-    tier        = models.IntegerField(default=1)
+    tier        = models.IntegerField(default=1)   # legacy int tier (1/2/3)
     ev_data     = models.JSONField(null=True, blank=True)
+    # v2 — backend-only risk tier + disposition gate result + buyer-facing label
+    risk_tier        = models.CharField(max_length=10, blank=True, default='')   # LOW/MEDIUM/HIGH
+    disposition      = models.CharField(max_length=20, blank=True, default='')   # RESTOCK_NEW/OPEN_BOX/...
+    condition_label  = models.CharField(max_length=40, blank=True, default='')   # "Used – Very Good" etc.
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

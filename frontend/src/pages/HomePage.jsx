@@ -4,6 +4,12 @@ import Header from '../components/Header'
 import Banner, { TrustStrip } from '../components/Banner'
 import ProductFeed from '../components/ProductFeed'
 import api, { getRecommendations } from '../api/client'
+import { useLocation as useGeoLocation } from '../hooks/useLocation'
+
+// v2 (point 6): location is requested ONCE (silent browser permission prompt) and
+// then used only to sort the storefront nearest-first — exactly like Amazon, which
+// uses your location quietly rather than showing a "deals near you" banner.
+
 
 const GRADE_PILL = {
   A: 'bg-green-100 text-green-800', B: 'bg-yellow-100 text-yellow-800',
@@ -48,22 +54,47 @@ const RecommendationRail = () => {
 }
 
 const HomePage = () => {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
+  const [numPages, setNumPages] = useState(1)
+  const { location, status, request } = useGeoLocation()
+
+  // Ask for location permission exactly once (no persistent banner).
+  useEffect(() => {
+    if (!location && status === 'idle') request()
+  }, [location, status, request])
 
   const searchQuery = searchParams.get('q') || ''
   const sourceFilter = searchParams.get('source') || ''
+  const conditionFilter = searchParams.get('condition') || ''
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+
+  const goToPage = (p) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('page', String(p))
+    setSearchParams(next)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
 
   useEffect(() => {
     setLoading(true)
     const params = new URLSearchParams()
     if (searchQuery) params.set('q', searchQuery)
     if (sourceFilter) params.set('source', sourceFilter)
+    if (conditionFilter) params.set('condition', conditionFilter)
+    params.set('page', String(page))
+    // v2: "Near me" — sort the storefront by proximity to the buyer's live location
+    if (location) { params.set('lat', location.lat); params.set('lng', location.lng) }
+
 
     api.get(`/api/listings/?${params.toString()}`)
       .then((res) => {
         const listings = res.data.results || []
+        setTotal(res.data.count || listings.length)
+        setNumPages(res.data.num_pages || 1)
         setProducts(listings.map((l) => ({
           id: l.id,
           title: l.product.title,
@@ -76,11 +107,17 @@ const HomePage = () => {
           source_display: l.source_display,
           grade_display: l.grade_display,
           seller_name: l.seller_name,
+          is_new: l.is_new,
+          mrp: l.mrp,
+          second_life: l.second_life,
+          rating: l.product.rating,
+          rating_count: l.product.rating_count,
         })))
       })
-      .catch(() => setProducts([]))
+      .catch(() => { setProducts([]); setTotal(0); setNumPages(1) })
       .finally(() => setLoading(false))
-  }, [searchQuery, sourceFilter])
+  }, [searchQuery, sourceFilter, conditionFilter, page, location])
+
 
   return (
     <div className="bg-[#EAEDED] min-h-screen">
@@ -94,11 +131,12 @@ const HomePage = () => {
             <p className="text-xs sm:text-sm text-gray-600">
               {searchQuery && <><span className="font-semibold">Search:</span> "{searchQuery}" </>}
               {sourceFilter && <><span className="font-semibold">Source:</span> {sourceFilter} </>}
-              — {loading ? '…' : `${products.length} found`}
+              — {loading ? '…' : `${total} found`}
             </p>
           </div>
         )}
-        <ProductFeed products={products} loading={loading} showHeading={!searchQuery} />
+        <ProductFeed products={products} loading={loading} showHeading={!searchQuery}
+          page={page} numPages={numPages} total={total} onPageChange={goToPage} />
       </main>
     </div>
   )

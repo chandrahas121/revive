@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage'
 import CreditsWalletPage from './pages/CreditsWalletPage'
 import SellIt from './components/stitch/SellIt'
 import Footer from './components/Footer'
+import ScrollToTop from './components/ScrollToTop'
 
 const Layout = () => (
   <div className="flex flex-col min-h-screen">
@@ -26,6 +27,7 @@ const Layout = () => (
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/"                       element={<HomePage />} />

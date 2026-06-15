@@ -4,7 +4,8 @@ import Header from '../components/Header'
 import HealthCard from '../components/stitch/HealthCard'
 import VirtualTryOn from '../components/stitch/VirtualTryOn'
 import FitTwin from '../components/stitch/FitTwin'
-import api, { getHealthCard } from '../api/client'
+import LifecycleTimeline from '../components/LifecycleTimeline'
+import api, { getHealthCard, advanceListingStage } from '../api/client'
 import { useCart } from '../context/CartContext'
 
 const CLOTHING_KEYWORDS = ['clothing', 'fashion', 'apparel', 'garment', 'textile', 'wear', 'shirt', 'dress', 'jacket', 'pants', 'jeans', 'top', 'blouse', 'skirt', 'coat', 'shoes', 'footwear']
@@ -36,17 +37,31 @@ const GRADE_TEXT_COLOR = {
 const ProductDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addToCart, cart } = useCart()
+  const { addToCart, removeFromCart, updateQuantity, cart, getItemQty } = useCart()
 
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [added, setAdded] = useState(false)
   const [selectedSize, setSelectedSize] = useState(null)
   const SIZES = ['S', 'M', 'L', 'XL', 'XXL']
   const [showHealthCard, setShowHealthCard] = useState(false)
   const [cardData, setCardData] = useState(null)
   const [cardLoading, setCardLoading] = useState(false)
+  const [advancing, setAdvancing] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
+
+  const handleAdvanceStage = async () => {
+    if (!listing) return
+    setAdvancing(true)
+    try {
+      const res = await advanceListingStage(listing.id)
+      setListing((prev) => ({ ...prev, status: res.data.status, lifecycle: res.data.lifecycle }))
+    } catch {
+      // ignore — demo control
+    } finally {
+      setAdvancing(false)
+    }
+  }
 
   useEffect(() => {
     api.get(`/api/listings/${id}/`)
@@ -56,6 +71,9 @@ const ProductDetailPage = () => {
   }, [id])
 
   const inCart = cart.some((item) => Number(item.id) === Number(id))
+  const cartQty = getItemQty(id)
+  const isSecondLife = listing ? listing.source !== 'new' : false
+  const maxStock = listing?.stock ?? (isSecondLife ? 1 : 10)
 
   const handleViewHealthCard = async () => {
     setShowHealthCard(true)
@@ -82,8 +100,16 @@ const ProductDetailPage = () => {
       grade: listing.grade,
       source: listing.source,
       size: selectedSize,
+      maxStock,
     })
-    setAdded(true)
+  }
+
+  const handleIncrement = () => {
+    if (cartQty < maxStock) updateQuantity(id, cartQty + 1)
+  }
+  const handleDecrement = () => {
+    if (cartQty > 1) updateQuantity(id, cartQty - 1)
+    else removeFromCart(id)
   }
 
   if (loading) return (
@@ -122,6 +148,9 @@ const ProductDetailPage = () => {
   const price = parseFloat(listing.price)
   const mrp = product.mrp ? parseFloat(product.mrp) : null
   const savings = mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : null
+  // v2 lifecycle: staged (refurbishing / held-local) items are visible but not buyable yet.
+  const lc = listing.lifecycle
+  const staged = lc && !lc.live && !lc.sold
 
   return (
     <div className="bg-[#EAEDED] min-h-screen">
@@ -216,6 +245,36 @@ const ProductDetailPage = () => {
               </div>
             )}
 
+            {/* v2 second-life lifecycle — where this item is in its journey */}
+            {lc && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-[#0F1111] mb-1.5">Second-life journey</p>
+                <LifecycleTimeline
+                  lifecycle={lc}
+                  onAdvance={handleAdvanceStage}
+                  advancing={advancing}
+                  showAdvance
+                />
+              </div>
+            )}
+
+            {listing.images && listing.images.length > 0 && !listing.is_new && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-[#0F1111] mb-1.5">Seller photos</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {listing.images.map((im, i) => (
+                    <div key={i} className="flex-shrink-0 w-20">
+                      <div className="w-20 h-20 rounded border border-[#D5D9D9] bg-white flex items-center justify-center overflow-hidden">
+                        <img src={im.url} alt={im.label} className="max-w-full max-h-full object-contain"
+                          onError={(e) => { e.target.style.display = 'none' }} />
+                      </div>
+                      <p className="text-[10px] text-gray-500 text-center mt-0.5">{im.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Delivery / Returns / Ships from / Sold by */}
             <div className="border border-[#D5D9D9] rounded divide-y divide-[#D5D9D9] mb-5 text-sm">
               <div className="flex px-3 py-2.5 gap-3">
@@ -242,7 +301,20 @@ const ProductDetailPage = () => {
             {product.description && (
               <div className="mb-3">
                 <p className="text-base font-bold text-[#0F1111] mb-2">About this item</p>
-                <p className="text-sm text-[#0F1111] leading-relaxed">{product.description}</p>
+                <div className={`text-sm text-[#0F1111] leading-relaxed ${!descExpanded ? 'line-clamp-4' : ''}`}>
+                  {product.description}
+                </div>
+                {product.description.length > 200 && (
+                  <button
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    className="text-[#007185] hover:underline hover:text-[#c45500] text-sm mt-1 flex items-center font-semibold focus:outline-none"
+                  >
+                    <svg className={`w-3.5 h-3.5 mr-1 transform transition-transform ${descExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    {descExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -265,12 +337,34 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
+              {listing.buying_options && listing.buying_options.length > 1 && (
+                <div className="border border-[#D5D9D9] rounded divide-y divide-[#D5D9D9]">
+                  <p className="text-[11px] font-bold text-[#0F1111] px-2.5 py-1.5 bg-[#F7F8F8]">Buying options</p>
+                  {listing.buying_options.map((o) => (
+                    <button key={o.id} onClick={() => navigate(`/product/${o.id}`)}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 text-left hover:bg-[#F7F8F8] transition-colors ${o.id === listing.id ? 'bg-[#FFF8E7]' : ''}`}>
+                      <span className="text-xs font-semibold text-[#0F1111]">
+                        {o.is_new ? 'New' : (o.source === 'renewed' ? 'Renewed' : (o.condition_label || 'Used'))}
+                        {o.id === listing.id && <span className="text-[10px] text-[#C7511F] ml-1">• viewing</span>}
+                      </span>
+                      <span className="text-xs font-bold text-[#0F1111]">₹{parseFloat(o.price).toLocaleString('en-IN')}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <p className="text-sm">
                 <span className="text-[#007600] font-semibold">FREE Delivery</span>
                 <span className="text-[#0F1111]"> by Tomorrow</span>
               </p>
 
-              <p className="text-lg text-[#007600]">In Stock</p>
+              {staged
+                ? <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 leading-snug">
+                    {lc.track === 'renewed'
+                      ? 'Being refurbished at an authorized center — not buyable yet. It goes live as Amazon Renewed once certified.'
+                      : 'Held locally — goes live the moment a nearby buyer appears. Not buyable yet.'}
+                  </p>
+                : <p className="text-lg text-[#007600]">In Stock</p>}
 
               {isClothing(product.category) && (
                 <div>
@@ -298,25 +392,71 @@ const ProductDetailPage = () => {
                 </p>
               )}
 
-              <button
-                onClick={handleAddToCart}
-                disabled={inCart || added}
-                className={`w-full py-2 rounded text-sm font-bold border transition-colors
-                  ${inCart || added
-                    ? 'bg-[#F0F2F2] text-gray-400 cursor-default border-[#D5D9D9]'
-                    : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'}`}
-                style={(inCart || added) ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
-              >
-                {inCart || added ? 'Added to Cart' : 'Add to Cart'}
-              </button>
+              {/* Staged (refurbishing / held-local) items are visible but not buyable yet.
+                  Otherwise: quantity selector once in cart, else Add to Cart. */}
+              {staged ? (
+                <button
+                  disabled
+                  className="w-full py-2 rounded text-sm font-bold border bg-[#F0F2F2] text-gray-400 cursor-default border-[#D5D9D9]"
+                >
+                  Not yet available
+                </button>
+              ) : inCart ? (
+                <div className="space-y-2">
+                  {/* Amazon-style qty row */}
+                  <div className="flex items-center justify-center gap-0 border border-[#D5D9D9] rounded-lg overflow-hidden">
+                    <button
+                      onClick={handleDecrement}
+                      className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6] transition-colors border-r border-[#D5D9D9]"
+                    >
+                      {cartQty === 1 ? (
+                        <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      ) : '−'}
+                    </button>
+                    <span className="flex-1 text-center text-sm font-bold text-[#0F1111] bg-white py-2">
+                      {cartQty}
+                    </span>
+                    <button
+                      onClick={handleIncrement}
+                      disabled={cartQty >= maxStock}
+                      className={`w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors border-l border-[#D5D9D9]
+                        ${cartQty >= maxStock ? 'text-gray-300 bg-[#F0F2F2] cursor-not-allowed' : 'text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6]'}`}
+                    >
+                      +
+                    </button>
+                  </div>
+                  {isSecondLife && (
+                    <p className="text-[11px] text-center text-amber-600">One-of-a-kind item · qty 1 only</p>
+                  )}
+                  {!isSecondLife && cartQty >= maxStock && (
+                    <p className="text-[11px] text-center text-amber-600">Maximum available stock reached</p>
+                  )}
+                  <button
+                    onClick={() => removeFromCart(id)}
+                    className="w-full text-center text-xs text-[#007185] hover:text-[#c45500] hover:underline py-1"
+                  >
+                    Remove from cart
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  className="w-full py-2 rounded text-sm font-bold border text-[#131921] border-[#f0c040] shadow-sm active:scale-95 transition-colors"
+                  style={{ background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+                >
+                  Add to Cart
+                </button>
+              )}
 
-              <button
-                onClick={() => { handleAddToCart(); navigate('/checkout') }}
-                className="w-full py-2 rounded text-sm font-bold text-white border border-[#e07000] shadow-sm transition-colors active:scale-95"
-                style={{ background: 'linear-gradient(180deg, #ffac31, #FF9900)' }}
-              >
-                Buy Now
-              </button>
+              {!staged && (
+                <button
+                  onClick={() => { handleAddToCart(); navigate('/checkout') }}
+                  className="w-full py-2 rounded text-sm font-bold text-white border border-[#e07000] shadow-sm transition-colors active:scale-95"
+                  style={{ background: 'linear-gradient(180deg, #ffac31, #FF9900)' }}
+                >
+                  Buy Now
+                </button>
+              )}
 
               <div className="flex items-center gap-1.5 text-xs text-gray-500">
                 <svg className="w-3 h-3 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -325,19 +465,28 @@ const ProductDetailPage = () => {
                 <span>Secure transaction</span>
               </div>
 
-              <hr className="border-[#D5D9D9]" />
-
-              <button
-                onClick={handleViewHealthCard}
-                className="w-full py-2 rounded text-sm font-semibold bg-[#232F3E] hover:bg-[#131921] text-[#febd69] border border-[#3d5166] transition-colors"
-              >
-                View Product Health Card
-              </button>
+              {/* Health Card is a SECOND-LIFE trust artifact only — a brand-new
+                  catalogue item has no AI grade / refurb record, so no card. */}
+              {!listing.is_new && (
+                <>
+                  <hr className="border-[#D5D9D9]" />
+                  <button
+                    onClick={handleViewHealthCard}
+                    className="w-full py-2 rounded text-sm font-semibold bg-[#232F3E] hover:bg-[#131921] text-[#febd69] border border-[#3d5166] transition-colors"
+                  >
+                    View Product Health Card
+                  </button>
+                </>
+              )}
 
               {isClothing(product.category) && (
                 <VirtualTryOn
                   garmentImage={listing.image}
                   garmentTitle={product.title}
+                  price={price}
+                  mrp={mrp}
+                  grade={listing.grade}
+                  gradeLabel={listing.grade_display}
                 />
               )}
 
@@ -395,6 +544,9 @@ const ProductDetailPage = () => {
                 </div>
                 <div className="rounded-lg overflow-y-auto overflow-x-hidden shadow-2xl" style={{ maxHeight: '82vh' }}>
                   <HealthCard
+                    source={listing.source}
+                    listing={listing}
+                    product={listing.product}
                     grade={listing.grade}
                     conditionSummary={listing.condition_summary}
                     completeness={listing.completeness}

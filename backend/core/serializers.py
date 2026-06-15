@@ -46,6 +46,10 @@ class ListingSerializer(serializers.ModelSerializer):
     grade_display = serializers.CharField(source='get_grade_display', read_only=True)
     seller_name = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
+    is_new = serializers.SerializerMethodField()
+    mrp = serializers.SerializerMethodField()
+    second_life = serializers.SerializerMethodField()
+    lifecycle = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -54,7 +58,16 @@ class ListingSerializer(serializers.ModelSerializer):
             'grade', 'grade_display', 'condition_summary',
             'completeness', 'price', 'geohash5', 'status',
             'chosen_path', 'tier', 'ev_data',
-            'seller_name', 'image', 'created_at',
+            'condition_label', 'disposition',
+            'seller_name', 'image', 'images', 'created_at',
+            'is_new', 'mrp', 'second_life', 'lifecycle',
+        )
+
+    def get_lifecycle(self, obj):
+        from .lifecycle import lifecycle_payload
+        return lifecycle_payload(
+            status=obj.status, disposition=obj.disposition,
+            source=obj.source, chosen_path=obj.chosen_path,
         )
 
     def get_seller_name(self, obj):
@@ -65,6 +78,32 @@ class ListingSerializer(serializers.ModelSerializer):
     def get_image(self, obj):
         return obj.image_url or obj.product.reference_image_url
 
+    def get_is_new(self, obj):
+        return obj.source == 'new'
+
+    def get_mrp(self, obj):
+        return obj.product.mrp
+
+    def get_second_life(self, obj):
+        if obj.source != 'new':
+            return None
+        sibs = [l for l in obj.product.listings.all()
+                if l.source != 'new' and l.status == 'listed']
+        if not sibs:
+            return None
+        renewed = any(l.source == 'renewed' for l in sibs)
+        revive = any(l.source != 'renewed' for l in sibs)
+        labels = []
+        if renewed:
+            labels.append('Renewed')
+        if revive:
+            labels.append('Used')
+        return {
+            'count':      len(sibs),
+            'from_price': min(float(l.price) for l in sibs),
+            'labels':     labels,
+        }
+
 
 class CreateListingSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255)
@@ -74,6 +113,8 @@ class CreateListingSerializer(serializers.Serializer):
     mrp = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=None)
     geohash5 = serializers.CharField(max_length=10, required=False, allow_blank=True, default='')
     condition_summary = serializers.CharField(required=False, allow_blank=True, default='')
+    lat = serializers.FloatField(required=False, allow_null=True, default=None)
+    lng = serializers.FloatField(required=False, allow_null=True, default=None)
 
 
 class OrderSerializer(serializers.ModelSerializer):

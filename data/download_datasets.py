@@ -49,6 +49,68 @@ AMAZON_5CORE_URLS = {
     "Clothing": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/rating_only/Clothing_Shoes_and_Jewelry.csv.gz",
 }
 
+# ─── Amazon Reviews 2023 — ITEM METADATA (titles/prices/images/brand/rating) ────
+# These are what the catalog importer (manage.py import_amazon_data / seed_real)
+# needs. One friendly name → one UCSD meta_*.jsonl.gz file.
+_META_BASE = "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/raw/meta_categories/"
+AMAZON_META_URLS = {
+    "Electronics": _META_BASE + "meta_Electronics.jsonl.gz",
+    "Phones":      _META_BASE + "meta_Cell_Phones_and_Accessories.jsonl.gz",
+    "Clothing":    _META_BASE + "meta_Clothing_Shoes_and_Jewelry.jsonl.gz",
+    "Home":        _META_BASE + "meta_Home_and_Kitchen.jsonl.gz",
+    "Sports":      _META_BASE + "meta_Sports_and_Outdoors.jsonl.gz",
+    "Toys":        _META_BASE + "meta_Toys_and_Games.jsonl.gz",
+    "Beauty":      _META_BASE + "meta_Beauty_and_Personal_Care.jsonl.gz",
+    "Books":       _META_BASE + "meta_Books.jsonl.gz",
+}
+
+
+def download_amazon_meta(category: str = "Electronics", max_items: int = 4000) -> Path:
+    """Stream a meta_*.jsonl.gz and write only the first `max_items` items that
+    have a usable (title + image + price). Streaming + early-stop means you pull
+    a few MB, not the multi-GB full file. Output: data/meta_<category>.jsonl
+    """
+    url = AMAZON_META_URLS.get(category)
+    if not url:
+        raise ValueError(f"Unknown meta category: {category}. Options: {list(AMAZON_META_URLS)}")
+
+    out_path = DATA_DIR / f"meta_{category.lower()}.jsonl"
+    if out_path.exists():
+        logger.info(f"Already exists: {out_path}")
+        return out_path
+
+    logger.info(f"Streaming metadata: {url}")
+    logger.info(f"  → {out_path}  (keeping first {max_items} usable items)")
+
+    kept = scanned = 0
+    # Stream the gzip over HTTP and decode line-by-line; stop as soon as we have
+    # enough usable items (so we never download the whole multi-GB file).
+    with urllib.request.urlopen(url) as resp:  # noqa: S310 (trusted academic host)
+        with gzip.GzipFile(fileobj=resp) as gz:
+            with open(out_path, "w", encoding="utf-8") as out:
+                for raw in gz:
+                    if kept >= max_items:
+                        break
+                    scanned += 1
+                    try:
+                        m = json.loads(raw)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        continue
+                    title = (m.get("title") or "").strip()
+                    imgs = m.get("images") or []
+                    has_img = any(isinstance(im, dict) and (im.get("large") or im.get("hi_res") or im.get("thumb")) for im in imgs)
+                    price = m.get("price")
+                    has_price = price not in (None, "", "None")
+                    if not (title and has_img and has_price):
+                        continue
+                    out.write(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+                    kept += 1
+                    if kept % 500 == 0:
+                        print(f"\r  kept {kept}/{max_items} (scanned {scanned})", end="", flush=True)
+    print()
+    logger.info(f"✅ Wrote {kept} items to {out_path} (scanned {scanned} lines)")
+    return out_path
+
 
 def _download_with_progress(url: str, dest: Path) -> None:
     logger.info(f"Downloading: {url}")
@@ -183,14 +245,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download REVIVE ML datasets")
     parser.add_argument("--mercari", action="store_true", help="Download Mercari Price Suggestion")
     parser.add_argument("--fit", action="store_true", help="Download clothing-fit (Rent the Runway / ModCloth)")
-    parser.add_argument("--amazon-reviews", action="store_true", help="Download Amazon Reviews 2023")
+    parser.add_argument("--amazon-reviews", action="store_true", help="Download Amazon Reviews 2023 (review data)")
+    parser.add_argument("--meta", action="store_true",
+                        help="Download Amazon Reviews 2023 ITEM METADATA (for the catalog importer)")
     parser.add_argument("--category", default="Electronics",
-                        choices=list(AMAZON_REVIEWS_URLS.keys()),
-                        help="Amazon Reviews category")
+                        help="Category (reviews: %s ; meta: %s)" % (
+                            list(AMAZON_REVIEWS_URLS.keys()), list(AMAZON_META_URLS.keys())))
+    parser.add_argument("--max-items", type=int, default=4000,
+                        help="(--meta) keep first N usable items so you pull MB not GB")
     parser.add_argument("--full", action="store_true", help="Download full (not 5-core) Amazon reviews")
     args = parser.parse_args()
 
-    if not args.mercari and not args.amazon_reviews and not args.fit:
+    if not args.mercari and not args.amazon_reviews and not args.fit and not args.meta:
         parser.print_help()
         sys.exit(1)
 
@@ -205,3 +271,7 @@ if __name__ == "__main__":
     if args.amazon_reviews:
         p = download_amazon_reviews(args.category, use_5core=not args.full)
         print(f"Amazon Reviews: {p}")
+
+    if args.meta:
+        p = download_amazon_meta(args.category, max_items=args.max_items)
+        print(f"Amazon metadata: {p}")

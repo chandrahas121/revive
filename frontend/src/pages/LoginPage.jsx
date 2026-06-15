@@ -20,12 +20,16 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-white">
-      <div className="mt-4 mb-4 cursor-pointer" onClick={() => navigate('/')}>
+    <div className="flex flex-col items-center min-h-screen bg-white pt-0">
+      <div
+        className="w-full flex justify-center py-2 mb-6 cursor-pointer"
+        style={{ background: '#131921' }}
+        onClick={() => navigate('/')}
+      >
         <img
-          src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png"
+          src="https://links.papareact.com/f90"
           alt="Amazon Logo"
-          className="w-24 object-contain"
+          className="h-9 object-contain"
         />
       </div>
 
