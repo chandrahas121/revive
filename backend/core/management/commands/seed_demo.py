@@ -27,6 +27,7 @@ import random
 # before ml.route / ml.price_keras read it.
 os.environ["REVIVE_USE_KERAS_PRICE"] = "0"
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -74,6 +75,117 @@ def _display_name(author_id: str, rng: random.Random) -> str:
     return f"{_FIRST[seed % len(_FIRST)]} {_LAST_INITIAL[(seed // 7) % len(_LAST_INITIAL)]}."
 
 
+# Apparel garment groups — so a shirt product gets shirt reviews, jeans get jeans
+# reviews, etc. (the dataset mixes all garment types in one clothing file). Order
+# matters: more specific groups are checked before the bare "shirt".
+_APPAREL_GROUPS = [
+    ("bottoms",   ("jeans", "jean", "denim pant", "trouser", "trousers", "chino",
+                   "chinos", "pant", "pants", "jogger", "joggers", "khaki", "slacks")),
+    ("outerwear", ("jacket", "bomber", "blazer", "hoodie", "hooded", "sweatshirt",
+                   "sweater", "coat", "fleece", "windbreaker")),
+    ("tee",       ("t-shirt", "tshirt", "tee", "tees", "henley", "polo", "tank")),
+    ("shirt",     ("shirt", "button-down", "button down", "flannel")),
+]
+
+
+# A review whose TITLE names an accessory is about the wrong product even if its
+# body happens to mention "jeans"/"phone" — drop it ("BUY this belt!").
+_DROP_TITLE = ("belt", "wallet", "watch", "sock", "socks", "hat", "cap", "tie",
+               "scarf", "glove", "gloves", "purse", "handbag", "necklace", "bracelet",
+               "earring", "sunglasses", "case", "charger", "cable", "tripod",
+               "protector", "pantyhose", "panties", "bra", "stockings")
+
+
+def _title_accessory(title: str) -> bool:
+    import re
+    t = (title or "").lower()
+    return any(re.search(r"\b" + w + r"\b", t) for w in _DROP_TITLE)
+
+
+# A whole real product (ASIN) can BE an accessory or a garment we don't sell that
+# merely mentions our keywords ("great belt, keeps my pants up"; "love this shoe
+# horn"; "warm snow suit"). If a large fraction of an ASIN's reviews look like one
+# of these, drop the whole ASIN from the pool.
+_ACCESSORY_TERMS = ("belt", "buckle", "suspender", "suspenders", "wallet", "watch",
+                    "sunglasses", "cufflink", "cufflinks", "bowtie", "scarf", "glove",
+                    "gloves", "beanie", "purse", "handbag", "jewelry", "necklace",
+                    "bracelet", "earring", "sock", "socks", "lace", "laces", "insole",
+                    "insoles", "shoehorn", "shoe horn", "horn", "shoe tree", "shoe trees",
+                    "polish", "orthotic", "orthotics", "arch support", "shoe stretcher",
+                    "inserts", "deodorizer", "shoe rack")
+# Garments the catalog doesn't sell (women's / niche) — wrong product for our items.
+_WRONG_GARMENT = ("snowsuit", "snow suit", "ski suit", "snow pants", "snowpants",
+                  "coverall", "coveralls", "onesie", "pajama", "pajamas", "pyjama",
+                  "robe", "nightshirt", "nightgown", "costume", "swimsuit", "swim trunks",
+                  "wetsuit", "apron", "scrubs", "lingerie", "dress", "gown", "skirt",
+                  "leggings", "tights", "romper", "jumpsuit", "bikini", "saree", "kurti")
+# Shoe-CARE products (not shoes) that pollute the footwear file by mentioning "shoes".
+_SHOE_CARE = ("mink", "mink oil", "polish", "conditioner", "waterproofing", "weatherproof",
+              "wax", "renovator", "restorer", "dye", "freshener", "stretcher", "grabber",
+              "leather conditioner", "leather cream", "suede brush", "saddle soap",
+              "protectant", "water repellent", "cleaner")
+
+
+# Final safety gate on the REAL product title (ptitle) — catches accessories the
+# download-time title filter missed (e.g. a phone "Flip Shell", laptop "Headphones").
+_PTITLE_AVOID = {
+    "Phone": ("case", "cover", "shell", "flip", "folio", "pouch", "purse", "bag",
+              "crossbody", "sling", "holster", "clip", "pocket", "protector", "tempered",
+              "cable", "charger", "holder", "mount", "stylus", "adapter", "earphone",
+              "earbud", "headphone", "headphones", "headset", "lens", "strap", "stand",
+              "grip", "wallet", "skin", "sticker", "glass", "ring", "battery", "band",
+              "gear", "watch", "replacement", "tripod", "selfie", "gimbal", "dock",
+              "speaker", "tablet", "screen", "kit", "tool", "repair", "armband", "lanyard",
+              "sleeve", "car", "keychain"),
+    "Laptop": ("bag", "backpack", "briefcase", "messenger", "tote", "sleeve", "case",
+               "charger", "adapter", "stand", "cooling", "hub", "dock", "webcam", "headset",
+               "headphone", "headphones", "earphone", "earbud", "ssd", "hard drive", "hdd",
+               "drive", "dvd", "enclosure", "external", "ram", "memory", "mouse", "keyboard",
+               "skin", "protector", "battery", "replacement", "cable", "fan", "screen",
+               "sleep", "riser", "tray", "lock", "light", "pad", "stylus", "pen"),
+    "Footwear": _ACCESSORY_TERMS + ("women", "womens", "girls", "kids", "toddler", "heel",
+                                     "heels", "pump", "stiletto", "sandal", "slipper"),
+    "Apparel": _WRONG_GARMENT + ("belt", "wallet", "watch", "sock", "tie", "scarf", "glove",
+                                 "hat", "cap", "sunglasses", "necklace", "bracelet", "earring",
+                                 "shoe", "boot", "sneaker", "women", "womens", "ladies", "girl"),
+}
+
+
+def _ptitle_ok(ptitle, category) -> bool:
+    """Keep an ASIN only if its real product title isn't an accessory / wrong item."""
+    if not ptitle:
+        return True
+    import re
+    t = ptitle.lower()
+    avoid = _PTITLE_AVOID.get(category, ())
+    return not any(re.search(r"\b" + re.escape(w) + r"\b", t) for w in avoid)
+
+
+def _asin_is_wrong(recs, category) -> bool:
+    """True if a large fraction of the ASIN's reviews look like an accessory, a
+    shoe-care product, or a garment we don't sell — i.e. the ASIN isn't really one
+    of our products."""
+    import re
+    extra = _WRONG_GARMENT if category == "Apparel" else _SHOE_CARE
+    bad_terms = _ACCESSORY_TERMS + extra
+    pat = re.compile(r"\b(?:" + "|".join(re.escape(w) for w in bad_terms) + r")\b")
+    n_bad = sum(1 for r in recs
+                if pat.search((r.get("title", "") + " " + r.get("text", "")).lower()))
+    return n_bad >= max(2, 0.35 * len(recs))
+
+
+def _apparel_group(text: str) -> str:
+    """Coarse garment group for a product title or an aggregate of its reviews."""
+    import re
+    t = (text or "").lower()
+    best, best_n = "shirt", 0
+    for group, kws in _APPAREL_GROUPS:
+        n = sum(len(re.findall(r"\b" + re.escape(k) + r"\b", t)) for k in kws)
+        if n > best_n:
+            best, best_n = group, n
+    return best
+
+
 def _load_reviews(bucket: str):
     path = DATA_DIR / f"reviews_{bucket}.jsonl"
     if not path.exists():
@@ -114,10 +226,10 @@ class Command(BaseCommand):
         for p in products:
             by_cat.setdefault(p.category, []).append(p)
 
-        # Amazon products skew positive — a flagship doesn't average 2.7★. We use
-        # 100% REAL review TEXT, but deal each REAL star bucket round-robin across
-        # every product in the category, so all products get the same positive
-        # skew (~4.2★) instead of one item clumping the low-rated reviews.
+        # Reviews are grouped BY REAL PRODUCT (ASIN) in the dataset files. We give
+        # each demo product ONE real product's full review set, so every review on a
+        # page is genuinely about a single real product of the right category — no
+        # cross-product mismatches. (Same idea as Fit-Twin's per-item assignment.)
         rng = random.Random(11)
         total = 0
         for bucket, category in REVIEW_BUCKETS.items():
@@ -127,45 +239,69 @@ class Command(BaseCommand):
                 self.stdout.write(f"  reviews[{bucket}]: no data/targets — skipped")
                 continue
 
-            # Bucket the real reviews by their real star rating, then cap the
-            # low-star buckets so the blended average lands in the believable
-            # 4.0–4.5 band (keep some critical reviews, just not a flood).
-            star_pool = {s: [] for s in range(1, 6)}
+            # Group the bucket's reviews by their real product (ASIN), dropping any
+            # ASIN whose REAL product title is an accessory / wrong item.
+            by_asin = {}
             for rec in pool:
-                s = max(1, min(5, int(rec.get("rating", 5) or 5)))
-                star_pool[s].append(rec)
-            for s in star_pool:
-                rng.shuffle(star_pool[s])
-            keep5 = len(star_pool[5])
-            caps = {5: keep5, 4: keep5, 3: keep5 // 3, 2: keep5 // 6, 1: keep5 // 10}
-            for s, cap in caps.items():
-                star_pool[s] = star_pool[s][:max(0, cap)]
+                a = rec.get("asin", "")
+                if not _ptitle_ok(rec.get("ptitle", ""), category):
+                    continue
+                by_asin.setdefault(a, []).append(rec)
+            # Believable picks: enough reviews + a healthy average (so a flagship
+            # never shows a 2★ product's reviews). Best-reviewed products first.
+            def _avg(recs):
+                return sum(int(r.get("rating", 5) or 5) for r in recs) / len(recs)
+            asins = [a for a, recs in by_asin.items()
+                     if a and len(recs) >= 5 and _avg(recs) >= 3.8]
+            asins.sort(key=lambda a: (-_avg(by_asin[a]), -len(by_asin[a])))
+            if not asins:   # relax the average floor if filtering left too few
+                asins = sorted((a for a, recs in by_asin.items() if a and len(recs) >= 5),
+                               key=lambda a: -len(by_asin[a]))
+            # Drop ASINs that are really accessories (belts/socks/laces…) — they
+            # slip past the keyword filter by mentioning "pants"/"shoes".
+            if category in ("Apparel", "Footwear"):
+                kept_asins = [a for a in asins if not _asin_is_wrong(by_asin[a], category)]
+                if len(kept_asins) >= 8:   # prefer the clean pool (products may repeat)
+                    asins = kept_asins
 
-            per = max(8, sum(len(v) for v in star_pool.values()) // len(targets))
-            counts = {p.id: 0 for p in targets}
-            assign = {p.id: [] for p in targets}
-            ti = 0
-            for s in (5, 4, 3, 2, 1):           # deal best reviews first, round-robin
-                for rec in star_pool[s]:
-                    placed = False
-                    for _ in range(len(targets)):
-                        p = targets[ti % len(targets)]
-                        ti += 1
-                        if counts[p.id] < per:
-                            assign[p.id].append((s, rec))
-                            counts[p.id] += 1
-                            placed = True
-                            break
-                    if not placed:
-                        break
+            if not asins:
+                self.stdout.write(f"  reviews[{bucket}]: no product had enough reviews — skipped")
+                continue
+
+            # Apparel mixes garment types — match each product to a real product of
+            # the SAME garment group (tee↔tee, jeans↔jeans, shirt↔shirt, …) so a
+            # formal shirt never shows jeans reviews. Other buckets are single-type.
+            prod_asin = {}
+            if category == "Apparel":
+                from collections import defaultdict
+                group_pool = defaultdict(list)
+                for a in asins:   # asins already sorted best-first
+                    # Classify by the REAL product title (ptitle) when available —
+                    # far more reliable than guessing from review text.
+                    ptitle = next((r.get("ptitle") for r in by_asin[a] if r.get("ptitle")), "")
+                    agg = ptitle or " ".join((r.get("title", "") + " " + r.get("text", ""))
+                                             for r in by_asin[a])
+                    group_pool[_apparel_group(agg)].append(a)
+                gi = defaultdict(int)
+                for p in targets:
+                    g = _apparel_group(p.title)
+                    lst = group_pool.get(g) or asins   # fall back to any if group empty
+                    prod_asin[p.id] = lst[gi[g] % len(lst)]
+                    gi[g] += 1
+            else:
+                for i, p in enumerate(targets):
+                    prod_asin[p.id] = asins[i % len(asins)]
 
             objs = []
             for p in targets:
-                pairs = assign[p.id]
-                if not pairs:
-                    continue
-                ratings = [s for s, _ in pairs]
-                for s, rec in pairs:
+                recs = [r for r in by_asin[prod_asin[p.id]]
+                        if not _title_accessory(r.get("title", ""))]   # one real product per item
+                rng.shuffle(recs)
+                recs = recs[:15]
+                ratings = []
+                for rec in recs:
+                    rating = max(1, min(5, int(rec.get("rating", 5) or 5)))
+                    ratings.append(rating)
                     ts = rec.get("timestamp") or 0
                     try:
                         rdate = date.fromtimestamp(ts / 1000) if ts else None
@@ -173,7 +309,7 @@ class Command(BaseCommand):
                         rdate = None
                     objs.append(Review(
                         product=p, author=_display_name(rec.get("author_id", ""), rng),
-                        rating=s, title=(rec.get("title") or "")[:160],
+                        rating=rating, title=(rec.get("title") or "")[:160],
                         body=(rec.get("text") or "")[:650],
                         verified_purchase=bool(rec.get("verified", True)),
                         helpful_votes=int(rec.get("helpful", 0) or 0),
@@ -181,11 +317,12 @@ class Command(BaseCommand):
                     ))
                 # Star rating from the real reviews; rating_count stays the large
                 # catalogue figure (Amazon shows far more ratings than reviews).
-                p.rating = round(sum(ratings) / len(ratings), 1)
-                total += len(pairs)
+                p.rating = round(sum(ratings) / len(ratings), 1) if ratings else p.rating
+                total += len(recs)
             Review.objects.bulk_create(objs)
             Product.objects.bulk_update(targets, ["rating"])
-            self.stdout.write(f"  reviews[{bucket}->{category}]: {len(objs)} across {len(targets)} products")
+            self.stdout.write(f"  reviews[{bucket}->{category}]: {len(objs)} reviews "
+                              f"across {len(targets)} products ({len(asins)} real products in pool)")
         return total
 
     def handle(self, *args, **o):
@@ -222,6 +359,24 @@ class Command(BaseCommand):
         #     2023 dataset) to products, by category — and set each product's
         #     star rating from the real reviews it received.
         n_reviews = self._seed_reviews(products)
+
+        # 2c) Pillar 4 — Fit-Twin. Give every APPAREL product a real item from the
+        #     Rent-the-Runway clothing-fit dataset (footwear is excluded — shoes
+        #     don't use the S–XXL fit model), so the product page shows item-level
+        #     "How this fits" from real fit outcomes. Then give the demo buyer a
+        #     cross-category size profile so the advice is personalised ("shoppers
+        #     similar to you"). No body measurements are ever asked.
+        self.stdout.write("Assigning Fit-Twin items to apparel + demo size profile...")
+        try:
+            call_command("assign_fit_items", "--all", verbosity=0)
+            n_fit = Product.objects.filter(category="Apparel").exclude(fit_item_id="").count()
+            self.stdout.write(f"  fit items assigned to {n_fit} apparel products")
+        except Exception as e:   # index missing → Fit-Twin just falls back gracefully
+            self.stdout.write(f"  (skipped fit-item assignment: {e})")
+        # Behavioral fit fingerprint for the demo buyer (dataset categories →
+        # typical kept size). Lets Fit-Twin surface "shoppers similar to you".
+        demo.fit_size_profile = {"dress": 8.0, "gown": 10.0, "sheath": 8.0, "top": 6.0}
+        demo.save(update_fields=["fit_size_profile"])
 
         # 3) Curate second-life listings on a subset of the SAME products
         rng = random.Random(7)

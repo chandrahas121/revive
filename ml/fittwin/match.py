@@ -188,40 +188,63 @@ def _fmt(sz):
 # ── Letter sizing (S–XXL) ─────────────────────────────────────────────────────
 # The fit dataset is women's numeric sizes. For menswear we band those numbers
 # into unisex letter sizes so the advice reads sensibly ("best in M") instead of
-# a raw women's dress number. The recommendation stays grounded in real fit data.
+# a raw women's dress number. To avoid clumping everything at the top of the scale
+# (a fixed ≤16→XL cut sends the dataset's large dress sizes all to XXL), the bands
+# are DATA-DRIVEN: cut on the dataset's own size quantiles so S–XXL spread
+# realistically and the typical size lands at M/L. The recommendation itself stays
+# grounded in real fit outcomes.
 LETTER_ORDER = ["S", "M", "L", "XL", "XXL"]
 
+# Quantile cut points (computed once from the index size distribution).
+_letter_cuts = None
 
-def _size_to_letter(sz) -> str:
+
+def _ensure_letter_cuts(df):
+    global _letter_cuts
+    if _letter_cuts is not None:
+        return _letter_cuts
+    s = df["size"].dropna()
+    _letter_cuts = {
+        "S": float(s.quantile(0.20)),   # ~ S : smallest fifth
+        "M": float(s.quantile(0.45)),   # ~ M : below median
+        "L": float(s.quantile(0.70)),   # ~ L : around/above median
+        "XL": float(s.quantile(0.88)),  # ~ XL: upper tail ; rest -> XXL
+    }
+    return _letter_cuts
+
+
+def _size_to_letter(sz, cuts=None) -> str:
+    cuts = cuts or _letter_cuts or {"S": 4, "M": 8, "L": 12, "XL": 16}
     s = float(sz)
-    if s <= 4:
+    if s <= cuts["S"]:
         return "S"
-    if s <= 8:
+    if s <= cuts["M"]:
         return "M"
-    if s <= 12:
+    if s <= cuts["L"]:
         return "L"
-    if s <= 16:
+    if s <= cuts["XL"]:
         return "XL"
     return "XXL"
 
 
-def _best_letter(base):
-    """Best-fitting letter band (highest true-fit rate, tie-break by support) plus
-    an honest verdict for that band."""
-    letters = base["size"].map(_size_to_letter)
-    best, best_key, best_verdict = None, (-1.0, -1), None
-    for letter in LETTER_ORDER:
-        grp = base[letters == letter]
-        if len(grp) < MIN_SIZE_SUPPORT:
-            continue
-        key = (float((grp["fit"] == "fit").mean()), len(grp))
-        if key > best_key:
-            best, best_key, best_verdict = letter, key, _verdict(grp)
-    if best is None:
-        good = base[base["fit"] == "fit"]
-        if len(good):
-            best = _size_to_letter(good["size"].median())
-    return best, best_verdict
+def _best_letter(base, cuts=None):
+    """The item's central well-fitting letter band: the band of the MEDIAN size
+    among shoppers who reported a true fit (falling back to the overall median).
+    Using the median true-fit size — rather than the single highest-rate band —
+    keeps the recommendation on the realistic centre of the size run (M/L for a
+    typical item) instead of jumping to a sparse extreme band. The verdict comes
+    from that band's real outcomes."""
+    good = base[base["fit"] == "fit"]
+    if len(good) >= MIN_SIZE_SUPPORT:
+        med = float(good["size"].median())
+    elif len(base):
+        med = float(base["size"].median())
+    else:
+        return None, None
+    letter = _size_to_letter(med, cuts)
+    grp = base[base["size"].map(lambda s: _size_to_letter(s, cuts)) == letter]
+    verdict = _verdict(grp) if len(grp) >= MIN_SIZE_SUPPORT else "fit"
+    return letter, verdict
 
 
 def find_fit_twins(
@@ -279,8 +302,10 @@ def find_fit_twins(
     direction = _direction(base)
 
     if size_system == "letter":
-        # Menswear: recommend a letter band from the real fit outcomes.
-        rec_out, rec_verdict = _best_letter(base)
+        # Menswear: recommend a letter band from the real fit outcomes, using
+        # data-driven (quantile) letter bands so the scale spreads S–XXL.
+        cuts = _ensure_letter_cuts(df)
+        rec_out, rec_verdict = _best_letter(base, cuts)
         selected_out = selected_verdict = None
         rate = float((base["fit"] == "fit").mean())
         n, basis = int(len(base)), "overall"
@@ -387,8 +412,16 @@ def _nudge(scope, pct, n, selected, rec_size, direction, basis, matches_pick,
 
 
 if __name__ == "__main__":
-    import json
-    for sz in (None, 8, 10, 12):
-        o = find_fit_twins(category="gown", user_size=sz, k=25)
-        print(f"size={sz}: rec={o['recommended_size']} pct={o['good_fit_pct']} "
-              f"basis={o['basis']} dir={o['direction']} :: {o['nudge']}")
+    idx = _load()
+    if idx is not None:
+        vc = idx["records"].groupby("item_id").size().sort_values(ascending=False)
+        from collections import Counter
+        spread = Counter()
+        for iid, _n in list(vc.items())[:40]:
+            o = find_fit_twins(item_id=str(iid), size_system="letter")
+            if o["available"]:
+                spread[o["recommended_size"]] += 1
+        print("letter recommendation spread over 40 top items:", dict(spread))
+        o = find_fit_twins(item_id=str(vc.index[0]), size_system="letter")
+        print("sample:", o["recommended_size"], o["recommended_verdict"],
+              o["direction"], "::", o.get("twins_found"), "reviews")

@@ -20,8 +20,10 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Catalogue categories that are garments (Fit-Twin applies). NOTE: footwear is
+# intentionally excluded — shoes don't use the S–XXL clothing fit model.
 CLOTHING = {
-    "clothing", "dress", "gown", "top", "tops", "shirt", "jacket",
+    "apparel", "clothing", "dress", "gown", "top", "tops", "shirt", "jacket",
     "romper", "jumpsuit", "skirt", "sheath",
 }
 MIN_REVIEWS = 10   # an item needs this many real reviews to be worth assigning
