@@ -37,6 +37,12 @@ export const manageListing = (listingId, action) =>
 export const getStorefront = (params = {}) =>
   api.get('/api/listings/', { params });   // supports lat/lng/near, condition, grade, category
 
+// v2 lifecycle: turn a graded RETURN into a STAGED second-life listing (not instantly live)
+export const processReturn = (payload) => api.post('/api/returns/process/', payload);
+// Demo control: advance a listing to its next lifecycle stage (refurb done / demand met / sold)
+export const advanceListingStage = (listingId) =>
+  api.post(`/api/listings/${listingId}/advance/`, {});
+
 // v2 (point 3): catalog match → real MRP + system-suggested resale price
 export const suggestCatalog = ({ q, category, grade = 'B' }) =>
   api.get('/api/catalog/suggest/', { params: { q, category, grade } });

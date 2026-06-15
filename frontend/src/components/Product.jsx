@@ -20,11 +20,16 @@ const SOURCE_LABEL = {
 };
 const inr = (v) => `₹${parseFloat(v).toLocaleString('en-IN')}`;
 
-const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLife, rating, ratingCount }) => {
+const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLife, rating, ratingCount, lifecycle }) => {
   const navigate = useNavigate();
   const { addToCart, cart } = useCart();
   const inCart = id != null && cart.some((item) => Number(item.id) === Number(id));
   const srcLabel = !isNew ? SOURCE_LABEL[source] : null;
+
+  // v2 lifecycle: a staged second-life item (refurbishing / held-local) is visible
+  // but not yet buyable. Show its stage and disable purchase until it goes live.
+  const staged = lifecycle && !lifecycle.live && !lifecycle.sold;
+  const stageLabel = staged ? (lifecycle.stages?.find((s) => s.current)?.label || 'In progress') : null;
 
   // New tiles use the real catalog rating; second-life derive stars from grade.
   const rateStars = isNew
@@ -51,6 +56,11 @@ const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLif
       {!isNew && grade && (
         <span className={`absolute top-2 right-2 text-[10px] font-black px-1.5 py-0.5 rounded z-10 ${GRADE_STYLES[grade] || ''}`}>
           {grade}
+        </span>
+      )}
+      {staged && (
+        <span className="absolute top-8 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10 bg-amber-100 text-amber-800 border border-amber-200">
+          ⏳ {stageLabel}
         </span>
       )}
 
@@ -98,15 +108,24 @@ const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLif
 
       <p className="text-[11px] text-[#007600] font-medium mb-2">FREE delivery Tomorrow</p>
 
-      <button
-        onClick={handleAdd}
-        disabled={inCart}
-        className={`mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border transition-colors
-          ${inCart ? 'bg-gray-100 text-gray-400 cursor-default border-gray-200' : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'}`}
-        style={inCart ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
-      >
-        {inCart ? 'Added to Cart' : 'Add to Cart'}
-      </button>
+      {staged ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/product/${id}`); }}
+          className="mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border border-amber-300 bg-amber-50 text-amber-800"
+        >
+          {lifecycle.track === 'renewed' ? 'Refurbishing — track it' : 'Held nearby — track it'}
+        </button>
+      ) : (
+        <button
+          onClick={handleAdd}
+          disabled={inCart}
+          className={`mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border transition-colors
+            ${inCart ? 'bg-gray-100 text-gray-400 cursor-default border-gray-200' : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'}`}
+          style={inCart ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+        >
+          {inCart ? 'Added to Cart' : 'Add to Cart'}
+        </button>
+      )}
     </div>
   );
 };

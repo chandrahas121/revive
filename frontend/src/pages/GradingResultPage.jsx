@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
-import { inspectReturn, routeItem, generateHealthCard } from '../api/client';
+import { inspectReturn, routeItem, generateHealthCard, processReturn } from '../api/client';
 import { getTier, TIER_INFO, estimateGreenCredits } from '../utils/tier';
 // v2 (point 1): return capture prompts come from the CATEGORY, not the price tier.
 import { capturePrompts } from '../utils/categoryProfiles';
+import LifecycleTimeline from '../components/LifecycleTimeline';
 
 
 const GRADE_CFG = {
@@ -48,6 +49,12 @@ const GradingResultPage = () => {
   const [showRefund, setShowRefund] = useState(false);
   const [showHandover, setShowHandover] = useState(false);
   const hcFired = useRef(false);
+
+  // v2 lifecycle: confirming handover STAGES the item into its second-life track
+  // (it is NOT instantly live). We then show where it is in that journey.
+  const [processing, setProcessing] = useState(false);
+  const [processed, setProcessed] = useState(null);   // { id, lifecycle, source, ... }
+  const [processError, setProcessError] = useState('');
 
   const coverFile = photoSlots.front || Object.values(photoSlots)[0] || null;
   const coverPreview = previews.front || Object.values(previews)[0] || '';
@@ -99,9 +106,10 @@ const GradingResultPage = () => {
 
     try {
       const fd = new FormData();
-      // front first so it's the cover / fraud-gate image
+      // front first so it's the cover / fraud-gate image; send each image WITH its
+      // slot key so grading is category+angle aware (soles, tag, screen-on, …).
       const ordered = ['front', ...Object.keys(photoSlots).filter((k) => k !== 'front')];
-      ordered.forEach((k) => { if (photoSlots[k]) fd.append('images', photoSlots[k]); });
+      ordered.forEach((k) => { if (photoSlots[k]) { fd.append('images', photoSlots[k]); fd.append('slots', k); } });
       if (videoFile) fd.append('video', videoFile);
       fd.append('expected_title', productTitle);
       fd.append('category', category);
@@ -165,6 +173,34 @@ const GradingResultPage = () => {
       inspected_by: inspectedBy,
     }).catch(() => { });
   }, [phase]);
+
+  // Confirm handover → stage the returned item into its second-life lifecycle.
+  const handleConfirmHandover = async () => {
+    if (!order?.listing_id) { navigate('/orders'); return; }
+    setProcessing(true);
+    setProcessError('');
+    try {
+      const res = await processReturn({
+        order_id: order.id,
+        grade,
+        defects,
+        condition_summary: conditionSummary,
+        condition_signals: {
+          box_present: result?.box_present,
+          accessories_present: result?.accessories_present,
+          functional: result?.functional,
+          tags_present: result?.tags_present,
+          seal_intact: result?.seal_intact,
+          completeness: result?.completeness,
+        },
+      });
+      setProcessed(res.data);
+    } catch {
+      setProcessError('Could not stage the item right now — your refund is unaffected.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const filled = (cfg.score / 100) * CIRCUMFERENCE;
   const canConfirm = tier !== 1 || handover !== '';
@@ -337,8 +373,48 @@ const GradingResultPage = () => {
                   <div className="flex flex-wrap gap-1.5">
                     {defects.slice(0, 6).map((d, i) => (
                       <span key={i} className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200 capitalize">
-                        {d.type}{d.location ? ` · ${d.location}` : ''}{d.severity ? ` · ${d.severity}` : ''}
+                        {d.type}{d.angle_label ? ` · ${d.angle_label}` : (d.location ? ` · ${d.location}` : '')}{d.severity ? ` · ${d.severity}` : ''}
                       </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category condition checks confirmed across angles */}
+              {[['tags_present', 'Original tags'], ['box_present', 'Original box'],
+                ['powers_on', 'Powers on'], ['accessories_present', 'Accessories']]
+                .some(([k]) => result?.[k] === true || result?.[k] === false) && (
+                <div className="border-t border-[#f0f0f0] px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Condition checks</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[['tags_present', 'Original tags'], ['box_present', 'Original box'],
+                      ['powers_on', 'Powers on'], ['accessories_present', 'Accessories']]
+                      .filter(([k]) => result?.[k] === true || result?.[k] === false)
+                      .map(([k, label]) => (
+                        <span key={k} className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border
+                          ${result[k] ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                          {result[k] ? '✓' : '✕'} {label}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Per-angle defect maps — proves every angle was inspected */}
+              {result?.angle_heatmaps?.length > 1 && (
+                <div className="border-t border-[#f0f0f0] px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">
+                    Defect map · {result.angle_heatmaps.length} angles inspected
+                  </p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {result.angle_heatmaps.map((m, i) => (
+                      <div key={i} className="flex-shrink-0 w-24">
+                        <img src={`data:image/jpeg;base64,${m.b64}`} alt={m.angle_label}
+                          className="w-24 h-24 rounded object-cover border border-gray-200" />
+                        <p className="text-[9px] text-center text-gray-500 mt-0.5 truncate">
+                          {m.angle_label}{m.n_defects ? ` · ${m.n_defects}` : ''}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -367,7 +443,15 @@ const GradingResultPage = () => {
                 <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-lg" style={{ background: tierInfo.bg }}>♻️</div>
                 <div>
                   <p className="font-bold text-[#0F1111] text-base">{routeMessage}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">This item will stay in your city instead of travelling to a warehouse.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {route?.disposition === 'RESTOCK_NEW'
+                      ? 'Verified unopened — it goes back to the normal catalogue as New.'
+                      : route?.disposition === 'RENEWED_SPN'
+                        ? 'It heads to an authorized center for refurbishment, then lists as Amazon Renewed.'
+                        : route?.disposition === 'RECYCLE_DONATE'
+                          ? 'It exits the marketplace responsibly via a verified partner.'
+                          : 'It stays in your city instead of travelling to a warehouse — activated when a nearby buyer appears.'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -441,13 +525,48 @@ const GradingResultPage = () => {
                 )}
 
                 <div className="px-4 pb-4">
-                  <button onClick={() => navigate('/orders')} disabled={!canConfirm}
-                    className={`w-full py-3 rounded-lg font-bold text-sm transition-colors ${canConfirm ? 'bg-[#FF9900] hover:bg-[#e88b00] text-white' : 'bg-[#F7CA76] text-[#8a6d00] cursor-not-allowed opacity-70'}`}>
-                    {tier === 1 && !handover ? 'Choose a handover option' : 'Confirm handover'}
+                  <button onClick={handleConfirmHandover} disabled={!canConfirm || processing || !!processed}
+                    className={`w-full py-3 rounded-lg font-bold text-sm transition-colors ${(canConfirm && !processed) ? 'bg-[#FF9900] hover:bg-[#e88b00] text-white' : 'bg-[#F7CA76] text-[#8a6d00] cursor-not-allowed opacity-70'}`}>
+                    {processing ? 'Staging your item…'
+                      : processed ? '✓ Handover confirmed'
+                      : tier === 1 && !handover ? 'Choose a handover option'
+                      : 'Confirm handover'}
                   </button>
+                  {processError && <p className="mt-2 text-xs text-red-600">{processError}</p>}
                 </div>
               </div>
             </div>
+
+            {/* ── Second-life lifecycle — the item is STAGED, not instantly live ── */}
+            {processed?.lifecycle && (
+              <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 sm:p-5 shadow-sm space-y-3">
+                <div>
+                  <p className="font-bold text-[#0F1111] text-base">What happens to your item next</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {processed.disposition === 'RESTOCK_NEW'
+                      ? 'Verified unopened — it rejoins the normal Amazon catalogue as New.'
+                      : processed.lifecycle.track === 'renewed'
+                        ? "It's scheduled for professional refurbishment before it's listed as Amazon Renewed — it doesn't go live yet."
+                        : processed.lifecycle.track === 'exit'
+                          ? "It exits the marketplace responsibly."
+                          : "It stays local and is held until a nearby buyer is found — it isn't warehoused, and goes live in Revive only when local demand appears."}
+                  </p>
+                </div>
+                <LifecycleTimeline lifecycle={processed.lifecycle} />
+                <div className="flex gap-3">
+                  {processed.id && processed.source !== 'new' && (
+                    <button onClick={() => navigate(`/product/${processed.id}`)}
+                      className="flex-1 py-2.5 rounded-lg bg-[#232F3E] hover:bg-[#131921] text-[#febd69] font-bold text-sm">
+                      Track it in {processed.lifecycle.track_label}
+                    </button>
+                  )}
+                  <button onClick={() => navigate('/orders')}
+                    className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50">
+                    Back to Your Orders
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

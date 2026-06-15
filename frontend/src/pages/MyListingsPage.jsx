@@ -13,6 +13,9 @@ const STATUS_CONFIG = {
   warehouse_bound: { label: 'Warehouse Bound', style: 'bg-blue-100 text-blue-700 border-blue-200',     dot: 'bg-blue-400' },
   donated:         { label: 'Donated',         style: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-400' },
   recycled:        { label: 'Recycled',        style: 'bg-slate-100 text-slate-600 border-slate-200',  dot: 'bg-slate-400' },
+  awaiting_demand: { label: 'Held · awaiting demand', style: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-400' },
+  refurbishing:    { label: 'Refurbishing',    style: 'bg-violet-100 text-violet-700 border-violet-200', dot: 'bg-violet-400' },
+  refurb_scheduled:{ label: 'Pickup scheduled', style: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-400' },
 };
 
 const GRADE_CONFIG = {

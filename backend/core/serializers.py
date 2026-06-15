@@ -49,6 +49,7 @@ class ListingSerializer(serializers.ModelSerializer):
     is_new = serializers.SerializerMethodField()
     mrp = serializers.SerializerMethodField()
     second_life = serializers.SerializerMethodField()
+    lifecycle = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -59,7 +60,14 @@ class ListingSerializer(serializers.ModelSerializer):
             'chosen_path', 'tier', 'ev_data',
             'condition_label', 'disposition',
             'seller_name', 'image', 'images', 'created_at',
-            'is_new', 'mrp', 'second_life',
+            'is_new', 'mrp', 'second_life', 'lifecycle',
+        )
+
+    def get_lifecycle(self, obj):
+        from .lifecycle import lifecycle_payload
+        return lifecycle_payload(
+            status=obj.status, disposition=obj.disposition,
+            source=obj.source, chosen_path=obj.chosen_path,
         )
 
     def get_seller_name(self, obj):

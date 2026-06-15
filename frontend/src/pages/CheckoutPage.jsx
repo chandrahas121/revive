@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import GreenCredits from '../components/stitch/GreenCredits'
-import api from '../api/client'
+import api, { redeemCredits } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
@@ -24,6 +24,11 @@ const CheckoutPage = () => {
       setPlacing(true)
       setError('')
       await Promise.all(cart.map((item) => api.post('/api/orders/', { listing_id: item.id, size: item.size })))
+      // Pillar 5: actually record the credit spend so the balance drops (the toggle
+      // only previewed the discount). 20% cap on the cart total, server-validated.
+      if (redeemedCredits > 0) {
+        try { await redeemCredits({ listing_price: cartTotal, commit: true }) } catch { /* non-blocking */ }
+      }
       clearCart()
       setSuccess(true)
       setTimeout(() => navigate('/orders'), 2000)

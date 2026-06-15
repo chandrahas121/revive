@@ -15,7 +15,22 @@ const HEADINGS = {
   renewed:   'Amazon Renewed — certified refurbished',
 };
 
-const ProductFeed = ({ products, loading, showHeading = true }) => {
+// Build a compact page list with ellipses, e.g. 1 … 4 5 [6] 7 8 … 20
+function pageWindow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current, current - 1, current + 1]);
+  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) out.push('…');
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
+const ProductFeed = ({ products, loading, showHeading = true, page = 1, numPages = 1, total = 0, onPageChange }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSource = searchParams.get('source') || '';
@@ -24,6 +39,7 @@ const ProductFeed = ({ products, loading, showHeading = true }) => {
     const params = new URLSearchParams(searchParams);
     if (value) params.set('source', value);
     else params.delete('source');
+    params.delete('page');   // changing tabs resets to page 1
     navigate(`/?${params.toString()}`);
   };
 
@@ -86,8 +102,44 @@ const ProductFeed = ({ products, loading, showHeading = true }) => {
               secondLife={p.second_life}
               rating={p.rating}
               ratingCount={p.rating_count}
+              lifecycle={p.lifecycle}
             />
           ))}
+        </div>
+      )}
+
+      {!loading && products.length > 0 && numPages > 1 && (
+        <div className="flex items-center justify-center gap-1.5 py-6 px-3 flex-wrap">
+          <button
+            onClick={() => onPageChange && onPageChange(Math.max(1, page - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 text-sm rounded border border-[#D5D9D9] bg-white text-[#0F1111] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            ‹ Prev
+          </button>
+          {pageWindow(page, numPages).map((p, i) =>
+            p === '…' ? (
+              <span key={`e${i}`} className="px-2 text-sm text-gray-400">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => onPageChange && onPageChange(p)}
+                className={`min-w-[34px] px-2.5 py-1.5 text-sm rounded border transition-colors
+                  ${p === page
+                    ? 'border-[#C7511F] bg-[#C7511F] text-white font-bold'
+                    : 'border-[#D5D9D9] bg-white text-[#0F1111] hover:bg-gray-50'}`}
+              >
+                {p}
+              </button>
+            )
+          )}
+          <button
+            onClick={() => onPageChange && onPageChange(Math.min(numPages, page + 1))}
+            disabled={page >= numPages}
+            className="px-3 py-1.5 text-sm rounded border border-[#D5D9D9] bg-white text-[#0F1111] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next ›
+          </button>
         </div>
       )}
     </div>

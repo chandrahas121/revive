@@ -72,6 +72,11 @@ class Listing(models.Model):
         DONATED = 'donated', 'Donated'
         RECYCLED = 'recycled', 'Recycled'
         WAREHOUSE_BOUND = 'warehouse_bound', 'Warehouse Bound'
+        # v2 lifecycle stages — a returned/listed item is NOT instantly live; it
+        # progresses through a disposition-driven track (see core/lifecycle.py):
+        REFURB_SCHEDULED = 'refurb_scheduled', 'Refurb pickup scheduled'  # Renewed track
+        REFURBISHING     = 'refurbishing', 'Refurbishing at SPN center'   # Renewed track
+        AWAITING_DEMAND  = 'awaiting_demand', 'Held local · awaiting demand'  # Revive track
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='listings')
     source = models.CharField(max_length=20, choices=Source.choices, default=Source.WAREHOUSE)

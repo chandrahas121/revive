@@ -160,7 +160,8 @@ _GRADE_CONDITION_TEXT: Dict[str, str] = {
 _GRADE_TO_COND_ORD: Dict[str, float] = {"A": 5.0, "B": 4.0, "C": 3.0, "D": 1.0}
 
 
-def _predict_price(grade: str, category: str, mrp: float = 1000.0) -> float:
+def _predict_price(grade: str, category: str, mrp: float = 1000.0,
+                   title: str = "", brand: str = "", signals: Optional[dict] = None) -> float:
     """
     Predict resale price. Order of preference:
       1. Trained Keras MLP ensemble (ml/price_keras.py) if its artifacts exist
@@ -176,9 +177,18 @@ def _predict_price(grade: str, category: str, mrp: float = 1000.0) -> float:
         except Exception:
             _keras_price = None
     if _keras_price is not None:
-        kp = _keras_price(grade, category, mrp)
+        kp = _keras_price(grade, category, mrp, title=title, brand=brand, signals=signals)
         if kp is not None:
-            return float(kp)
+            # The Mercari-trained ensemble predicts an absolute US-marketplace
+            # price that ignores the catalog MRP magnitude — so a like-new iPhone
+            # would come back at a few thousand rupees. Per design (§4.1) the
+            # model is a market-relative SIGNAL: anchor it on the catalog MRP via
+            # the grade-recovery curve so high-value items stay credible, and let
+            # the model nudge the result by condition. Per-defect deductions are
+            # then applied by the caller (_apply_defect_discount).
+            anchor = mrp * GRADE_RECOVERY.get(grade, 0.42)
+            blended = 0.70 * anchor + 0.30 * float(kp)
+            return float(max(mrp * 0.08, min(mrp * 0.92, blended)))
 
     artifact = _load_price_model()
     if artifact is not None:
@@ -719,6 +729,9 @@ def route_item(
     geohash5: Optional[str] = None,
     mrp: float = 1000.0,
     product_id: str = "unknown",
+    title: str = "",
+    brand: str = "",
+    condition_signals: Optional[Dict] = None,
     *,
     sealed: bool = False,
     opened: bool = True,
@@ -747,7 +760,7 @@ def route_item(
     defects = defects or []
 
     # ── Step 1: Price prediction (catalog-MRP-anchored, grade-adjusted) ───────
-    price = _predict_price(grade, category, mrp)
+    price = _predict_price(grade, category, mrp, title=title, brand=brand, signals=condition_signals)
     # v2 (Q9): deduct a severity-weighted penalty for the specific defects found,
     # so pricing reflects condition + defects, not just the letter grade.
     price = _apply_defect_discount(price, defects, mrp)

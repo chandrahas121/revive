@@ -25,6 +25,11 @@ IMG = {
     "shirt_b": "https://images.unsplash.com/photo-1564584217132-2271feaeb3c5?w=600&q=80&fit=crop",
     "pant_a": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&q=80&fit=crop",
     "pant_b": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80&fit=crop",
+    "monitor_a": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&q=80&fit=crop",
+    "monitor_b": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=600&q=80&fit=crop",
+    "kitchen_a": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=600&q=80&fit=crop",
+    "book_a": "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=80&fit=crop",
+    "toy_a": "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=600&q=80&fit=crop",
 }
 
 # (title, category, brand, mrp, image)
@@ -78,6 +83,22 @@ _DEMO = [
     ("U.S. Polo Assn. Men's Trousers", "Apparel", "U.S. Polo Assn.", 2499, "pant_a"),
     ("Jack & Jones Men's Slim Fit Jeans", "Apparel", "Jack & Jones", 2999, "pant_b"),
     ("Allen Solly Men's Formal Trousers", "Apparel", "Allen Solly", 2199, "pant_a"),
+    # ── Monitors ─────────────────────────────────────────────────────────────────
+    ("Dell UltraSharp U2723QE 27\" 4K Monitor", "Monitor", "Dell", 44999, "monitor_a"),
+    ("LG 27UP850 27\" 4K UHD Monitor", "Monitor", "LG", 38999, "monitor_b"),
+    ("Samsung Odyssey G5 27\" QHD Gaming Monitor", "Monitor", "Samsung", 24999, "monitor_a"),
+    ("BenQ GW2785TC 27\" FHD Eye-Care Monitor", "Monitor", "BenQ", 14999, "monitor_b"),
+    ("Acer Nitro VG271 27\" FHD Gaming Monitor", "Monitor", "Acer", 13499, "monitor_a"),
+    ("ASUS ProArt PA248QV 24\" Monitor", "Monitor", "ASUS", 18999, "monitor_b"),
+    # ── A few extras for catalog variety (lower rating_count) ────────────────────
+    ("Prestige Iris 750W Mixer Grinder", "Home & Kitchen", "Prestige", 3499, "kitchen_a"),
+    ("Philips HD9252 Digital Air Fryer", "Home & Kitchen", "Philips", 8999, "kitchen_a"),
+    ("Pigeon Stovekraft Non-Stick Cookware Set", "Home & Kitchen", "Pigeon", 1999, "kitchen_a"),
+    ("Atomic Habits by James Clear", "Books", "Random House", 599, "book_a"),
+    ("The Psychology of Money by Morgan Housel", "Books", "Jaico", 399, "book_a"),
+    ("Ikigai by Hector Garcia", "Books", "Penguin", 499, "book_a"),
+    ("LEGO Classic Bricks Box 484 Pieces", "Toys", "LEGO", 2999, "toy_a"),
+    ("Funskool Hot Wheels 5-Car Pack", "Toys", "Funskool", 899, "toy_a"),
 ]
 
 

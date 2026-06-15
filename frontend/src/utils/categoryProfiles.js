@@ -60,6 +60,18 @@ export const CATEGORY_PROFILES = {
     isElectronics: true,
     extra: ['battery_screenshot'],
   },
+  Monitor: {
+    capture: [
+      { key: 'front',       label: 'Front',               hint: 'Whole screen, well lit', required: true },
+      { key: 'screen_on',   label: 'Screen (powered on)', hint: 'Show it displays',       required: true },
+      { key: 'ports',       label: 'Ports',               hint: 'HDMI / DP / power',       required: true },
+      { key: 'stand',       label: 'Stand / Back',        hint: 'Stand & rear panel',      required: true },
+      { key: 'accessories', label: 'Accessories',         hint: 'Cables, power brick, box', required: true },
+      DEFECTS,
+    ],
+    conditions: ['New (sealed)', 'Open box', 'Renewed', 'Used A', 'Used B', 'Used C', 'Used D'],
+    isElectronics: true,
+  },
   'Home & Kitchen': {
     capture: [
       { key: 'front',       label: 'Front',       hint: 'Whole item',     required: true },
@@ -118,6 +130,7 @@ const ALIASES = {
   shirt: 'Apparel', 't-shirt': 'Apparel', dress: 'Apparel', kurta: 'Apparel',
   phone: 'Phone', smartphone: 'Phone', mobile: 'Phone', tablet: 'Phone',
   laptop: 'Laptop', notebook: 'Laptop', macbook: 'Laptop',
+  monitor: 'Monitor', display: 'Monitor', screen: 'Monitor', monitors: 'Monitor',
   electronics: 'Phone',
   'home & kitchen': 'Home & Kitchen', home: 'Home & Kitchen', kitchen: 'Home & Kitchen',
   appliance: 'Home & Kitchen', appliances: 'Home & Kitchen',
@@ -150,5 +163,5 @@ export function isElectronics(category) {
 
 // The list of categories the seller can pick from in Sell It.
 export const SELLABLE_CATEGORIES = [
-  'Apparel', 'Footwear', 'Phone', 'Laptop', 'Home & Kitchen', 'Books', 'Toys', 'Beauty',
+  'Apparel', 'Footwear', 'Phone', 'Laptop', 'Monitor', 'Home & Kitchen', 'Books', 'Toys', 'Beauty',
 ];

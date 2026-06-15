@@ -276,6 +276,8 @@ def grade_image(
     reference_bytes: Optional[bytes] = None,
     category: Optional[str] = None,
     use_cache: bool = True,
+    angle: str = "",
+    angle_label: str = "",
 ) -> dict:
     """
     Grade a single product image.
@@ -314,14 +316,17 @@ def grade_image(
         else:
             raise FileNotFoundError(f"grade_image: file not found: {image_bytes}")
 
-    # 1. Cache check
+    # 1. Cache check — keyed per image AND category/angle so the same photo graded
+    #    as different angles (or under a different category) isn't masked.
     image_hash = hashlib.sha256(image_bytes).hexdigest()
+    cache_key = image_hash[:24]
+    if category or angle:
+        cache_key += "_g" + hashlib.sha1(f"{category}|{angle}".encode()).hexdigest()[:6]
     if use_cache:
         from ml.captioner import _load_cache
         cache = _load_cache()
-        key = image_hash[:24]
-        if key in cache:
-            cached = dict(cache[key])
+        if cache_key in cache:
+            cached = dict(cache[cache_key])
             cached["from_cache"] = True
             cached["latency_ms"] = 0
             return cached
@@ -361,10 +366,12 @@ def grade_image(
         logger.error(f"[grade] DINO failed: {e}")
         dino_detections = []
 
-    # 3. LLM caption (primary intelligence; consumes DINO detections as context)
+    # 3. LLM caption (primary intelligence; consumes DINO detections as context).
+    #    category + angle make it inspect the right thing for THIS photo.
     try:
         from ml.captioner import caption
-        llm_result = caption(image_bytes, dino_detections)
+        llm_result = caption(image_bytes, dino_detections,
+                             category=category, slot=angle, slot_label=angle_label)
     except Exception as e:
         logger.error(f"[grade] Captioner failed: {e}")
         llm_result = {
@@ -389,6 +396,12 @@ def grade_image(
     # 5. Grading head — fuse all signals
     fused = _compute_grading_head(llm_result, dino_detections, completeness, category=category)
 
+    # Tag every defect with the angle it was seen from (so the aggregate knows which
+    # photo each defect belongs to and the defect map draws boxes on the right image).
+    for d in fused["defects"]:
+        d.setdefault("angle", angle)
+        d.setdefault("angle_label", angle_label or angle)
+
     latency_ms = round((time.monotonic() - t_start) * 1000)
 
     result = {
@@ -400,6 +413,13 @@ def grade_image(
         "condition_summary": llm_result.get("condition_summary", ""),
         "functional": llm_result.get("functional", True),
         "box_present": llm_result.get("box_present", False),
+        # Category-specific condition signals (None = not judgeable from this angle)
+        "tags_present": llm_result.get("tags_present"),
+        "accessories_present": llm_result.get("accessories_present"),
+        "powers_on": llm_result.get("powers_on"),
+        "seal_intact": llm_result.get("seal_intact"),
+        "angle": angle,
+        "angle_label": angle_label or angle,
         "latency_ms": latency_ms,
         "model_version": "revive-grade-v1.0",
         "image_hash": image_hash[:24],
@@ -411,53 +431,131 @@ def grade_image(
     if use_cache and not llm_result.get("_heuristic"):
         from ml.captioner import _load_cache, _save_cache
         cache = _load_cache()
-        cache[image_hash[:24]] = result
+        cache[cache_key] = result
         _save_cache(cache)
 
     return result
 
 
+def _tri_state(values: List[Optional[bool]]) -> Optional[bool]:
+    """Combine optional booleans across angles: True if any True, else False if any
+    explicit False, else None (not judgeable from any angle)."""
+    seen = [v for v in values if v is not None]
+    if not seen:
+        return None
+    if any(v is True for v in seen):
+        return True
+    return False if any(v is False for v in seen) else None
+
+
+def _synthesize_summary(frame_results: List[dict], signals: dict) -> str:
+    """Build ONE summary that reflects ALL angles, not just the best single frame."""
+    labels = [r.get("angle_label") or r.get("angle") or f"angle {i+1}"
+              for i, r in enumerate(frame_results)]
+    lead = f"Inspected {len(frame_results)} angle(s): {', '.join(labels)}."
+
+    # Per-angle note, de-duplicated (the angle-aware prompt makes these distinct).
+    seen, notes = set(), []
+    for r in frame_results:
+        s = (r.get("condition_summary") or "").strip()
+        if not s:
+            continue
+        norm = s.lower()
+        if norm in seen:
+            continue
+        seen.add(norm)
+        lbl = r.get("angle_label") or r.get("angle")
+        notes.append(f"{lbl}: {s}" if lbl else s)
+
+    # Category-condition call-outs the buyer cares about.
+    flags = []
+    if signals.get("tags_present") is True:        flags.append("original tags attached")
+    elif signals.get("tags_present") is False:     flags.append("tags removed")
+    if signals.get("box_present") is True:         flags.append("original box included")
+    elif signals.get("box_present") is False:      flags.append("no original box")
+    if signals.get("powers_on") is True:           flags.append("powers on")
+    elif signals.get("powers_on") is False:        flags.append("does NOT power on")
+    if signals.get("accessories_present") is True: flags.append("accessories included")
+    elif signals.get("accessories_present") is False: flags.append("accessories missing")
+
+    out = lead
+    if notes:
+        out += " " + " ".join(notes[:5])
+    if flags:
+        out += " Condition checks: " + ", ".join(flags) + "."
+    return out[:600]
+
+
 def _aggregate_frame_results(frame_results: List[dict], source: str) -> dict:
     """
-    Aggregate per-frame/per-image grade results into a single verdict.
+    Aggregate per-angle grade results into a single verdict — all angles count.
 
     Rules:
       - Worst grade wins (A > B > C > D — most damage takes precedence)
-      - Defects: union across all frames, keeping highest severity per type
-      - Confidence/completeness: average across frames
-      - condition_summary: from the highest-confidence frame
-      - functional: True only if ALL frames say functional
-      - box_present: True if ANY frame detected a box
+      - Defects: union across ALL angles, each tagged with the angle it came from
+        (de-duplicated by type+angle so the defect map shows every angle)
+      - Confidence/completeness: average across angles
+      - condition_summary: SYNTHESIZED across all angles (not just the best frame)
+      - functional: True only if all angles say functional AND powers_on isn't False
+      - Category condition signals (tags_present / box_present / powers_on /
+        accessories_present / seal_intact) combined across the relevant angles
     """
-    grade_order = {"A": 4, "B": 3, "C": 2, "D": 1}
+    grade_order = {"A": 4, "B": 3, "C": 2, "D": 1, "E": 0, "F": -1}
     sev_rank = {"minor": 1, "moderate": 2, "severe": 3}
 
     grades = [r["grade"] for r in frame_results]
     worst_grade = min(grades, key=lambda g: grade_order.get(g, 0))
 
-    all_defects: Dict[str, dict] = {}
-    for r in frame_results:
+    # Union of defects, de-duped by (type, angle) keeping the highest severity.
+    by_key: Dict[tuple, dict] = {}
+    for i, r in enumerate(frame_results):
         for d in r.get("defects", []):
-            dtype = d.get("type", "other")
-            if dtype not in all_defects or sev_rank.get(d.get("severity"), 0) > sev_rank.get(
-                all_defects[dtype].get("severity"), 0
-            ):
-                all_defects[dtype] = d
+            d = {**d, "angle": d.get("angle", r.get("angle", "")),
+                 "angle_label": d.get("angle_label") or r.get("angle_label") or r.get("angle", ""),
+                 "image_index": i}
+            k = (d.get("type", "other").lower(), d.get("angle", ""))
+            if k not in by_key or sev_rank.get(d.get("severity"), 0) > sev_rank.get(by_key[k].get("severity"), 0):
+                by_key[k] = d
+    all_defects = list(by_key.values())
 
-    best_frame = max(frame_results, key=lambda r: r.get("confidence", 0))
+    # Category condition signals across the angles that can judge them.
+    signals = {
+        "tags_present":        _tri_state([r.get("tags_present") for r in frame_results]),
+        "box_present":         _tri_state([r.get("box_present") for r in frame_results]),
+        "powers_on":           _tri_state([r.get("powers_on") for r in frame_results]),
+        "accessories_present": _tri_state([r.get("accessories_present") for r in frame_results]),
+        "seal_intact":         _tri_state([r.get("seal_intact") for r in frame_results]),
+    }
+    functional = all(r.get("functional", True) for r in frame_results) and signals["powers_on"] is not False
+
     avg_confidence = sum(r.get("confidence", 0) for r in frame_results) / len(frame_results)
     avg_completeness = sum(r.get("completeness", 0) for r in frame_results) / len(frame_results)
     total_latency = sum(r.get("latency_ms", 0) for r in frame_results)
+
+    # Per-angle breakdown (drives the multi-angle defect map on the frontend).
+    per_angle = [{
+        "image_index": i,
+        "angle": r.get("angle", ""),
+        "angle_label": r.get("angle_label") or r.get("angle", ""),
+        "grade": r.get("grade"),
+        "n_defects": len(r.get("defects", [])),
+    } for i, r in enumerate(frame_results)]
 
     return {
         "listing_id": str(uuid.uuid4()),
         "grade": worst_grade,
         "confidence": round(avg_confidence, 3),
-        "defects": list(all_defects.values()),
+        "defects": all_defects,
         "completeness": round(avg_completeness, 3),
-        "condition_summary": best_frame.get("condition_summary", ""),
-        "functional": all(r.get("functional", True) for r in frame_results),
-        "box_present": any(r.get("box_present", False) for r in frame_results),
+        "condition_summary": _synthesize_summary(frame_results, signals),
+        "functional": functional,
+        "box_present": bool(signals["box_present"]),
+        "tags_present": signals["tags_present"],
+        "accessories_present": signals["accessories_present"],
+        "powers_on": signals["powers_on"],
+        "seal_intact": signals["seal_intact"],
+        "condition_signals": signals,
+        "per_angle": per_angle,
         "latency_ms": total_latency,
         "model_version": "revive-grade-v1.0",
         "source": source,
@@ -473,6 +571,8 @@ def grade_multi_image(
     operator: str = "self",
     reference_bytes: Optional[bytes] = None,
     category: Optional[str] = None,
+    slots: Optional[List[str]] = None,
+    slot_labels: Optional[List[str]] = None,
 ) -> dict:
     """
     Grade a product from multiple angle photos (e.g. front, back, sides).
@@ -511,7 +611,11 @@ def grade_multi_image(
 
     from concurrent.futures import ThreadPoolExecutor
 
-    def _grade_one(img_bytes: bytes) -> dict:
+    slots = slots or []
+    slot_labels = slot_labels or []
+
+    def _grade_one(args) -> dict:
+        idx, img_bytes = args
         return grade_image(
             img_bytes,
             product_id=product_id,
@@ -519,11 +623,13 @@ def grade_multi_image(
             reference_bytes=reference_bytes,
             category=category,
             use_cache=True,
+            angle=slots[idx] if idx < len(slots) else "",
+            angle_label=slot_labels[idx] if idx < len(slot_labels) else (slots[idx] if idx < len(slots) else ""),
         )
 
-    # Grade all images in parallel (each already parallelises CLIP internally)
+    # Grade all angles in parallel (each already parallelises CLIP internally)
     with ThreadPoolExecutor(max_workers=min(len(images), 4)) as pool:
-        frame_results = list(pool.map(_grade_one, images))
+        frame_results = list(pool.map(_grade_one, list(enumerate(images))))
 
     return _aggregate_frame_results(frame_results, source="multi_image")
 

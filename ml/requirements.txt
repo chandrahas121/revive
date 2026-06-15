@@ -13,7 +13,7 @@ implicit>=0.7.0
 # ─── Computer Vision: Grounding DINO + CLIP ───────────────────────────────────
 torch>=2.0.0
 torchvision>=0.15.0
-transformers>=4.38.0         # Grounding DINO (AutoModelForZeroShotObjectDetection)
+transformers>=4.44,<5        # Grounding DINO: 5.x breaks the grounding-dino-tiny checkpoint (bbox_embed keys → meta tensors)
 Pillow>=9.0.0
 
 # CLIP — try openai-clip first, fall back to open_clip

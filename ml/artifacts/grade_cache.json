@@ -308,5 +308,563 @@
     "image_hash": "0bb68c5dc53397703fe41cd3",
     "n_dino_detections": 0,
     "from_cache": false
+  },
+  "43ab8fc92da495ead439e2dc": {
+    "listing_id": "635960ef-39e3-4937-8307-af441f2368c9",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "top-right"
+      }
+    ],
+    "completeness": 0.635,
+    "condition_summary": "The product has a minor scratch on the top-right corner, but otherwise appears in very good cosmetic condition and is fully functional.",
+    "functional": true,
+    "box_present": false,
+    "latency_ms": 120000,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "43ab8fc92da495ead439e2dc",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "1fa129e3e7df8e6edd96c555_5ae6ca": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "moderate",
+        "location": "sole"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The soles show moderate wear, but the overall condition of the footwear is very good.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 5609
+  },
+  "1afdc15dfa8714106f8d93f0_2d5012": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scuffs",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "top",
+        "angle_label": "Top"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The shoe has some minor scuffing on the front-center area, but overall appears to be in very good condition.",
+    "box_present": false,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 10000
+  },
+  "1afdc15dfa8714106f8d93f0_g2d5012": {
+    "listing_id": "3650b60d-da44-4ad9-bde7-54815e478e6f",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scuffs",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "top",
+        "angle_label": "Top"
+      }
+    ],
+    "completeness": 0.628,
+    "condition_summary": "The shoe has some minor scuffing on the front-center area, but overall appears to be in very good condition.",
+    "functional": true,
+    "box_present": false,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "top",
+    "angle_label": "Top",
+    "latency_ms": 42797,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "1afdc15dfa8714106f8d93f0",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "b4e00a5ce996819a26cf6465_5ae6ca": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "moderate",
+        "location": "sole",
+        "angle": "sole",
+        "angle_label": "Soles"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The sole of the shoe shows moderate wear, but the overall condition appears to be very good.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 8609
+  },
+  "b4e00a5ce996819a26cf6465_g5ae6ca": {
+    "listing_id": "e45e52d1-3817-4d1d-ab78-2fc4deddea71",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "moderate",
+        "location": "sole",
+        "angle": "sole",
+        "angle_label": "Soles"
+      }
+    ],
+    "completeness": 0.59,
+    "condition_summary": "The sole of the shoe shows moderate wear, but the overall condition appears to be very good.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "sole",
+    "angle_label": "Soles",
+    "latency_ms": 43016,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "b4e00a5ce996819a26cf6465",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "a35b0f340de5efc831c3472c_112949": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "side",
+        "angle": "side",
+        "angle_label": "Side"
+      },
+      {
+        "type": "crease",
+        "severity": "minor",
+        "location": "side",
+        "angle": "side",
+        "angle_label": "Side"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The shoe exhibits some minor scuffing and creasing on the side profile, but remains in very good overall condition.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 8782
+  },
+  "a35b0f340de5efc831c3472c_g112949": {
+    "listing_id": "248284be-fd44-405b-a99a-5a0b1cc4adaf",
+    "grade": "B",
+    "confidence": 0.72,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "side",
+        "angle": "side",
+        "angle_label": "Side"
+      },
+      {
+        "type": "crease",
+        "severity": "minor",
+        "location": "side",
+        "angle": "side",
+        "angle_label": "Side"
+      }
+    ],
+    "completeness": 0.782,
+    "condition_summary": "The shoe exhibits some minor scuffing and creasing on the side profile, but remains in very good overall condition.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "side",
+    "angle_label": "Side",
+    "latency_ms": 43031,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "a35b0f340de5efc831c3472c",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "43ab8fc92da495ead439e2dc_8e12e5": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "minor",
+        "location": "insole",
+        "angle": "insole",
+        "angle_label": "Insole"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The insole shows minor wear but the overall condition of the footwear appears very good.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 10500
+  },
+  "43ab8fc92da495ead439e2dc_g8e12e5": {
+    "listing_id": "16d92807-21f6-4f1c-8991-45e580177ffd",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "minor",
+        "location": "insole",
+        "angle": "insole",
+        "angle_label": "Insole"
+      }
+    ],
+    "completeness": 0.635,
+    "condition_summary": "The insole shows minor wear but the overall condition of the footwear appears very good.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "insole",
+    "angle_label": "Insole",
+    "latency_ms": 43328,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "43ab8fc92da495ead439e2dc",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "29ac72db0a40f9f286cac8fe_e5b58d": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "dent",
+        "severity": "minor",
+        "location": "bottom-right",
+        "angle": "base",
+        "angle_label": "Base"
+      }
+    ],
+    "completeness": 0.95,
+    "condition_summary": "The laptop has a minor dent on the bottom-right corner, but appears to be in overall very good condition.",
+    "box_present": false,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 6657
+  },
+  "29ac72db0a40f9f286cac8fe_ge5b58d": {
+    "listing_id": "245d315a-7f74-4a12-bdd5-5dfcd5b00622",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "dent",
+        "severity": "minor",
+        "location": "bottom-right",
+        "angle": "base",
+        "angle_label": "Base"
+      }
+    ],
+    "completeness": 0.8,
+    "condition_summary": "The laptop has a minor dent on the bottom-right corner, but appears to be in overall very good condition.",
+    "functional": true,
+    "box_present": false,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "base",
+    "angle_label": "Base",
+    "latency_ms": 13984,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "29ac72db0a40f9f286cac8fe",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "c6a9a9f5f115ffdb88b04577_d186ff": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [],
+    "completeness": 1.0,
+    "condition_summary": "The laptop screen powers on and displays correctly with no visible defects.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": true,
+    "accessories_present": null,
+    "powers_on": true,
+    "seal_intact": null,
+    "latency_ms": 3219
+  },
+  "c6a9a9f5f115ffdb88b04577_gd186ff": {
+    "listing_id": "59ffbc76-d402-4f7c-b13d-656cd33418f5",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [],
+    "completeness": 0.8,
+    "condition_summary": "The laptop screen powers on and displays correctly with no visible defects.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": true,
+    "accessories_present": null,
+    "powers_on": true,
+    "seal_intact": null,
+    "angle": "screen_on",
+    "angle_label": "Screen (powered on)",
+    "latency_ms": 25859,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "c6a9a9f5f115ffdb88b04577",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "45940c5c089f0287a1108df2_702ac2": {
+    "grade": "A",
+    "confidence": 0.9,
+    "defects": [],
+    "completeness": 1.0,
+    "condition_summary": "The keyboard and trackpad of this laptop appear to be in excellent condition, with no visible signs of wear or damage.",
+    "box_present": null,
+    "functional": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4375
+  },
+  "45940c5c089f0287a1108df2_g702ac2": {
+    "listing_id": "50e90231-d5b0-40cb-9d7d-de9c369f5f61",
+    "grade": "A",
+    "confidence": 0.9,
+    "defects": [],
+    "completeness": 0.8,
+    "condition_summary": "The keyboard and trackpad of this laptop appear to be in excellent condition, with no visible signs of wear or damage.",
+    "functional": null,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "keyboard",
+    "angle_label": "Keyboard",
+    "latency_ms": 26875,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "45940c5c089f0287a1108df2",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "c6a9a9f5f115ffdb88b04577_90c83b": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "top-left",
+        "angle": "lid",
+        "angle_label": "Lid"
+      }
+    ],
+    "completeness": 0.95,
+    "condition_summary": "The laptop has a minor scratch on the top-left corner of the lid, but is otherwise in very good condition.",
+    "box_present": null,
+    "functional": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4703
+  },
+  "c6a9a9f5f115ffdb88b04577_g90c83b": {
+    "listing_id": "aba1dabb-bfce-4839-a19b-e2b9a2eadc62",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "top-left",
+        "angle": "lid",
+        "angle_label": "Lid"
+      }
+    ],
+    "completeness": 0.8,
+    "condition_summary": "The laptop has a minor scratch on the top-left corner of the lid, but is otherwise in very good condition.",
+    "functional": null,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "lid",
+    "angle_label": "Lid",
+    "latency_ms": 27187,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "c6a9a9f5f115ffdb88b04577",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "45284a4273a7dd8a17bccfa7_27c2cc": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "other",
+        "severity": "minor",
+        "location": "bottom-right",
+        "angle": "ports",
+        "angle_label": "Ports"
+      }
+    ],
+    "completeness": 0.95,
+    "condition_summary": "The laptop appears to be in very good condition, with only minor cosmetic wear visible on the ports and connectors.",
+    "box_present": false,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 5453
+  },
+  "45284a4273a7dd8a17bccfa7_g27c2cc": {
+    "listing_id": "1ec3ec1c-e668-4b55-a5aa-b608c7ff264b",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "other",
+        "severity": "minor",
+        "location": "bottom-right",
+        "angle": "ports",
+        "angle_label": "Ports"
+      }
+    ],
+    "completeness": 0.8,
+    "condition_summary": "The laptop appears to be in very good condition, with only minor cosmetic wear visible on the ports and connectors.",
+    "functional": true,
+    "box_present": false,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "ports",
+    "angle_label": "Ports",
+    "latency_ms": 14094,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "45284a4273a7dd8a17bccfa7",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "45284a4273a7dd8a17bccfa7_cbf7b3": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "minor_scratch",
+        "severity": "minor",
+        "location": "bottom-right",
+        "angle": "accessories",
+        "angle_label": "Accessories"
+      }
+    ],
+    "completeness": 0.9,
+    "condition_summary": "The laptop shows minor cosmetic wear with a small scratch on the bottom-right corner, but is otherwise in very good condition.",
+    "box_present": false,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": true,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 6453
+  },
+  "45284a4273a7dd8a17bccfa7_gcbf7b3": {
+    "listing_id": "0843d0b4-097d-46c5-bcb2-fbff96293351",
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "minor_scratch",
+        "severity": "minor",
+        "location": "bottom-right",
+        "angle": "accessories",
+        "angle_label": "Accessories"
+      }
+    ],
+    "completeness": 0.8,
+    "condition_summary": "The laptop shows minor cosmetic wear with a small scratch on the bottom-right corner, but is otherwise in very good condition.",
+    "functional": true,
+    "box_present": false,
+    "tags_present": null,
+    "accessories_present": true,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "accessories",
+    "angle_label": "Accessories",
+    "latency_ms": 11469,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "45284a4273a7dd8a17bccfa7",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "1afdc15dfa8714106f8d93f0_791b13": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "stain",
+        "severity": "minor",
+        "location": "front-center-left"
+      },
+      {
+        "type": "crack",
+        "severity": "minor",
+        "location": "sole-center"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The shoe has a minor stain on the front-center-left area and a minor crack on the sole at the center.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 6547
   }
 }

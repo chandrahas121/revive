@@ -4,7 +4,8 @@ import Header from '../components/Header'
 import HealthCard from '../components/stitch/HealthCard'
 import VirtualTryOn from '../components/stitch/VirtualTryOn'
 import FitTwin from '../components/stitch/FitTwin'
-import api, { getHealthCard } from '../api/client'
+import LifecycleTimeline from '../components/LifecycleTimeline'
+import api, { getHealthCard, advanceListingStage } from '../api/client'
 import { useCart } from '../context/CartContext'
 
 const CLOTHING_KEYWORDS = ['clothing', 'fashion', 'apparel', 'garment', 'textile', 'wear', 'shirt', 'dress', 'jacket', 'pants', 'jeans', 'top', 'blouse', 'skirt', 'coat', 'shoes', 'footwear']
@@ -47,6 +48,20 @@ const ProductDetailPage = () => {
   const [showHealthCard, setShowHealthCard] = useState(false)
   const [cardData, setCardData] = useState(null)
   const [cardLoading, setCardLoading] = useState(false)
+  const [advancing, setAdvancing] = useState(false)
+
+  const handleAdvanceStage = async () => {
+    if (!listing) return
+    setAdvancing(true)
+    try {
+      const res = await advanceListingStage(listing.id)
+      setListing((prev) => ({ ...prev, status: res.data.status, lifecycle: res.data.lifecycle }))
+    } catch {
+      // ignore — demo control
+    } finally {
+      setAdvancing(false)
+    }
+  }
 
   useEffect(() => {
     api.get(`/api/listings/${id}/`)
@@ -122,6 +137,9 @@ const ProductDetailPage = () => {
   const price = parseFloat(listing.price)
   const mrp = product.mrp ? parseFloat(product.mrp) : null
   const savings = mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : null
+  // v2 lifecycle: staged (refurbishing / held-local) items are visible but not buyable yet.
+  const lc = listing.lifecycle
+  const staged = lc && !lc.live && !lc.sold
 
   return (
     <div className="bg-[#EAEDED] min-h-screen">
@@ -216,6 +234,19 @@ const ProductDetailPage = () => {
               </div>
             )}
 
+            {/* v2 second-life lifecycle — where this item is in its journey */}
+            {lc && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-[#0F1111] mb-1.5">Second-life journey</p>
+                <LifecycleTimeline
+                  lifecycle={lc}
+                  onAdvance={handleAdvanceStage}
+                  advancing={advancing}
+                  showAdvance
+                />
+              </div>
+            )}
+
             {listing.images && listing.images.length > 0 && !listing.is_new && (
               <div className="mb-4">
                 <p className="text-xs font-bold text-[#0F1111] mb-1.5">Seller photos</p>
@@ -303,7 +334,13 @@ const ProductDetailPage = () => {
                 <span className="text-[#0F1111]"> by Tomorrow</span>
               </p>
 
-              <p className="text-lg text-[#007600]">In Stock</p>
+              {staged
+                ? <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 leading-snug">
+                    {lc.track === 'renewed'
+                      ? 'Being refurbished at an authorized center — not buyable yet. It goes live as Amazon Renewed once certified.'
+                      : 'Held locally — goes live the moment a nearby buyer appears. Not buyable yet.'}
+                  </p>
+                : <p className="text-lg text-[#007600]">In Stock</p>}
 
               {isClothing(product.category) && (
                 <div>
@@ -333,23 +370,25 @@ const ProductDetailPage = () => {
 
               <button
                 onClick={handleAddToCart}
-                disabled={inCart || added}
+                disabled={inCart || added || staged}
                 className={`w-full py-2 rounded text-sm font-bold border transition-colors
-                  ${inCart || added
+                  ${inCart || added || staged
                     ? 'bg-[#F0F2F2] text-gray-400 cursor-default border-[#D5D9D9]'
                     : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'}`}
-                style={(inCart || added) ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+                style={(inCart || added || staged) ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
               >
-                {inCart || added ? 'Added to Cart' : 'Add to Cart'}
+                {staged ? 'Not yet available' : inCart || added ? 'Added to Cart' : 'Add to Cart'}
               </button>
 
-              <button
-                onClick={() => { handleAddToCart(); navigate('/checkout') }}
-                className="w-full py-2 rounded text-sm font-bold text-white border border-[#e07000] shadow-sm transition-colors active:scale-95"
-                style={{ background: 'linear-gradient(180deg, #ffac31, #FF9900)' }}
-              >
-                Buy Now
-              </button>
+              {!staged && (
+                <button
+                  onClick={() => { handleAddToCart(); navigate('/checkout') }}
+                  className="w-full py-2 rounded text-sm font-bold text-white border border-[#e07000] shadow-sm transition-colors active:scale-95"
+                  style={{ background: 'linear-gradient(180deg, #ffac31, #FF9900)' }}
+                >
+                  Buy Now
+                </button>
+              )}
 
               <div className="flex items-center gap-1.5 text-xs text-gray-500">
                 <svg className="w-3 h-3 text-gray-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -358,14 +397,19 @@ const ProductDetailPage = () => {
                 <span>Secure transaction</span>
               </div>
 
-              <hr className="border-[#D5D9D9]" />
-
-              <button
-                onClick={handleViewHealthCard}
-                className="w-full py-2 rounded text-sm font-semibold bg-[#232F3E] hover:bg-[#131921] text-[#febd69] border border-[#3d5166] transition-colors"
-              >
-                View Product Health Card
-              </button>
+              {/* Health Card is a SECOND-LIFE trust artifact only — a brand-new
+                  catalogue item has no AI grade / refurb record, so no card. */}
+              {!listing.is_new && (
+                <>
+                  <hr className="border-[#D5D9D9]" />
+                  <button
+                    onClick={handleViewHealthCard}
+                    className="w-full py-2 rounded text-sm font-semibold bg-[#232F3E] hover:bg-[#131921] text-[#febd69] border border-[#3d5166] transition-colors"
+                  >
+                    View Product Health Card
+                  </button>
+                </>
+              )}
 
               {isClothing(product.category) && (
                 <VirtualTryOn

@@ -69,6 +69,7 @@ def _cache_key(image_bytes: bytes) -> str:
 CONDITION_PROMPT = """\
 You are a product condition assessor for a re-commerce platform (like Amazon Renewed).
 
+{context}
 Grounding DINO detector context: {detections}
 Each detection is tagged as "confirmed" (high confidence) or "uncertain" (borderline).
 Only include "uncertain" detections as defects if you can visually verify the damage yourself.
@@ -84,10 +85,20 @@ Assess the product in the image and return ONLY valid JSON with these exact fiel
       "location": "<brief location e.g. front-center, bottom-left>"}}
   ],
   "completeness": <0.0-1.0>,
-  "condition_summary": "<one professional sentence naming the specific defects seen>",
+  "condition_summary": "<one professional sentence naming the specific defects seen FROM THIS ANGLE>",
   "box_present": <true|false>,
-  "functional": <true|false>
+  "functional": <true|false>,
+  "tags_present": <true|false|null>,
+  "accessories_present": <true|false|null>,
+  "powers_on": <true|false|null>,
+  "seal_intact": <true|false|null>
 }}
+
+Field rules:
+  - Set tags_present / accessories_present / powers_on / seal_intact to a boolean ONLY if
+    THIS angle lets you judge it (e.g. only the tag photo judges tags_present, only the
+    powered-on screen photo judges powers_on). Otherwise set it to null.
+  - Grade ONLY what is visible in THIS photo; the system combines all angles afterwards.
 
 Grade scale:
   A = Like new / mint — no visible defects, all accessories present
@@ -145,7 +156,7 @@ _OPENROUTER_VISION_MODELS = [
     "meta-llama/llama-3.2-11b-vision-instruct",  # open source vision
 ]
 
-def _caption_openrouter(image_bytes: bytes, detections: List[Dict]) -> dict:
+def _caption_openrouter(image_bytes: bytes, prompt: str) -> dict:
     """Call vision model via OpenRouter (OpenAI-compatible API)."""
     from openai import OpenAI
 
@@ -170,7 +181,6 @@ def _caption_openrouter(image_bytes: bytes, detections: List[Dict]) -> dict:
     )
 
     b64 = base64.standard_b64encode(image_bytes).decode()
-    prompt = CONDITION_PROMPT.format(detections=_det_text(detections))
 
     response = client.chat.completions.create(
         model=model,
@@ -194,13 +204,12 @@ def _caption_openrouter(image_bytes: bytes, detections: List[Dict]) -> dict:
 
 
 # ── Anthropic direct backend ─────────────────────────────────────────────────
-def _caption_anthropic(image_bytes: bytes, detections: List[Dict]) -> dict:
+def _caption_anthropic(image_bytes: bytes, prompt: str) -> dict:
     """Call Claude Haiku directly via Anthropic SDK."""
     import anthropic
 
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
     b64 = base64.standard_b64encode(image_bytes).decode()
-    prompt = CONDITION_PROMPT.format(detections=_det_text(detections))
 
     response = client.messages.create(
         model=os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5"),
@@ -228,7 +237,7 @@ def _caption_anthropic(image_bytes: bytes, detections: List[Dict]) -> dict:
 
 
 # ── AWS Bedrock backend ──────────────────────────────────────────────────────
-def _caption_bedrock(image_bytes: bytes, detections: List[Dict]) -> dict:
+def _caption_bedrock(image_bytes: bytes, prompt: str) -> dict:
     """Call Claude Haiku on AWS Bedrock (production path)."""
     import boto3
 
@@ -238,7 +247,6 @@ def _caption_bedrock(image_bytes: bytes, detections: List[Dict]) -> dict:
     )
 
     b64 = base64.standard_b64encode(image_bytes).decode()
-    prompt = CONDITION_PROMPT.format(detections=_det_text(detections))
     model_id = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-haiku-20240307-v1:0")
 
     body = json.dumps(
@@ -291,14 +299,12 @@ def _load_qwen():
     logger.info("[captioner] Qwen loaded.")
 
 
-def _caption_local(image_bytes: bytes, detections: List[Dict]) -> dict:
+def _caption_local(image_bytes: bytes, prompt: str) -> dict:
     """Run Qwen2.5-VL-3B locally (GPU required)."""
     import tempfile, os as _os
     from qwen_vl_utils import process_vision_info
 
     _load_qwen()
-
-    prompt = CONDITION_PROMPT.format(detections=_det_text(detections))
 
     # Write image to a temp file since Qwen processor needs a path or URL
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
@@ -374,9 +380,15 @@ def _detection_heuristic(detections: List[Dict]) -> dict:
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
-def caption(image_bytes: bytes, detections: List[Dict]) -> dict:
+def caption(image_bytes: bytes, detections: List[Dict],
+            category: Optional[str] = None, slot: str = "", slot_label: str = "") -> dict:
     """
     Call the configured LLM provider to grade and caption a product image.
+
+    `category` + `slot` make the prompt category- and angle-aware: a Footwear SOLE
+    photo is graded on tread wear; an electronics SCREEN-ON photo confirms it powers
+    on; an Apparel TAG photo reports tags_present. This is what lets the grader use
+    the category-specific condition checks, not just a generic "is it damaged?" pass.
 
     Provider selection (LLM_PROVIDER env var):
         openrouter  → OpenRouter API (default)
@@ -384,10 +396,25 @@ def caption(image_bytes: bytes, detections: List[Dict]) -> dict:
         bedrock     → AWS Bedrock
         local       → Qwen2.5-VL-3B (offline GPU)
 
-    Results are cached by SHA-256(image_bytes) → grade_cache.json.
+    Results are cached by SHA-256(image_bytes)+category+slot → grade_cache.json.
     """
+    # Build the category + angle aware instruction block.
+    context = ""
+    try:
+        from ml.category_profiles import grading_instructions
+        if category or slot:
+            context = grading_instructions(category or "", slot, slot_label)
+    except Exception as e:
+        logger.debug(f"[captioner] grading_instructions unavailable: {e}")
+    prompt = CONDITION_PROMPT.format(context=context, detections=_det_text(detections))
+
     cache = _load_cache()
+    # Cache per image AND per category/slot so different angles never collide and
+    # the new category-aware grading isn't masked by an old generic cached result.
     key = _cache_key(image_bytes)
+    if category or slot:
+        import hashlib as _h
+        key = key + "_" + _h.sha1(f"{category}|{slot}".encode()).hexdigest()[:6]
     if key in cache:
         logger.debug(f"[captioner] Cache hit {key}")
         return cache[key]
@@ -398,22 +425,22 @@ def caption(image_bytes: bytes, detections: List[Dict]) -> dict:
     result = None
     try:
         if provider == "anthropic":
-            result = _caption_anthropic(image_bytes, detections)
+            result = _caption_anthropic(image_bytes, prompt)
         elif provider == "bedrock":
-            result = _caption_bedrock(image_bytes, detections)
+            result = _caption_bedrock(image_bytes, prompt)
         elif provider == "local":
-            result = _caption_local(image_bytes, detections)
+            result = _caption_local(image_bytes, prompt)
         else:  # openrouter (default)
             # If no OpenRouter key, try Anthropic
             if not os.environ.get("OPENROUTER_API_KEY") and os.environ.get("ANTHROPIC_API_KEY"):
                 logger.info("[captioner] No OPENROUTER_API_KEY; using anthropic direct.")
-                result = _caption_anthropic(image_bytes, detections)
+                result = _caption_anthropic(image_bytes, prompt)
             else:
-                result = _caption_openrouter(image_bytes, detections)
+                result = _caption_openrouter(image_bytes, prompt)
     except Exception as e:
         logger.error(f"[captioner] Provider '{provider}' failed: {e}. Trying local fallback.")
         try:
-            result = _caption_local(image_bytes, detections)
+            result = _caption_local(image_bytes, prompt)
         except Exception as e2:
             logger.error(f"[captioner] Local fallback also failed: {e2}. Using detection-based heuristic.")
             result = _detection_heuristic(detections)

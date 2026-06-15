@@ -19,7 +19,12 @@ from typing import List, Tuple, Optional
 logger = logging.getLogger(__name__)
 
 # Two images whose dHash differ by <= this many bits are "the same shot".
-DUP_HAMMING_THRESHOLD = 6
+# Kept STRICT (3) on purpose: 6 was too loose and false-flagged genuinely
+# different angles of large flat objects (a laptop's closed lid vs base vs ports
+# are near-uniform metallic surfaces with very close dHashes). A re-used identical
+# photo hashes at distance 0–2 even after re-compression, so 3 still catches the
+# fraud case (same shot in many slots) without blocking legitimate angle sets.
+DUP_HAMMING_THRESHOLD = 3
 
 
 def dhash(image_bytes: bytes, hash_size: int = 8) -> Optional[int]:

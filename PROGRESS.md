@@ -4,14 +4,80 @@
 > NOTE: working copy is under `...\OneDrive\Documents\amazon-hackon`. OneDrive has since been **quit** (user confirmed); the mid-merge corruption documented below is resolved. Sandbox bash may still lag behind file-tool writes — that's a sandbox artifact, not disk corruption.
 
 > ## ⚡ CURRENT STATE (read first)
-> Pillars 1/2/3/5 integrated; app builds; storefront looks like real Amazon (NEW catalog default + curated second-life). Both Health Cards live. Real Amazon dataset + guaranteed branded demo catalog wired.
+> Pillars 1/2/3/5 integrated; app builds. **Storefront is now driven by a self-contained curated demo catalog (`seed_demo`) — the Amazon dataset import is DEPRECATED/removed from the demo path** (it was women-heavy + only-electronics-renewed). Numbered-page pagination + title/brand search. Sell-It is catalogue-free (type name + original price) and the **trained `.keras` price model serves the resale suggestion**, MRP-anchored + per-defect, adjustable ±20%. Both Health Cards live.
+> **Staged second-life LIFECYCLE (2026-06-15c):** returns/listings are NOT instantly live — they walk a disposition-driven track (`core/lifecycle.py`): Renewed = pickup→refurbishing→certified-live→sold; Revive = held-local(awaiting demand)→live→sold; sealed→Restock-New (exits); dead→recycle/donate. Return flow stages the item via `POST /api/returns/process/`; demo `POST /api/listings/<id>/advance/` steps stages on camera. Staged items show in the storefront with a `⏳` badge but aren't buyable until live. Timeline UI: `frontend/.../LifecycleTimeline.jsx` (on the return result + product page + the [Demo] advance button).
 > **To run the demo on your machine:**
 > ```bash
-> cd backend && python manage.py migrate          # applies 0005 + 0006
-> python manage.py seed_real --per-file 4000 --revive 50 --renewed 25
+> cd backend && python manage.py migrate
+> python manage.py seed_demo                       # curated catalog, NO dataset files
 > cd ../frontend && npm run build                  # or npm run dev
 > ```
+> Trained price model: `REVIVE_USE_KERAS_PRICE=1` is set in `backend/.env`. It loads ~2.3 GB on the **first** Sell-It grade (~20–35 s) → **pre-warm before recording** (start backend, grade one throwaway item). Unset/0 = fast heuristic, no model load. (`seed_demo` forces it off so seeding stays fast.)
 > Logins: buyer `demo@revive.in / demo12345`, sellers `*.seller@revive.in / seller12345`.
+
+## SESSION LOG — 2026-06-15c · Laptop regrade bug + staged second-life LIFECYCLE (returns don't go live instantly)
+
+Two asks: (1) a laptop "Re-grade" in Sell-It showed **B at 0% confidence / no grading**; (2) verify routing vs plan + make the return→second-life flow real & demoable (it was "return → instantly in Revive/Renewed", which isn't real-world).
+
+**Bug 1 — laptop regrade (fixed, 3 layers).** `skip_match=true` (seller's own item) correctly bypasses the match/instance gates, but the **duplicate-photo gate still ran**; a laptop's flat metallic angles (lid/base/ports) hash within the loose `DUP_HAMMING_THRESHOLD=6` → false "same shot" → a `{duplicate_photos:true}` response with **no `grade`** → frontend rendered `GRADE_CONFIG[undefined]||B` at 0%. Fixes: threshold 6→**3** (`ml/image_dedup.py`); dedup hard-block now **returns-only** (`and not skip_match`, `grade/views.py`); SellIt `runGradingMulti` now **guards on missing `res.data.grade`** and shows the gate message instead of a fake card.
+
+**Routing verification.** `route.py` matches v2 §10 (Disposition Gate authoritative; EV picks only the physical resell route; risk-tier electronics-kirana block). **Gap found & fixed:** the inspect view passed `condition_signals` only into *pricing* — disposition kwargs (`sealed/opened/complete/functional_pass`) stayed at defaults, so **Journey 4 (sealed return → Restock-New) could never fire** and `functional`/`completeness` didn't drive disposition. Now wired in `grade/views.py` (sealed←`seal_intact`, complete←`completeness≥0.8`/accessories, functional_pass←`functional`).
+
+**Real-world research (validated user's instinct).** High-value used/defective → certified refurb (Amazon Renewed via SPN) → warehouse → sold (inspection/refurb cost justified). Low-value as-is returns are **not warehoused** (inspect+store > recovery — why retailers liquidate/destroy). REVIVE's differentiator: keep it **local, activate only on geohash demand** — no warehouse glut.
+
+**Staged LIFECYCLE (new — the headline change).** A return/listing is no longer instantly live; it walks a disposition-driven track:
+- `core/lifecycle.py` (single source of truth; mirrored conceptually in `frontend/.../LifecycleTimeline.jsx`). Tracks: **renewed** = Pickup scheduled → Refurbishing → Certified & live → Sold; **revive** = Held locally (awaiting nearby demand) → Live near you → Sold; **restock** = Back as New (exits); **exit** = Recycled/Donated.
+- Model (`core/models.py`): new `Status` = `REFURB_SCHEDULED / REFURBISHING / AWAITING_DEMAND` (migration `0007`).
+- Endpoints (`core/views.py` + `core/urls/listings.py`): `POST /api/returns/process/` turns a graded return into a **staged** Listing (re-runs `route_item` authoritatively, sets source + first-stage status, marks order RETURNED); `POST /api/listings/<id>/advance/` = **demo control** to step a listing to its next stage. Storefront list now includes staged statuses (visible w/ badge, **not buyable** — order create still requires `listed`). `ListingSerializer` exposes `lifecycle`.
+- Frontend: `LifecycleTimeline` stepper; `GradingResultPage` "Confirm handover" now **stages the item** and shows "what happens next" + track link (disposition-aware routing subline too); storefront cards show a `⏳ stage` badge and swap Add-to-Cart for "track it" when staged; `ProductDetailPage` shows the timeline + **[Demo] advance-stage** button and disables buying while staged; `MyListingsPage` status chips for the new stages.
+
+**Verified:** `manage.py check` 0 · `vite build` clean · Python check (sealed→RESTOCK_NEW, opened-A→OPEN_BOX, dead-screen→RENEWED_SPN, used→USED_P2P, F→RECYCLE/donate; all 4 tracks chain correctly) · **APIClient integration test**: iPhone(dead)→renewed `refurb_scheduled→refurbishing→listed→sold`, Nike(used)→revive `awaiting_demand→listed→sold`, Blender(sealed)→restock `listed`(source=new), order→returned. Temp tests removed.
+
+**Demo narration:** return a phone → grade → "scheduled for refurbishment" (NOT live) → open it in Renewed (shows Refurbishing, not buyable) → tap **Demo: advance stage** twice → it certifies & goes live → buy it. Return a shoe → "held locally, awaiting nearby demand" → advance → "Live near you" → buy. Return a sealed item → "back as New" (rejoins catalog, never enters Revive).
+
+**Addendum 3 — Health Card gated to second-life + Green Credits wired live.** (1) New catalogue items wrongly offered a "View Product Health Card" button (clicking 404'd then rendered a fake Revive card from props); now gated on `!listing.is_new` in `ProductDetailPage` — Health Card is a second-life-only artifact. Card impl itself verified sound: tamper-evident `card_hash` (SHA-256 of payload), append-only hash-chained `LedgerEntry` (UPDATE/DELETE blocked at model level), two source-aware designs (Revive AI vs Renewed professional). (2) Green Credits backend (wallet/vest/redeem/donate) was correct but **earning + spending weren't wired into live flows** — `kind='earn'` existed only in seed scripts, and the checkout redeem toggle only previewed the discount without committing the spend. Added `green/credits.py` (`award_keep_credits` / `cancel_pending_credits` / `credit_amount`, mirroring `utils/tier.js`): placing an order now creates a **PENDING earn** (vests at return-window close), returning an order **cancels** it, and checkout now calls `redeemCredits(commit:true)` so the **balance actually drops**. Integration-tested: buy Footwear ₹8000 → +40 pending; redeem → spend recorded; return → pending cancelled. The 20% cap is on discount-rupees (1 credit = ₹0.10).
+
+**Addendum 2 — Keras price loader hardened (WinError 32).** Loading the `.keras` ensemble unpacks weights to a temp dir that lands in `ml/artifacts/` and got locked on Windows (`[WinError 32] model.weights.h5 used by another process`) — leftover `tmp*` dirs + antivirus/handle locks — so pricing silently fell back to the heuristic. `ml/price_keras._ensure_loaded` is now **thread-locked**, **cleans stale `ml/artifacts/tmp*` before loading**, and **retries once** on `OSError/PermissionError`. Verified: model loads in ~50s, `predict_price_inr` returns a value (raw signal then MRP-anchored in `route.py`). Still pre-warm once before recording. (Grading itself always ran end-to-end; only the trained-price load was falling back.)
+
+**Addendum — Grounding DINO restored + Sell-It submit feedback.** DINO was returning empty detections: the venv had **transformers 5.12.0**, which is incompatible with the `grounding-dino-tiny` checkpoint (all `bbox_embed` keys load as MISSING → meta tensors → "Cannot copy out of meta tensor"). Pinned **`transformers>=4.44,<5`** (`ml/requirements.txt`) and installed `4.57.6` via `uv pip install --python .venv/Scripts/python.exe` (note: this venv has **no pip**, use **uv**; `huggingface-hub` auto-downgraded to 0.36.2). Verified DINO loads + runs and DINOv2/instance-match deps still import. CLIP is `openai-clip` (independent of transformers). **The running dev server must be restarted** to pick up the downgrade. Also: Sell-It tier-3 "Schedule Professional Inspection" looked dead — a required field (battery %/declaration) failed validation but the error only showed at the top of a long form; now errors also render next to the submit button and scroll into view.
+
+## SESSION LOG — 2026-06-15b · Pillar 1 grading made multi-angle + category-aware, fed into pricing
+
+The grader DID aggregate all angles for the GRADE (worst-grade-wins) but the output looked single-image, and it never used the category-specific checks (tags/box/screen-on). Fixed end-to-end.
+
+**Root causes found**
+- `condition_summary` was copied from only the single best-confidence frame → looked like one image was read.
+- The LLM prompt was category- and angle-blind → box/tag/screen-on were never actually checked.
+- Aggregated defect bboxes from different angles were all drawn on the COVER image (wrong positions).
+
+**What changed**
+- **Category + angle aware VLM prompt** (`ml/captioner.py`): `caption()` now takes `category`+`slot`, injects a category rubric + per-angle focus (a SOLE photo → tread wear; SCREEN-ON → powers_on; TAG → tags_present), and asks for new JSON fields `tags_present / accessories_present / powers_on / seal_intact` (null when not judgeable from that angle). Prompt building centralised; backends take the built prompt; cache key now includes category+slot. Verified live against OpenRouter (5.6s, real response, new fields present).
+- **Slot-focus helpers** (`ml/category_profiles.py`): `slot_focus`, `slot_signal`, `grading_instructions(category, slot)`.
+- **Slot-aware grading + aggregation** (`ml/grade.py`): `grade_image(..., angle)`; `grade_multi_image(images, slots, slot_labels)` grades each photo with its angle. New aggregation: worst-grade-wins; defects tagged with `angle`+`image_index` (deduped per type+angle); condition signals combined across angles (`_tri_state`); `functional` also fails if `powers_on` is False; **condition_summary SYNTHESIZED across all angles** ("Inspected 3 angles: Side… Soles… Box… Condition checks: tags attached, box included"); returns `per_angle` + `condition_signals`.
+- **View** (`backend/grade/views.py`): reads `slots`, passes them in; renders a **per-angle defect map** (each image drawn with its OWN defects — fixes the wrong-bbox-on-cover bug) → `angle_heatmaps`; passes `condition_signals` to `route_item`.
+- **Grading → Mercari pricing** (`ml/price_keras.py` + `route.py`): the trained model's main feature is `item_condition_id` (1=New…5=Poor) plus name/brand + category TF-IDF text. New `_effective_condition(grade, signals)` refines that id from the grading signals — grade A **with tags/box/accessories + functional → New(1)**; A missing accessories → Like-new(2); not functional → Poor(5). Threaded `condition_signals` through `route_item → _predict_price → predict_price_inr`. So the detailed grade now visibly moves the price.
+- **Frontend** (`SellIt.jsx`, `GradingResultPage.jsx`): send a `slots` field per image; show **category condition chips** (✓/✕ Original tags / box / Powers on / Accessories) and a **multi-angle defect-map strip** ("N angles inspected"), with defect chips tagged by angle.
+
+**Verified:** `manage.py check` 0 issues · `vite build` clean · ML structural test (3-angle aggregation → worst grade C, per-angle defects, synthesized summary, signals, effective-condition mapping all correct) · live caption() returns the new schema.
+
+## SESSION LOG — 2026-06-15 · Curated demo catalog, pagination/search, catalogue-free Sell-It + trained pricing
+
+Fixed the two demo blockers the user reported (bad dataset seeding; broken Sell-It pricing).
+
+**A. Seeding & storefront**
+- **NEW `core/management/commands/seed_demo.py`** — self-contained, reads **no dataset files**. Builds the whole store from `_demo_catalog.py` (every product → one NEW listing), then pre-classifies a subset as second-life **on the same products** (buying options): Renewed = balanced phones/laptops/**monitors** (round-robin so monitors actually appear, not just top-by-MRP laptops); Revive = balanced tees + shoes + a few open-box electronics. Generates Health Cards; seeds returnable demo orders (phone/laptop/monitor/t-shirt/shoes) + credits. Verified: **57 products · 57 New · 16 Revive · 10 Renewed · 26 cards**; Renewed = Monitor:4/Laptop:3/Phone:3, Revive = Apparel:7/Footwear:6 + open-box. No women data.
+- `_demo_catalog.py` — added **6 Monitors** (category `"Monitor"`) + a few Home/Books/Toys extras for variety.
+- **Monitor category profile** added to `ml/category_profiles.py` + `frontend/src/utils/categoryProfiles.js` (screen-on/ports/stand prompts, `is_electronics`), aliases monitor/display/screen, added to `SELLABLE_CATEGORIES`. Electronics checks key off `is_electronics()` so Monitor escalates correctly in `risk_tier`.
+- **Numbered-page pagination** in `core/views.py` `ListingListView` (page/page_size → count/num_pages, applied in BOTH the normal and near-me branches — the near-me branch previously hard-capped at 40 with no paging, the real "all on one page" cause). **Search** now matches title OR brand (`Q`).
+- Frontend: `HomePage.jsx` drives `page` via URL + resets on search/filter; `ProductFeed.jsx` renders an Amazon-style numbered pager (Prev · 1 … N · Next).
+- **`seed_real.py` / `import_amazon_data.py` / `download_datasets.py` / `data/meta_*.jsonl` are DEPRECATED** (left in repo, no longer used; safe to delete).
+
+**B. Sell-It (catalogue-free) + trained-model pricing**
+- `SellIt.jsx`: removed the catalogue auto-complete dependency — seller types **product name + original price** freely (categories incl. Monitor). Price now comes **after** grading: `runGradingMulti` sends `mrp` + `expected_title` + `geohash5` to `/api/grade/inspect/`, reads `route.price` (the trained-model resale price) → pre-fills asking price, adjustable **±20%** (clamped on submit).
+- Wired the trained model end-to-end: `route_item`/`_predict_price` now accept `title`/`brand` and pass them to `price_keras.predict_price_inr`; `grade/views.py` passes `expected_title`. `REVIVE_USE_KERAS_PRICE=1` in `.env`.
+- **Important fix:** the Mercari `.keras` ensemble predicts an absolute US-marketplace price that ignores MRP magnitude (a like-new iPhone came back at ₹5.4k). Per §4.1 it's a *market signal* → `_predict_price` now **anchors it on catalog MRP** via the grade-recovery curve (`0.70*anchor + 0.30*model`, clamped 8–92% MRP); per-defect deductions still applied after. Verified credible: A iPhone 69,900→₹39,787 (57%), C iPhone+defect→₹17,915 (26%), B Laptop→₹23,921 (44%), B Monitor→₹11,083 (44%), A Nike→₹7,934 (61%). Grade+defects clearly drive the price.
+
+**Verified this session:** `manage.py check` 0 issues · `seed_demo` clean (counts above) · `vite build` clean (1894 modules) · Keras ensemble loads (TF/nltk/scipy present) and serves anchored prices via `route_item`.
 
 ## SESSION LOG — 2026-06-14 · Integrate Pillars 1/2/3/5 (UNBLOCKED)
 
