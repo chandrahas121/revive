@@ -37,18 +37,18 @@ const GRADE_TEXT_COLOR = {
 const ProductDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addToCart, cart } = useCart()
+  const { addToCart, removeFromCart, updateQuantity, cart, getItemQty } = useCart()
 
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [added, setAdded] = useState(false)
   const [selectedSize, setSelectedSize] = useState(null)
   const SIZES = [2, 4, 6, 8, 10, 12, 14, 16]
   const [showHealthCard, setShowHealthCard] = useState(false)
   const [cardData, setCardData] = useState(null)
   const [cardLoading, setCardLoading] = useState(false)
   const [advancing, setAdvancing] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const handleAdvanceStage = async () => {
     if (!listing) return
@@ -71,6 +71,9 @@ const ProductDetailPage = () => {
   }, [id])
 
   const inCart = cart.some((item) => Number(item.id) === Number(id))
+  const cartQty = getItemQty(id)
+  const isSecondLife = listing ? listing.source !== 'new' : false
+  const maxStock = listing?.stock ?? (isSecondLife ? 1 : 10)
 
   const handleViewHealthCard = async () => {
     setShowHealthCard(true)
@@ -97,8 +100,16 @@ const ProductDetailPage = () => {
       grade: listing.grade,
       source: listing.source,
       size: selectedSize,
+      maxStock,
     })
-    setAdded(true)
+  }
+
+  const handleIncrement = () => {
+    if (cartQty < maxStock) updateQuantity(id, cartQty + 1)
+  }
+  const handleDecrement = () => {
+    if (cartQty > 1) updateQuantity(id, cartQty - 1)
+    else removeFromCart(id)
   }
 
   if (loading) return (
@@ -290,7 +301,20 @@ const ProductDetailPage = () => {
             {product.description && (
               <div className="mb-3">
                 <p className="text-base font-bold text-[#0F1111] mb-2">About this item</p>
-                <p className="text-sm text-[#0F1111] leading-relaxed">{product.description}</p>
+                <div className={`text-sm text-[#0F1111] leading-relaxed ${!descExpanded ? 'line-clamp-4' : ''}`}>
+                  {product.description}
+                </div>
+                {product.description.length > 200 && (
+                  <button
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    className="text-[#007185] hover:underline hover:text-[#c45500] text-sm mt-1 flex items-center font-semibold focus:outline-none"
+                  >
+                    <svg className={`w-3.5 h-3.5 mr-1 transform transition-transform ${descExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    {descExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -368,17 +392,61 @@ const ProductDetailPage = () => {
                 </p>
               )}
 
-              <button
-                onClick={handleAddToCart}
-                disabled={inCart || added || staged}
-                className={`w-full py-2 rounded text-sm font-bold border transition-colors
-                  ${inCart || added || staged
-                    ? 'bg-[#F0F2F2] text-gray-400 cursor-default border-[#D5D9D9]'
-                    : 'text-[#131921] border-[#f0c040] shadow-sm active:scale-95'}`}
-                style={(inCart || added || staged) ? {} : { background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
-              >
-                {staged ? 'Not yet available' : inCart || added ? 'Added to Cart' : 'Add to Cart'}
-              </button>
+              {/* Staged (refurbishing / held-local) items are visible but not buyable yet.
+                  Otherwise: quantity selector once in cart, else Add to Cart. */}
+              {staged ? (
+                <button
+                  disabled
+                  className="w-full py-2 rounded text-sm font-bold border bg-[#F0F2F2] text-gray-400 cursor-default border-[#D5D9D9]"
+                >
+                  Not yet available
+                </button>
+              ) : inCart ? (
+                <div className="space-y-2">
+                  {/* Amazon-style qty row */}
+                  <div className="flex items-center justify-center gap-0 border border-[#D5D9D9] rounded-lg overflow-hidden">
+                    <button
+                      onClick={handleDecrement}
+                      className="w-10 h-10 flex items-center justify-center text-lg font-bold text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6] transition-colors border-r border-[#D5D9D9]"
+                    >
+                      {cartQty === 1 ? (
+                        <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                      ) : '−'}
+                    </button>
+                    <span className="flex-1 text-center text-sm font-bold text-[#0F1111] bg-white py-2">
+                      {cartQty}
+                    </span>
+                    <button
+                      onClick={handleIncrement}
+                      disabled={cartQty >= maxStock}
+                      className={`w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors border-l border-[#D5D9D9]
+                        ${cartQty >= maxStock ? 'text-gray-300 bg-[#F0F2F2] cursor-not-allowed' : 'text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6]'}`}
+                    >
+                      +
+                    </button>
+                  </div>
+                  {isSecondLife && (
+                    <p className="text-[11px] text-center text-amber-600">One-of-a-kind item · qty 1 only</p>
+                  )}
+                  {!isSecondLife && cartQty >= maxStock && (
+                    <p className="text-[11px] text-center text-amber-600">Maximum available stock reached</p>
+                  )}
+                  <button
+                    onClick={() => removeFromCart(id)}
+                    className="w-full text-center text-xs text-[#007185] hover:text-[#c45500] hover:underline py-1"
+                  >
+                    Remove from cart
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  className="w-full py-2 rounded text-sm font-bold border text-[#131921] border-[#f0c040] shadow-sm active:scale-95 transition-colors"
+                  style={{ background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+                >
+                  Add to Cart
+                </button>
+              )}
 
               {!staged && (
                 <button
