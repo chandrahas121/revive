@@ -4,16 +4,34 @@
 > NOTE: working copy is under `...\OneDrive\Documents\amazon-hackon`. OneDrive has since been **quit** (user confirmed); the mid-merge corruption documented below is resolved. Sandbox bash may still lag behind file-tool writes — that's a sandbox artifact, not disk corruption.
 
 > ## ⚡ CURRENT STATE (read first)
-> Pillars 1/2/3/5 integrated; app builds. **Storefront is now driven by a self-contained curated demo catalog (`seed_demo`) — the Amazon dataset import is DEPRECATED/removed from the demo path** (it was women-heavy + only-electronics-renewed). Numbered-page pagination + title/brand search. Sell-It is catalogue-free (type name + original price) and the **trained `.keras` price model serves the resale suggestion**, MRP-anchored + per-defect, adjustable ±20%. Both Health Cards live.
+> Pillars 1/2/3/5 integrated; app builds. **Storefront is now driven by a self-contained curated demo catalog (`seed_demo`) — now ~172 products balanced across Phone/Laptop/Footwear/men's-Apparel (172 New · 30 Revive · 18 Renewed).** Product pages show **real customer reviews fetched from the Amazon Reviews 2023 dataset** (Amazon-style summary + star breakdown + review list; see 2026-06-15d log). The Amazon *metadata* catalog import is DEPRECATED/removed from the demo path (it was women-heavy + only-electronics-renewed) — but the *review* dataset is now used via `data/download_reviews.py`. Numbered-page pagination + title/brand search. Sell-It is catalogue-free (type name + original price) and the **trained `.keras` price model serves the resale suggestion**, MRP-anchored + per-defect, adjustable ±20%. Both Health Cards live.
 > **Staged second-life LIFECYCLE (2026-06-15c):** returns/listings are NOT instantly live — they walk a disposition-driven track (`core/lifecycle.py`): Renewed = pickup→refurbishing→certified-live→sold; Revive = held-local(awaiting demand)→live→sold; sealed→Restock-New (exits); dead→recycle/donate. Return flow stages the item via `POST /api/returns/process/`; demo `POST /api/listings/<id>/advance/` steps stages on camera. Staged items show in the storefront with a `⏳` badge but aren't buyable until live. Timeline UI: `frontend/.../LifecycleTimeline.jsx` (on the return result + product page + the [Demo] advance button).
 > **To run the demo on your machine:**
 > ```bash
+> python data/download_reviews.py                   # once: pull real Amazon reviews → data/reviews_*.jsonl
 > cd backend && python manage.py migrate
-> python manage.py seed_demo                       # curated catalog, NO dataset files
+> python manage.py seed_demo --revive 30 --renewed 18   # ~172 products + real reviews
 > cd ../frontend && npm run build                  # or npm run dev
 > ```
 > Trained price model: `REVIVE_USE_KERAS_PRICE=1` is set in `backend/.env`. It loads ~2.3 GB on the **first** Sell-It grade (~20–35 s) → **pre-warm before recording** (start backend, grade one throwaway item). Unset/0 = fast heuristic, no model load. (`seed_demo` forces it off so seeding stays fast.)
 > Logins: buyer `demo@revive.in / demo12345`, sellers `*.seller@revive.in / seller12345`.
+
+## SESSION LOG — 2026-06-15d · Real Amazon reviews + ~150-product balanced catalog
+
+User ask: items + their reviews should display **like Amazon does**, with the review text **fetched from the Amazon reviews dataset**; categories phones / men's clothing / shoes / laptops. Plus: grow the catalog to **~100–200 products balanced across categories**, listed across New / Revive / Renewed (most in New).
+
+**A. Real reviews from the Amazon Reviews 2023 (UCSD/McAuley) dataset.**
+- **NEW `data/download_reviews.py`** — streams the raw per-category review `.jsonl.gz` (multi-GB) over HTTP and **early-stops** after N usable reviews per *storefront bucket*, so we pull a few MB not GB. Buckets: `phone`→Cell_Phones_and_Accessories, `laptop`→Electronics, `footwear`/`apparel`→Clothing_Shoes_and_Jewelry. Each kept review is keyword-relevance + length filtered, mojibake (`U+FFFD`→`'`) and `<br/>` cleaned. Output: `data/reviews_<bucket>.jsonl` (`rating,title,text,author_id,asin,verified,helpful,timestamp`). **Ran it: 2300–2400 real reviews across the 4 buckets.**
+- **NEW `core.models.Review`** (FK→Product: author, rating, title, body, verified_purchase, helpful_votes, review_date, source_asin) — migration **`0008_review`**. Authors are anonymised in the dataset, so a deterministic "Firstname L." display name is derived from the opaque `user_id` (mixed IN/US pool).
+- **`seed_demo._seed_reviews`** attaches the real reviews to products **by category**. Real review TEXT is 100% authentic, but each product's set is composed by **dealing each real star-bucket round-robin** across all products in the category (low-star buckets capped) so every item gets the same believable Amazon positive-skew — verified: **all products 4.2–4.7★, ~15 reviews each** (no more flagship-at-2.7★ clumping). Product `rating` is recomputed from its real reviews; `rating_count` stays the large catalogue figure (Amazon shows far more ratings than written reviews).
+- **API**: `ListingDetailView` now returns `ratings` (`average`, `total`, `review_count`, 5→1 `breakdown`) + `reviews` (top 30, most-helpful first via `Review.Meta.ordering`). New `ReviewSerializer`.
+- **UI** (`ProductDetailPage.jsx`): real aggregate replaces the hardcoded "142 ratings / 4 stars" (partial-fill `Stars` component + click-to-scroll); a full **"Customer reviews"** section = rating summary + 5★→1★ breakdown bars + review list (avatar, name, stars, bold title, "Reviewed on <date>", **Verified Purchase**, body, "N people found this helpful").
+
+**B. Bigger balanced catalog.** `_demo_catalog.py` expanded **57→172 products**, balanced across the hero categories: **Phone 40, Apparel 40 (men's tees/shirts/pants/jackets), Laptop 38, Footwear 38**, + Monitor 8 + a few Home/Books/Toys. `seed_demo --revive 30 --renewed 18` → **172 New · 30 Revive · 18 Renewed · 48 cards** (most in New, as asked).
+
+**Verified:** `manage.py check` 0 · `makemigrations`/`migrate` clean (0008) · `seed_demo` clean (counts above, ratings 4.2–4.7) · detail API returns ratings+reviews (sample verified) · `vite build` clean (1896 modules).
+
+**Re-run on your machine:** `python data/download_reviews.py` (once, pulls the real reviews) → `cd backend && python manage.py migrate && python manage.py seed_demo --revive 30 --renewed 18`. `seed_demo` skips review seeding gracefully if the `data/reviews_*.jsonl` files aren't present.
 
 ## SESSION LOG — 2026-06-15c · Laptop regrade bug + staged second-life LIFECYCLE (returns don't go live instantly)
 
@@ -216,7 +234,7 @@ AI decision engine for returned/unused products: identify product from catalog �
 - ✅ **Restock-as-New** — importer excludes RESTOCK_NEW/RECYCLE_DONATE from second-life listings (they stay in the New catalog / exit), per §6.
 
 ### Still open / optional
-- **Review text**: importer stores rating + rating_count only. Add a `Review` model + import review jsonl if individual reviews are wanted.
+- ✅ **Review text** (done 2026-06-15d): `Review` model + `data/download_reviews.py` (real Amazon Reviews 2023 data) + `seed_demo._seed_reviews` + Amazon-style reviews UI on the product page.
 - **Real demand index (Q10):** `ml/build_demand_index.py` still synthetic; feed real order/search history.
 - **DINOv2 threshold calibration (Q4):** env `REVIVE_INSTANCE_THRESHOLD` default 0.55 — calibrate on real pairs.
 - **Demo product images** are clean category-representative Unsplash URLs (a few phones/laptops share one) — swap exact press shots into `_demo_catalog.py` `IMG`/items if desired.

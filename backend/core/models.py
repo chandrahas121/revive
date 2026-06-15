@@ -45,6 +45,27 @@ class Product(models.Model):
         return self.title
 
 
+class Review(models.Model):
+    """A customer review on a catalogue product — real text imported from the
+    Amazon Reviews 2023 (UCSD/McAuley) dataset, displayed Amazon-style on the
+    product page."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    author = models.CharField(max_length=80)
+    rating = models.IntegerField(default=5)            # 1–5 stars
+    title = models.CharField(max_length=160, blank=True)
+    body = models.TextField(blank=True)
+    verified_purchase = models.BooleanField(default=True)
+    helpful_votes = models.IntegerField(default=0)
+    review_date = models.DateField(null=True, blank=True)
+    source_asin = models.CharField(max_length=20, blank=True, default='')  # dataset provenance
+
+    class Meta:
+        ordering = ['-helpful_votes', '-review_date']
+
+    def __str__(self):
+        return f"{self.rating}★ {self.title[:40]} — {self.product.title[:30]}"
+
+
 class Listing(models.Model):
     """A specific item available for sale — the core inventory unit."""
 

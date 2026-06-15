@@ -16,7 +16,9 @@ Run:
 
 Logins: buyer demo@revive.in / demo12345 · sellers *.seller@revive.in / seller12345
 """
-from datetime import timedelta
+from datetime import timedelta, date
+from pathlib import Path
+import json
 import os
 import random
 
@@ -26,9 +28,10 @@ import random
 os.environ["REVIVE_USE_KERAS_PRICE"] = "0"
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 
-from core.models import Product, Listing, Order, User
+from core.models import Product, Listing, Order, User, Review
 from trust.models import HealthCard, LedgerEntry
 from green.models import CreditTransaction
 from core.management.commands.import_amazon_data import create_listing_for, _route_fn
@@ -47,6 +50,45 @@ RENEWED_CATS = {"Phone", "Laptop", "Monitor"}
 # Categories that lead the Revive (AI-graded) second-life surface.
 REVIVE_LEAD_CATS = ["Apparel", "Footwear"]
 
+# Where the downloaded real-review JSONL files live (repo_root/data).
+DATA_DIR = Path(__file__).resolve().parents[4] / "data"
+# storefront bucket file → catalogue category it feeds.
+REVIEW_BUCKETS = {
+    "phone": "Phone", "laptop": "Laptop",
+    "footwear": "Footwear", "apparel": "Apparel",
+}
+
+# Real Amazon reviews are anonymised (opaque user_id) — give each a believable,
+# deterministic display name so the page reads like Amazon. Mixed IN/US pool.
+_FIRST = ["Arjun", "Priya", "Rohan", "Aisha", "Vikram", "Sneha", "Karan", "Neha",
+          "Aditya", "Pooja", "Rahul", "Divya", "Sameer", "Ananya", "Nikhil",
+          "Megha", "John", "Sarah", "Michael", "Emily", "David", "Jessica",
+          "Daniel", "Laura", "Chris", "Amanda", "Kevin", "Rachel", "Manish",
+          "Shreya", "Tarun", "Ritika", "Imran", "Fatima", "George", "Olivia"]
+_LAST_INITIAL = list("ABCDFGHJKLMNPRSTVW")
+
+
+def _display_name(author_id: str, rng: random.Random) -> str:
+    """Deterministic-ish 'Firstname L.' from the dataset's opaque author_id."""
+    seed = sum(ord(c) for c in (author_id or "anon")) or rng.randint(1, 9999)
+    return f"{_FIRST[seed % len(_FIRST)]} {_LAST_INITIAL[(seed // 7) % len(_LAST_INITIAL)]}."
+
+
+def _load_reviews(bucket: str):
+    path = DATA_DIR / f"reviews_{bucket}.jsonl"
+    if not path.exists():
+        return []
+    out = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    out.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return out
+
 
 def _guarantee(tier):
     if tier == 3:
@@ -64,6 +106,87 @@ class Command(BaseCommand):
                             help="How many phones/laptops/monitors to also list as Renewed.")
         parser.add_argument("--revive", type=int, default=16,
                             help="How many items to also list as Revive (tees/shoes + a few open-box).")
+
+    # ── Real Amazon reviews → products, by category ──────────────────────────
+    @transaction.atomic
+    def _seed_reviews(self, products):
+        by_cat = {}
+        for p in products:
+            by_cat.setdefault(p.category, []).append(p)
+
+        # Amazon products skew positive — a flagship doesn't average 2.7★. We use
+        # 100% REAL review TEXT, but deal each REAL star bucket round-robin across
+        # every product in the category, so all products get the same positive
+        # skew (~4.2★) instead of one item clumping the low-rated reviews.
+        rng = random.Random(11)
+        total = 0
+        for bucket, category in REVIEW_BUCKETS.items():
+            pool = _load_reviews(bucket)
+            targets = by_cat.get(category, [])
+            if not pool or not targets:
+                self.stdout.write(f"  reviews[{bucket}]: no data/targets — skipped")
+                continue
+
+            # Bucket the real reviews by their real star rating, then cap the
+            # low-star buckets so the blended average lands in the believable
+            # 4.0–4.5 band (keep some critical reviews, just not a flood).
+            star_pool = {s: [] for s in range(1, 6)}
+            for rec in pool:
+                s = max(1, min(5, int(rec.get("rating", 5) or 5)))
+                star_pool[s].append(rec)
+            for s in star_pool:
+                rng.shuffle(star_pool[s])
+            keep5 = len(star_pool[5])
+            caps = {5: keep5, 4: keep5, 3: keep5 // 3, 2: keep5 // 6, 1: keep5 // 10}
+            for s, cap in caps.items():
+                star_pool[s] = star_pool[s][:max(0, cap)]
+
+            per = max(8, sum(len(v) for v in star_pool.values()) // len(targets))
+            counts = {p.id: 0 for p in targets}
+            assign = {p.id: [] for p in targets}
+            ti = 0
+            for s in (5, 4, 3, 2, 1):           # deal best reviews first, round-robin
+                for rec in star_pool[s]:
+                    placed = False
+                    for _ in range(len(targets)):
+                        p = targets[ti % len(targets)]
+                        ti += 1
+                        if counts[p.id] < per:
+                            assign[p.id].append((s, rec))
+                            counts[p.id] += 1
+                            placed = True
+                            break
+                    if not placed:
+                        break
+
+            objs = []
+            for p in targets:
+                pairs = assign[p.id]
+                if not pairs:
+                    continue
+                ratings = [s for s, _ in pairs]
+                for s, rec in pairs:
+                    ts = rec.get("timestamp") or 0
+                    try:
+                        rdate = date.fromtimestamp(ts / 1000) if ts else None
+                    except (OSError, OverflowError, ValueError):
+                        rdate = None
+                    objs.append(Review(
+                        product=p, author=_display_name(rec.get("author_id", ""), rng),
+                        rating=s, title=(rec.get("title") or "")[:160],
+                        body=(rec.get("text") or "")[:650],
+                        verified_purchase=bool(rec.get("verified", True)),
+                        helpful_votes=int(rec.get("helpful", 0) or 0),
+                        review_date=rdate, source_asin=(rec.get("asin") or "")[:20],
+                    ))
+                # Star rating from the real reviews; rating_count stays the large
+                # catalogue figure (Amazon shows far more ratings than reviews).
+                p.rating = round(sum(ratings) / len(ratings), 1)
+                total += len(pairs)
+            Review.objects.bulk_create(objs)
+            Product.objects.bulk_update(targets, ["rating"])
+            self.stdout.write(f"  reviews[{bucket}->{category}]: {len(objs)} across {len(targets)} products")
+        return total
 
     def handle(self, *args, **o):
         # 1) Demo sellers + buyer
@@ -87,12 +210,18 @@ class Command(BaseCommand):
         self.stdout.write("Wiping existing catalog...")
         HealthCard.objects.all().delete()
         Order.objects.all().delete()
+        Review.objects.all().delete()
         Listing.objects.all().delete()
         Product.objects.all().delete()
         CreditTransaction.objects.filter(user=demo).delete()
 
         self.stdout.write("Building branded NEW catalog...")
         products = upsert_demo_catalog()   # each gets one NEW listing at MRP
+
+        # 2b) Attach REAL Amazon reviews (downloaded from the UCSD Amazon Reviews
+        #     2023 dataset) to products, by category — and set each product's
+        #     star rating from the real reviews it received.
+        n_reviews = self._seed_reviews(products)
 
         # 3) Curate second-life listings on a subset of the SAME products
         rng = random.Random(7)
@@ -214,6 +343,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"\nDone! {Product.objects.count()} products · "
             f"{Listing.objects.filter(source='new').count()} New · "
-            f"{n_revive} Revive · {n_renewed} Renewed · {HealthCard.objects.count()} cards.\n"
+            f"{n_revive} Revive · {n_renewed} Renewed · {HealthCard.objects.count()} cards · "
+            f"{n_reviews} real Amazon reviews.\n"
             f"Catalog mix: {cats}\n"
             f"Buyer: demo@revive.in / demo12345 · Sellers: *.seller@revive.in / seller12345"))

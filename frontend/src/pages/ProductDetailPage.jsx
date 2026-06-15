@@ -34,6 +34,111 @@ const GRADE_TEXT_COLOR = {
   D: 'text-red-700',
 }
 
+// Amazon-style partial-fill star row (value 0–5).
+const Stars = ({ value = 0, className = '' }) => {
+  const pct = Math.max(0, Math.min(100, (value / 5) * 100))
+  return (
+    <span
+      className={`relative inline-block leading-none whitespace-nowrap ${className}`}
+      aria-label={`${value} out of 5 stars`}
+    >
+      <span className="text-[#D5D9D9]">★★★★★</span>
+      <span className="absolute inset-0 overflow-hidden text-[#FFA41C]" style={{ width: `${pct}%` }}>
+        ★★★★★
+      </span>
+    </span>
+  )
+}
+
+const fmtDate = (d) => {
+  if (!d) return ''
+  try {
+    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch {
+    return d
+  }
+}
+
+// Amazon-style "Customer reviews" block: rating summary + breakdown bars + list.
+const ReviewsSection = ({ ratings, reviews }) => {
+  const avg = ratings?.average || 0
+  const total = ratings?.total || reviews.length
+  const reviewCount = ratings?.review_count || reviews.length
+  const breakdown = ratings?.breakdown || {}
+  const denom = reviewCount || 1
+
+  return (
+    <section id="reviews" className="bg-white border border-[#D5D9D9] rounded-lg mt-4 px-4 py-5 sm:px-6 scroll-mt-4">
+      <h2 className="text-lg sm:text-xl font-bold text-[#0F1111] mb-4">Customer reviews</h2>
+      <div className="flex flex-col lg:flex-row gap-6">
+
+        {/* ── Summary + breakdown ── */}
+        <div className="lg:w-72 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Stars value={avg} className="text-xl" />
+            <span className="text-base text-[#0F1111]">{avg.toFixed(1)} out of 5</span>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">{total.toLocaleString('en-IN')} global ratings</p>
+
+          <div className="space-y-1.5">
+            {[5, 4, 3, 2, 1].map((star) => {
+              const c = breakdown[String(star)] || 0
+              const pct = Math.round((c / denom) * 100)
+              return (
+                <div key={star} className="flex items-center gap-2 text-sm">
+                  <span className="text-[#007185] w-12 flex-shrink-0">{star} star</span>
+                  <div className="flex-1 h-5 bg-[#F0F2F2] border border-[#D5D9D9] rounded-sm overflow-hidden">
+                    <div className="h-full bg-[#FFA41C]" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-[#007185] w-9 text-right flex-shrink-0">{pct}%</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Review list ── */}
+        <div className="flex-1 min-w-0 lg:border-l lg:border-[#D5D9D9] lg:pl-6">
+          <p className="text-base font-bold text-[#0F1111] mb-3">
+            {reviewCount.toLocaleString('en-IN')} reviews with content
+          </p>
+          {reviews.length === 0 && (
+            <p className="text-sm text-gray-500">No written reviews yet.</p>
+          )}
+          <div className="divide-y divide-[#E7E7E7]">
+            {reviews.map((r) => (
+              <div key={r.id} className="py-4 first:pt-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-[#E7E9EC] flex items-center justify-center text-xs font-bold text-[#565959]">
+                    {(r.author || '?').charAt(0)}
+                  </div>
+                  <span className="text-sm text-[#0F1111] font-medium">{r.author}</span>
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Stars value={r.rating} className="text-sm" />
+                  <span className="text-sm font-bold text-[#0F1111]">{r.title}</span>
+                </div>
+                {r.review_date && (
+                  <p className="text-xs text-gray-500 mb-1.5">Reviewed on {fmtDate(r.review_date)}</p>
+                )}
+                {r.verified_purchase && (
+                  <p className="text-xs font-bold text-[#C45500] mb-1.5">Verified Purchase</p>
+                )}
+                <p className="text-sm text-[#0F1111] leading-relaxed">{r.body}</p>
+                {r.helpful_votes > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    {r.helpful_votes.toLocaleString('en-IN')} {r.helpful_votes === 1 ? 'person' : 'people'} found this helpful
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 const ProductDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -151,6 +256,9 @@ const ProductDetailPage = () => {
   // v2 lifecycle: staged (refurbishing / held-local) items are visible but not buyable yet.
   const lc = listing.lifecycle
   const staged = lc && !lc.live && !lc.sold
+  // Customer-review aggregates (from the detail endpoint), Amazon-style.
+  const ratingAvg = listing.ratings?.average ?? product.rating ?? 0
+  const ratingTotal = listing.ratings?.total ?? product.rating_count ?? 0
 
   return (
     <div className="bg-[#EAEDED] min-h-screen">
@@ -204,15 +312,20 @@ const ProductDetailPage = () => {
               </p>
             )}
 
-            {/* Stars */}
+            {/* Stars — real aggregate from customer reviews */}
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex leading-none">
-                {[1, 2, 3, 4].map((i) => <span key={i} className="text-[#FF9900]">★</span>)}
-                <span className="text-[#D5D9D9]">★</span>
-              </div>
-              <span className="text-[#007185] text-sm hover:underline hover:text-[#c45500] cursor-pointer">
-                142 ratings
-              </span>
+              <span className="text-sm font-medium text-[#0F1111]">{ratingAvg.toFixed(1)}</span>
+              <Stars value={ratingAvg} className="text-base" />
+              <a
+                href="#reviews"
+                onClick={(e) => {
+                  e.preventDefault()
+                  document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="text-[#007185] text-sm hover:underline hover:text-[#c45500] cursor-pointer"
+              >
+                {ratingTotal.toLocaleString('en-IN')} ratings
+              </a>
             </div>
 
             <hr className="border-[#D5D9D9] mb-4" />
@@ -560,6 +673,11 @@ const ProductDetailPage = () => {
           )}
 
         </div>
+
+        {/* ── Customer reviews (real Amazon Reviews 2023 data) ── */}
+        {listing.reviews && (
+          <ReviewsSection ratings={listing.ratings} reviews={listing.reviews} />
+        )}
       </main>
     </div>
   )

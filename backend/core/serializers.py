@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import User, Product, Listing, Order
+from .models import User, Product, Listing, Order, Review
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ('id', 'author', 'rating', 'title', 'body',
+                  'verified_purchase', 'helpful_votes', 'review_date')
 
 
 class RegisterSerializer(serializers.ModelSerializer):

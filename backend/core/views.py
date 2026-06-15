@@ -18,10 +18,10 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 logger = logging.getLogger(__name__)
 
-from .models import Listing, Product, Order
+from .models import Listing, Product, Order, Review
 from .serializers import (
     RegisterSerializer, UserSerializer, ListingSerializer,
-    CreateListingSerializer, OrderSerializer,
+    CreateListingSerializer, OrderSerializer, ReviewSerializer,
 )
 
 
@@ -355,6 +355,24 @@ class ListingDetailView(APIView):
         order = {'new': 0, 'renewed': 1}
         opts = sorted(siblings, key=lambda l: (order.get(l.source, 2), float(l.price)))
         data['buying_options'] = ListingSerializer(opts, many=True).data
+
+        # Real customer reviews (Amazon Reviews 2023 dataset) on this product,
+        # Amazon-style: a star breakdown + the most-helpful reviews first.
+        reviews = list(listing.product.reviews.all())
+        breakdown = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+        for r in reviews:
+            breakdown[r.rating] = breakdown.get(r.rating, 0) + 1
+        n = len(reviews)
+        avg = round(sum(r.rating for r in reviews) / n, 1) if n else float(listing.product.rating)
+        data['ratings'] = {
+            'average': avg,
+            # Amazon shows far more total ratings than written reviews — use the
+            # catalogue rating_count as the headline figure, reviews as the detail.
+            'total': listing.product.rating_count or n,
+            'review_count': n,
+            'breakdown': {str(k): breakdown[k] for k in (5, 4, 3, 2, 1)},
+        }
+        data['reviews'] = ReviewSerializer(reviews[:30], many=True).data
         return Response(data)
 
 
