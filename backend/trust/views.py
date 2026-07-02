@@ -12,20 +12,12 @@ from rest_framework.views import APIView
 
 from core.models import Listing
 from .models import HealthCard, LedgerEntry
+from .services import generate_health_card
 
 logger = logging.getLogger(__name__)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-
-def _guarantee_terms(tier: int, inspected_by: str) -> tuple:
-    """Return (guarantee_days, guarantee_holder) based on tier and inspection type."""
-    if tier == 3 or inspected_by == 'ai_spn':
-        return 90, 'Amazon SPN'
-    if tier == 2:
-        return 30, 'seller_escrow'
-    return 7, 'seller_escrow'
-
 
 def _generate_qr_b64(data: str):
     """Return base64-encoded PNG QR code, or None if qrcode is not installed."""
@@ -157,50 +149,13 @@ class HealthCardGenerateView(APIView):
         except Listing.DoesNotExist:
             return Response({'error': 'Listing not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        tier = route_result.get('tier') or listing.tier or 1
-        guarantee_days, guarantee_holder = _guarantee_terms(tier, inspected_by)
-
-        card, created = HealthCard.objects.get_or_create(listing=listing)
-
-        # Determine prev_hash for the new ledger entry
-        last_entry = card.ledger.last() if not created else None
-        prev_hash  = last_entry.this_hash if last_entry else ''
-
-        # Update card fields
-        card.tier             = tier
-        card.grade            = grade_result.get('grade', 'B')
-        card.confidence       = float(grade_result.get('confidence') or 0.5)
-        card.defects          = grade_result.get('defects') or []
-        card.completeness     = float(grade_result.get('completeness') or 0.8)
-        card.condition_summary = grade_result.get('condition_summary', '')
-        card.functional       = bool(grade_result.get('functional', True))
-        card.box_present      = bool(grade_result.get('box_present', False))
-        card.inspected_by     = inspected_by
-        card.model_version    = grade_result.get('model_version', 'revive-grade-v1.0')
-        card.battery_pct      = int(battery_pct) if battery_pct is not None else None
-        card.imei             = imei or ''
-        card.previous_owners  = card.previous_owners if not created else 0
-        card.guarantee_days   = guarantee_days
-        card.guarantee_holder = guarantee_holder
-        card.qr_data          = ''  # reset so save() regenerates
-        card.save()
-
-        # Append 'graded' ledger entry
-        LedgerEntry.objects.create(
-            card=card,
-            event=LedgerEntry.Event.GRADED,
-            prev_hash=prev_hash,
-            data={
-                'grade':        card.grade,
-                'confidence':   card.confidence,
-                'defects':      card.defects,
-                'tier':         tier,
-                'inspected_by': inspected_by,
-                'route':        route_result.get('chosen_path', ''),
-                'routed_price': route_result.get('price', ''),
-                'km_saved':     route_result.get('km_saved', 0),
-                'co2_saved_kg': route_result.get('co2_saved_kg', 0),
-            },
+        card, created = generate_health_card(
+            listing,
+            grade_result=grade_result,
+            route_result=route_result,
+            inspected_by=inspected_by,
+            battery_pct=battery_pct,
+            imei=imei,
         )
 
         return Response(

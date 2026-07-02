@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ShieldCheck, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Header from '../components/Header';
-import { inspectReturn, routeItem, generateHealthCard, processReturn } from '../api/client';
+import {
+  inspectReturnGatedAsync, pollInspect, uploadFileToStorage,
+  routeItem, generateHealthCard, processReturn,
+} from '../api/client';
 import { riskTier, TIER_INFO, estimateGreenCredits } from '../utils/tier';
 // v2 (point 1): return capture prompts come from the CATEGORY, not the price tier.
 import { capturePrompts } from '../utils/categoryProfiles';
@@ -115,7 +118,16 @@ const GradingResultPage = () => {
       // slot key so grading is category+angle aware (soles, tag, screen-on, …).
       const ordered = ['front', ...Object.keys(photoSlots).filter((k) => k !== 'front')];
       ordered.forEach((k) => { if (photoSlots[k]) { fd.append('images', photoSlots[k]); fd.append('slots', k); } });
-      if (videoFile) fd.append('video', videoFile);
+
+      // Upload the (large) video straight to storage via a presigned URL so it never
+      // travels through the job queue; fall back to sending the file if storage is off.
+      if (videoFile) {
+        let videoUrl = null;
+        try { videoUrl = await uploadFileToStorage(videoFile); } catch { videoUrl = null; }
+        if (videoUrl) fd.append('video_url', videoUrl);
+        else fd.append('video', videoFile);
+      }
+
       fd.append('expected_title', productTitle);
       fd.append('category', category);
       fd.append('product_id', String(order?.listing_id || 'return'));
@@ -123,14 +135,20 @@ const GradingResultPage = () => {
       fd.append('geohash5', 'tbxx1');
       fd.append('operator', 'agent');
 
-      const res = await inspectReturn(fd);
-      if (res.data.match === false) {
+      // Async: submit → job_id → poll. The heavy multi-image + video ML (and the
+      // fraud gates) run in a Celery worker, so the web request never blocks.
+      const { data: submit } = await inspectReturnGatedAsync(fd);
+      const data = (submit.job_id && submit.status === 'processing')
+        ? await pollInspect(submit.job_id)
+        : submit;
+
+      if (data.match === false) {
         clearInterval(tick);
-        setMismatch(res.data);
+        setMismatch(data);
         setPhase('mismatch');
         return;
       }
-      setResult(res.data);
+      setResult(data);
     } catch {
       // inspect endpoint down — fall back to stored grade + a route lookup
       try {

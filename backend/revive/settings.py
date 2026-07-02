@@ -113,7 +113,11 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_REFRESH': 'refresh_token',
     'AUTH_COOKIE_SECURE': not DEBUG,     # True in production (HTTPS only)
     'AUTH_COOKIE_HTTP_ONLY': True,
-    'AUTH_COOKIE_SAMESITE': 'None',
+    # Local (DEBUG, plain http, same-site localhost): 'Lax' — browsers REJECT a
+    # SameSite=None cookie that isn't also Secure, which silently breaks login.
+    # Production (HTTPS, cross-site Vercel→Render): 'None' + Secure so the cookie
+    # is sent cross-origin.
+    'AUTH_COOKIE_SAMESITE': 'Lax' if DEBUG else 'None',
 }
 
 # ─── CORS ───────────────────────────────────────────────────────────────────
@@ -127,31 +131,57 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# S3 image storage — active when AWS_STORAGE_BUCKET_NAME env var is set.
-# Falls back to local filesystem (media/ folder) when not set.
+# Object storage — one code path, three modes selected purely by env vars, so the
+# same code runs locally and in the cloud (only the env changes):
+#   1. No S3 vars            → Django FileSystemStorage (media/ folder)     [pure local dev]
+#   2. Bucket + endpoint URL → MinIO, S3-compatible, self-hosted            [docker-compose]
+#   3. Bucket only           → real AWS S3 (+ optional CloudFront CDN)      [production]
 # boto3 picks up AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY automatically from env.
 _S3_BUCKET = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
 _S3_REGION = os.environ.get('AWS_S3_REGION_NAME', 'ap-south-1')
 _CLOUDFRONT_DOMAIN = os.environ.get('AWS_CLOUDFRONT_DOMAIN', '')
+# Endpoint Django itself uses to reach storage (e.g. http://minio:9000 inside docker).
+# Empty for real AWS (boto3 then uses the default AWS endpoint).
+_S3_ENDPOINT = os.environ.get('AWS_S3_ENDPOINT_URL', '')
+# Browser-facing endpoint used to build + presign URLs the client can actually reach
+# (e.g. http://localhost:9000). Defaults to the internal endpoint.
+_S3_PUBLIC_ENDPOINT = os.environ.get('AWS_S3_PUBLIC_ENDPOINT_URL', _S3_ENDPOINT)
+
+# Exposed at module level so core/storage.py can build a matching presign client.
+AWS_STORAGE_BUCKET_NAME = _S3_BUCKET
+AWS_S3_REGION_NAME = _S3_REGION
+AWS_S3_ENDPOINT_URL = _S3_ENDPOINT or None
+AWS_S3_PUBLIC_ENDPOINT_URL = _S3_PUBLIC_ENDPOINT or None
 
 if _S3_BUCKET:
-    if _CLOUDFRONT_DOMAIN:
+    _s3_options = {
+        'bucket_name': _S3_BUCKET,
+        'region_name': _S3_REGION,
+        'file_overwrite': False,              # never silently overwrite uploads
+        'object_parameters': {
+            'CacheControl': 'max-age=86400',  # browser caches images for 1 day
+        },
+    }
+
+    if _S3_ENDPOINT:
+        # MinIO / self-hosted S3: explicit endpoint + path-style addressing.
+        _public = _S3_PUBLIC_ENDPOINT.rstrip('/')
+        _proto, _, _host = _public.partition('://')
+        _s3_options['endpoint_url'] = _S3_ENDPOINT
+        _s3_options['addressing_style'] = 'path'
+        _s3_options['url_protocol'] = f'{_proto}:'          # http: for local MinIO
+        _s3_options['custom_domain'] = f'{_host}/{_S3_BUCKET}'  # localhost:9000/revive-media
+        MEDIA_URL = f'{_public}/{_S3_BUCKET}/'
+    elif _CLOUDFRONT_DOMAIN:
+        _s3_options['custom_domain'] = _CLOUDFRONT_DOMAIN
         MEDIA_URL = f'https://{_CLOUDFRONT_DOMAIN}/'
     else:
         MEDIA_URL = f'https://{_S3_BUCKET}.s3.{_S3_REGION}.amazonaws.com/'
-        
+
     STORAGES = {
         'default': {
             'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-            'OPTIONS': {
-                'bucket_name': _S3_BUCKET,
-                'region_name': _S3_REGION,
-                'custom_domain': _CLOUDFRONT_DOMAIN or None,
-                'file_overwrite': False,          # never silently overwrite uploads
-                'object_parameters': {
-                    'CacheControl': 'max-age=86400',  # browser caches images for 1 day
-                },
-            },
+            'OPTIONS': _s3_options,
         },
         'staticfiles': {
             'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',

@@ -166,6 +166,12 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
     [handleFileSelect]
   );
 
+  const showResult = (b64) => {
+    setProgress(100);
+    setResultImage(`data:image/jpeg;base64,${b64}`);
+    setPhase("result");
+  };
+
   const handleTryOn = async () => {
     if (!personFile) return;
     setPhase("processing");
@@ -174,22 +180,55 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
     try {
       const formData = new FormData();
       formData.append("person_image", personFile);
-      // Pass the garment as a URL — backend will fetch it
+      // Pass the garment as a URL — the service will fetch it
       formData.append("garment_image_url", garmentImage);
       formData.append("garment_description", garmentTitle || "clothing item");
 
+      // Try-On is async: submit → get a job_id → poll until done.
       const res = await api.post("/api/tryon/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 120000, // 2 min — HF Spaces can be slow
+        timeout: 30000, // submit is fast; the slow work happens in the worker
       });
 
-      const { result_image_b64 } = res.data;
-      setProgress(100);
-      setResultImage(`data:image/jpeg;base64,${result_image_b64}`);
-      setPhase("result");
+      // Back-compat: a synchronous backend may return the image directly.
+      if (res.data.result_image_b64) {
+        showResult(res.data.result_image_b64);
+        return;
+      }
+
+      const jobId = res.data.job_id;
+      if (!jobId) throw new Error("Try-on did not start. Please try again.");
+
+      // Poll the status endpoint until the worker finishes.
+      const MAX_MS = 150000; // 2.5 min ceiling — HF Spaces can be slow/cold
+      const INTERVAL_MS = 2500;
+      const startedAt = Date.now();
+
+      while (Date.now() - startedAt < MAX_MS) {
+        await new Promise((r) => setTimeout(r, INTERVAL_MS));
+
+        let statusRes;
+        try {
+          statusRes = await api.get(`/api/tryon/status/${jobId}/`, { timeout: 15000 });
+        } catch {
+          continue; // transient poll error — keep trying until the ceiling
+        }
+
+        const { status: jobStatus, result_image_b64, error } = statusRes.data;
+        if (jobStatus === "done" && result_image_b64) {
+          showResult(result_image_b64);
+          return;
+        }
+        if (jobStatus === "error") {
+          throw new Error(error || "Virtual try-on failed. Please try again.");
+        }
+      }
+
+      throw new Error("Try-on timed out — the AI service is busy. Please try again.");
     } catch (err) {
       const msg =
         err.response?.data?.error ||
+        err.message ||
         "Virtual try-on service is temporarily unavailable. Please try again.";
       setErrorMsg(msg);
       setPhase("error");

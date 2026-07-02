@@ -17,6 +17,67 @@ export const gradeAndRoute = (formData) =>
 export const inspectReturn = (formData) =>
   api.post('/api/grade/inspect/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
+// Async seller inspect (non-blocking): submit → job_id, then poll status.
+export const inspectReturnAsync = (formData) =>
+  api.post('/api/grade/inspect/async/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const getInspectStatus = (jobId) =>
+  api.get(`/api/grade/inspect/status/${jobId}/`);
+
+// ── Presigned uploads (browser → object storage direct) ───────────────────────
+export const presignUpload = ({ filename, content_type }) =>
+  api.post('/api/uploads/presign/', { filename, content_type });
+
+// Upload a File straight to object storage via a presigned POST.
+// Returns the public file URL, or null if storage isn't configured (caller then
+// falls back to sending the file through Django). Django never sees the bytes.
+export const uploadImageToStorage = async (file) => {
+  let presign;
+  try {
+    const { data } = await presignUpload({
+      filename: file.name,
+      content_type: file.type || 'image/jpeg',
+    });
+    presign = data;
+  } catch (err) {
+    if (err.response?.status === 400) return null; // storage not configured → fallback
+    throw err;
+  }
+
+  const form = new FormData();
+  Object.entries(presign.fields).forEach(([k, v]) => form.append(k, v));
+  form.append('file', file); // the file field MUST be appended last
+
+  // Bare fetch — not the `api` instance — so we don't send the API baseURL/cookies.
+  const resp = await fetch(presign.upload_url, { method: 'POST', body: form });
+  if (!resp.ok) throw new Error(`Upload failed (${resp.status})`);
+  return presign.file_url;
+};
+
+// The helper works for any file (image OR video) — content type is driven by
+// file.type. Alias for readability at call sites that upload video.
+export const uploadFileToStorage = uploadImageToStorage;
+
+// Async RETURN inspection — keeps the fraud gates (unlike the seller path).
+export const inspectReturnGatedAsync = (formData) =>
+  api.post('/api/grade/inspect/return/async/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+// Poll an inspect job (seller or return) until the worker finishes.
+// Returns the final result dict, or throws on timeout.
+export const pollInspect = async (jobId, { maxMs = 150000, intervalMs = 2500 } = {}) => {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < maxMs) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    let res;
+    try {
+      res = await getInspectStatus(jobId);
+    } catch {
+      continue; // transient poll error — keep trying until the ceiling
+    }
+    if (res.data?.status && res.data.status !== 'processing') return res.data;
+  }
+  throw new Error('Grading timed out');
+};
+
 // ── Pillar 2 — Smart Routing ──────────────────────────────────────────────────
 export const routeItem = (payload) => api.post('/api/route/', payload);
 export const demandGate = (payload) => api.post('/api/route/gate/', payload);

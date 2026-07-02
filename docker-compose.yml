@@ -1,14 +1,44 @@
 version: '3.9'
 
-# This docker-compose mimics a production deployment:
-#   - PostgreSQL instead of SQLite (real production database)
-#   - Redis for caching (demand index + listing cache)
-#   - 2 Django backend instances running simultaneously (horizontal scaling)
-#   - Nginx as a load balancer in front of both backends
+# Local-first microservices stack. Everything below runs on your laptop with
+# `docker compose up --build` and maps 1:1 to free-tier cloud services later
+# (Supabase / Upstash / S3 / Render) by changing env vars only.
 #
-# Run: docker-compose up --build
-# Then open: http://localhost  (nginx → backend1 or backend2, round-robin)
-# API:        http://localhost/api/listings/
+#   nginx (:80) ── API gateway ────────────────────────────────────────────────
+#     ├─ /api/tryon/  → tryon-service (FastAPI, independent)
+#     └─ /api/*       → backend1 / backend2 (Django, round-robin)
+#   celery-worker  ── async ML grading + review panels (never blocks the API)
+#   celery-beat    ── scheduled demand-index rebuild
+#   minio (:9000)  ── S3-compatible object storage (presigned uploads)
+#   db / redis     ── PostgreSQL + Redis
+
+# Shared backend config — one anchor, reused by web + worker + beat so they can
+# never drift apart.
+x-backend-env: &backend-env
+  DATABASE_URL: postgres://revive:revivepass@db:5432/revive
+  REDIS_URL: redis://redis:6379/0
+  SECRET_KEY: demo-secret-key-change-in-real-production
+  # DEBUG=True for the LOCAL stack: over plain http://localhost, DEBUG=False would
+  # force SECURE_SSL_REDIRECT and break every request. Production (Render) sets its
+  # own DEBUG=False with real HTTPS.
+  DEBUG: "True"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,backend1,backend2"
+  CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost"
+  CSRF_TRUSTED_ORIGINS: "http://localhost:5173,http://localhost"
+  # Object storage → local MinIO (S3-compatible). In cloud, point these at S3.
+  AWS_STORAGE_BUCKET_NAME: revive-media
+  AWS_S3_ENDPOINT_URL: http://minio:9000        # Django → MinIO (internal network)
+  AWS_S3_PUBLIC_ENDPOINT_URL: http://localhost:9000  # browser-facing (presigned URLs)
+  AWS_S3_REGION_NAME: us-east-1
+  AWS_ACCESS_KEY_ID: minioadmin
+  AWS_SECRET_ACCESS_KEY: minioadmin
+  # Try-On is its own service — Django proxies to it if hit directly.
+  TRYON_SERVICE_URL: http://tryon:8001
+  # Optional AI keys — blank unless set in a root .env (local works without them).
+  LLM_PROVIDER: ${LLM_PROVIDER:-}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+  HF_TOKEN: ${HF_TOKEN:-}
 
 services:
 
@@ -29,7 +59,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── Cache ──────────────────────────────────────────────────────────────────
+  # ─── Cache + Celery broker ────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:
@@ -40,60 +70,124 @@ services:
       timeout: 3s
       retries: 5
 
+  # ─── Object storage (S3-compatible) ──────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console (http://localhost:9001)
+    volumes:
+      - miniodata:/data
+
+  # One-shot: create the bucket and make it publicly readable (so image URLs work).
+  # This container self-waits for MinIO (the `until mc alias set` loop), so MinIO
+  # itself needs no healthcheck.
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      mc mb --ignore-existing local/revive-media;
+      mc anonymous set download local/revive-media;
+      echo 'MinIO bucket revive-media ready';
+      "
+
   # ─── Backend instance 1 ─────────────────────────────────────────────────────
   backend1:
     build: .
-    environment:
-      DATABASE_URL: postgres://revive:revivepass@db:5432/revive
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: demo-secret-key-change-in-real-production
-      DEBUG: "False"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,backend1,backend2"
-      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost"
-      CSRF_TRUSTED_ORIGINS: "http://localhost:5173,http://localhost"
+    environment: *backend-env
     ports:
       - "8000:8000"
+    volumes:
+      # Real Amazon Reviews 2023 samples for seed_demo (not baked into the image).
+      - ./data:/app/data:ro
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - media_files:/app/backend/media
 
-  # ─── Backend instance 2 (identical — this is horizontal scaling) ─────────────
+  # ─── Backend instance 2 (identical — horizontal scaling) ─────────────────────
   backend2:
     build: .
-    environment:
-      DATABASE_URL: postgres://revive:revivepass@db:5432/revive
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: demo-secret-key-change-in-real-production
-      DEBUG: "False"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,backend1,backend2"
-      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost"
-      CSRF_TRUSTED_ORIGINS: "http://localhost:5173,http://localhost"
+    environment: *backend-env
     ports:
       - "8001:8000"
+    volumes:
+      - ./data:/app/data:ro
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - media_files:/app/backend/media
 
-  # ─── Load balancer (distributes traffic between backend1 and backend2) ────────
+  # ─── Celery worker — runs the async ML grading + review-panel tasks ──────────
+  # Without this, POST /api/grade/async/ would enqueue jobs nothing consumes.
+  celery-worker:
+    build: .
+    command: celery -A revive worker -l info --concurrency 2
+    environment: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ─── Celery beat — scheduler for the 6-hourly demand-index rebuild ───────────
+  celery-beat:
+    build: .
+    command: celery -A revive beat -l info
+    environment: *backend-env
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ─── Try-On micro-service (FastAPI) — independent, GPU/HuggingFace-bound ──────
+  tryon:
+    build: ./services/tryon
+    environment:
+      # DB 1 (Django uses DB 0) so the two Celery apps have separate broker
+      # queues — otherwise tryon-worker steals + discards Django's tasks.
+      REDIS_URL: redis://redis:6379/1
+      TRYON_HF_SPACE: ${TRYON_HF_SPACE:-yisol/IDM-VTON}
+      HF_TOKEN: ${HF_TOKEN:-}
+    ports:
+      - "8010:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ─── Try-On worker — runs the slow diffusion call off the API thread ─────────
+  tryon-worker:
+    build: ./services/tryon
+    command: celery -A app.celery_app worker -l info --concurrency 2
+    environment:
+      REDIS_URL: redis://redis:6379/1   # same DB as the tryon service (isolated from Django's DB 0)
+      TRYON_HF_SPACE: ${TRYON_HF_SPACE:-yisol/IDM-VTON}
+      HF_TOKEN: ${HF_TOKEN:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ─── API gateway / load balancer ─────────────────────────────────────────────
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - media_files:/app/media:ro
     depends_on:
       - backend1
       - backend2
+      - tryon
 
 volumes:
   pgdata:
-  media_files:
+  miniodata:

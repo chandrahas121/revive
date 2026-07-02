@@ -9,10 +9,13 @@ frontend/src/components/stitch/OpsDashboard.jsx
 frontend/src/components/stitch/*.html
 frontend/src/App.css
 
-# Environments — never commit actual secrets
+# Environments — never commit actual secrets.
+# Ignore ALL .env files at any depth...
 .env
-.env.local
-.env.*.local
+.env.*
+# ...but DO keep the committed templates (placeholders only, no secrets):
+!.env.example
+!.env.production.example
 .venv
 venv/
 env/
@@ -83,6 +86,7 @@ Thumbs.db
 .coverage
 htmlcov/
 Amazon_Revive_design/
-images/  
+images/
+docs/
 # Seed-time review panel cache (offline heuristics would block keyed LLM runs)
 ml/artifacts/review_summary_cache.json

@@ -2,7 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import Header from '../Header';
-import api, { generateHealthCard } from '../../api/client';
+import api, {
+  generateHealthCard,
+  inspectReturnAsync,
+  pollInspect,
+  uploadImageToStorage,
+} from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { riskTier, TIER_INFO } from '../../utils/tier';
 // v2: photo prompts come from the CATEGORY profile, not the price tier (Q1/Q7).
@@ -521,18 +526,25 @@ const SellIt = () => {
       fd.append('expected_title', title.trim());      // feeds the trained price model's text
       fd.append('mrp', mrp || '0');                    // original price → resale price anchor
       fd.append('geohash5', 'tbxx1');                  // demo location for the demand signal
-      const res = await api.post('/api/grade/inspect/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      // The endpoint can return a non-grade gate response (mismatch / duplicate photos)
-      // with no `grade` field. Never render that as a fake "B / 0%" card — surface it.
-      if (!res.data?.grade) {
-        setGradeError(res.data?.message
+
+      // Async grade: submit → job_id → poll. The web worker returns in <100ms;
+      // the multi-second ML runs in a Celery worker, so the site never blocks.
+      const { data: submit } = await inspectReturnAsync(fd);
+      const data = (submit.job_id && submit.status === 'processing')
+        ? await pollInspect(submit.job_id)
+        : submit;
+
+      // The job can finish with no `grade` (gate response / grading unavailable).
+      // Never render that as a fake "B / 0%" card — surface the message instead.
+      if (!data?.grade) {
+        setGradeError(data?.message
           || 'AI could not grade these photos — please retake clear, well-lit angles and try again.');
         return;
       }
-      setGradeResult(res.data);
-      if (!conditionSummary && res.data.condition_summary) setConditionSummary(res.data.condition_summary);
+      setGradeResult(data);
+      if (!conditionSummary && data.condition_summary) setConditionSummary(data.condition_summary);
       // The trained model (+ per-defect deductions) returns a resale price via route.price.
-      const modelPrice = res.data?.route?.price;
+      const modelPrice = data?.route?.price;
       if (modelPrice && modelPrice > 0) {
         const rounded = Math.round(modelPrice);
         setSuggestedPrice(rounded);
@@ -588,7 +600,22 @@ const SellIt = () => {
       formData.append('price', String(finalPrice));
       formData.append('mrp', mrp);
       formData.append('condition_summary', conditionSummary.trim());
-      formData.append('image', coverFile);
+
+      // Upload the cover image straight to object storage via a presigned POST so
+      // Django never touches the bytes. Falls back to sending the file through
+      // Django if storage isn't configured (e.g. pure-local dev without MinIO).
+      let coverUrl = null;
+      try {
+        coverUrl = await uploadImageToStorage(coverFile);
+      } catch {
+        coverUrl = null;
+      }
+      if (coverUrl) {
+        formData.append('image_url', coverUrl);
+      } else {
+        formData.append('image', coverFile);
+      }
+
       // v2 (point 2): reuse the multi-image grade instead of re-grading one image
       if (gradeResult?.grade) {
         formData.append('grade_override', gradeResult.grade);

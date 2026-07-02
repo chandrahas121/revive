@@ -86,49 +86,115 @@ class GradeView(APIView):
         return Response(result)
 
 
+TRYON_SERVICE_URL = os.environ.get('TRYON_SERVICE_URL', '')
+
+
 class TryOnView(APIView):
     """
     POST /api/tryon/
     Body (multipart): person_image (file), garment_image_url (str), garment_description (str)
-    Returns { result_image_b64: str, latency_ms: int }
+    Returns 202 { job_id, status: "processing" } — poll GET /api/tryon/status/<job_id>/.
+
+    Try-On is slow (15-60s HuggingFace call), so it is never run inline on a web
+    worker. Two modes, chosen by the TRYON_SERVICE_URL env var:
+
+      * Set   → proxy to the standalone tryon-service (the microservice path).
+                In docker, nginx routes /api/tryon/ straight to that service, so
+                this shim only runs if Django is hit directly.
+      * Unset → run in a local background thread (pure-local dev, no extra service).
+
+    Both modes return the SAME async contract, so the frontend is identical.
     """
     permission_classes = [AllowAny]
 
     def post(self, request):
-        import time
-        import urllib.request
-
         person_file = request.FILES.get('person_image')
         if not person_file:
             return Response({'error': 'person_image is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         garment_url = request.data.get('garment_image_url', '')
-        garment_description = request.data.get('garment_description', 'clothing item')
-
         if not garment_url:
             return Response({'error': 'garment_image_url is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        garment_description = request.data.get('garment_description', 'clothing item')
 
-        try:
-            person_bytes = person_file.read()
+        # ── Mode 1: proxy to the standalone tryon-service ────────────────────
+        if TRYON_SERVICE_URL:
+            import requests as _requests
+            try:
+                person_file.seek(0)
+                resp = _requests.post(
+                    f"{TRYON_SERVICE_URL.rstrip('/')}/api/tryon/",
+                    files={'person_image': (
+                        person_file.name,
+                        person_file.read(),
+                        getattr(person_file, 'content_type', None) or 'image/jpeg',
+                    )},
+                    data={'garment_image_url': garment_url, 'garment_description': garment_description},
+                    timeout=10,   # fast — the service returns a job_id immediately
+                )
+                return Response(resp.json(), status=resp.status_code)
+            except Exception as e:
+                logger.error(f"[tryon] proxy to service failed: {e}")
+                return Response({'error': 'Virtual try-on service is temporarily unavailable.'},
+                                status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-            # Fetch garment image from URL
-            req = urllib.request.Request(garment_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                garment_bytes = resp.read()
+        # ── Mode 2: local background-thread fallback (no separate service) ───
+        person_bytes = person_file.read()
+        job_id = uuid.uuid4().hex
+        cache.set(f'tryon_job:{job_id}', {'status': 'processing'}, 3600)
 
-            t0 = time.time()
-            from ml.tryon import virtual_tryon_b64
-            result_b64 = virtual_tryon_b64(person_bytes, garment_bytes, garment_description)
-            latency_ms = int((time.time() - t0) * 1000)
+        def _worker():
+            import time
+            import urllib.request
+            try:
+                req = urllib.request.Request(garment_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    garment_bytes = resp.read()
+                from ml.tryon import virtual_tryon_b64
+                t0 = time.time()
+                result_b64 = virtual_tryon_b64(person_bytes, garment_bytes, garment_description)
+                cache.set(f'tryon_job:{job_id}', {
+                    'status': 'done',
+                    'result_image_b64': result_b64,
+                    'latency_ms': int((time.time() - t0) * 1000),
+                }, 3600)
+            except Exception as exc:
+                logger.error(f"[tryon] local job {job_id} failed: {exc}")
+                cache.set(f'tryon_job:{job_id}', {
+                    'status': 'error',
+                    'error': str(exc) or 'Virtual try-on failed. Please try again.',
+                }, 3600)
 
-            return Response({'result_image_b64': result_b64, 'latency_ms': latency_ms})
+        threading.Thread(target=_worker, daemon=True).start()
+        return Response({'job_id': job_id, 'status': 'processing'}, status=status.HTTP_202_ACCEPTED)
 
-        except Exception as e:
-            logger.error(f"[tryon] Failed: {e}")
-            return Response(
-                {'error': str(e) or 'Virtual try-on service is temporarily unavailable.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+
+class TryOnStatusView(APIView):
+    """
+    GET /api/tryon/status/<job_id>/
+    Mirrors the async grading status endpoint. Proxies to the tryon-service when
+    configured, otherwise reads the local background-thread result from cache.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, job_id):
+        if TRYON_SERVICE_URL:
+            import requests as _requests
+            try:
+                resp = _requests.get(
+                    f"{TRYON_SERVICE_URL.rstrip('/')}/api/tryon/status/{job_id}/",
+                    timeout=8,
+                )
+                return Response(resp.json(), status=resp.status_code)
+            except Exception as e:
+                logger.error(f"[tryon] status proxy failed: {e}")
+                return Response({'error': 'Virtual try-on service is temporarily unavailable.'},
+                                status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        result = cache.get(f'tryon_job:{job_id}')
+        if result is None:
+            return Response({'error': 'Job not found or expired.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
 
 
 class GradeAndRouteView(APIView):
@@ -259,217 +325,37 @@ class InspectAndRouteView(APIView):
 
     def post(self, request):
         images = request.FILES.getlist('images') or ([request.FILES['image']] if 'image' in request.FILES else [])
-        video  = request.FILES.get('video')
+        video = request.FILES.get('video')
         if not images and not video:
             return Response({'error': 'At least one image (or a video) is required.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        raw_category   = request.data.get('category', 'Electronics')
-        _CATEGORY_MAP = {
-            'fashion': 'Clothing', 'home & garden': 'Home & Kitchen',
-            'toys & games': 'Toys', 'sports & outdoors': 'Sports',
-            'beauty & health': 'Beauty', 'automotive': 'Other', 'music': 'Other',
-        }
-        category       = _CATEGORY_MAP.get(raw_category.lower(), raw_category)
+        raw_category = request.data.get('category', 'Electronics')
+        category = _CATEGORY_MAP.get(raw_category.lower(), raw_category)
         expected_title = request.data.get('expected_title', '')
-        product_id     = request.data.get('product_id', 'return')
-        operator       = request.data.get('operator', 'agent')
-        geohash5       = request.data.get('geohash5', 'tbxx1')
-
-        # Angle/slot for each uploaded image (front, sole, box, screen_on, …) so the
-        # grader inspects the right thing per photo and the defect map is per-angle.
-        slots = request.data.getlist('slots') if hasattr(request.data, 'getlist') else (request.data.get('slots') or [])
-        slot_labels = list(slots)
-        try:
-            from ml.category_profiles import capture_prompts
-            _lbl = {p['key']: p['label'] for p in capture_prompts(category)}
-            slot_labels = [_lbl.get(s, s) for s in slots]
-        except Exception:
-            pass
+        product_id = request.data.get('product_id', 'return')
+        operator = request.data.get('operator', 'agent')
+        geohash5 = request.data.get('geohash5', 'tbxx1')
+        slots = list(request.data.getlist('slots')) if hasattr(request.data, 'getlist') else []
+        # Seller listing their OWN item (Sell It) passes skip_match=true → gates bypassed.
+        skip_match = str(request.data.get('skip_match', '')).lower() in ('true', '1', 'yes')
         try:
             mrp = float(request.data.get('mrp', 1000.0))
         except (TypeError, ValueError):
             mrp = 1000.0
 
-        # v2: seller listing their OWN item (Sell It) passes skip_match=true, so the
-        # fraud/instance gate (meant for returns) is bypassed. Dedup still runs.
-        skip_match = str(request.data.get('skip_match', '')).lower() in ('true', '1', 'yes')
+        images_bytes = [f.read() for f in images]
+        video_bytes = video.read() if video else None
+        video_suffix = (os.path.splitext(video.name)[1] or '.mp4') if video else '.mp4'
 
-        # Read the cover image bytes once (used for the match gate + heatmap)
-        cover_bytes = images[0].read() if images else None
-        if cover_bytes is not None:
-            images[0].seek(0)
-
-        if cover_bytes is not None and not skip_match:
-            try:
-                from ml.verify import verify_match
-                match = verify_match(cover_bytes, expected_category=category, expected_title=expected_title)
-            except Exception as e:
-                logger.warning(f"verify_match failed, failing open: {e}")
-                match = {'match': True, 'checked': False, 'detected_object': '', 'detected_category': category, 'confidence': 0.0}
-
-            if match.get('checked') and not match.get('match'):
-                return Response({
-                    'match': False,
-                    'detected_object':   match.get('detected_object', ''),
-                    'detected_category': match.get('detected_category', ''),
-                    'confidence':        match.get('confidence', 0.0),
-                    'message': (
-                        f"This looks like {match.get('detected_object') or 'a different item'}, "
-                        f"not the {expected_title or category} you're returning. "
-                        "Please scan the correct item."
-                    ),
-                }, status=status.HTTP_200_OK)
-
-            # ── Instance gate (v2 Q4): is it the SAME model, not just the same
-            #    category? Compare against the catalog reference via DINOv2/CLIP. ─
-            try:
-                from ml.catalog import get_reference_bytes
-                from ml.instance_match import instance_match
-                ref_bytes = get_reference_bytes(category)
-                inst = instance_match(cover_bytes, ref_bytes)
-                if inst.get('checked') and not inst.get('match'):
-                    return Response({
-                        'match': False,
-                        'instance_match': inst,
-                        'message': (
-                            f"This doesn't look like the same {expected_title or category} "
-                            "in our catalogue (different model/variant). Please scan the correct item."
-                        ),
-                    }, status=status.HTTP_200_OK)
-            except Exception as e:
-                logger.warning(f"instance_match failed, failing open: {e}")
-
-        # ── Duplicate-photo gate (v2 Q6): reject the same shot in many slots ────
-        # Only enforced for RETURNS (fraud control). A seller listing their OWN item
-        # (skip_match=true) is never hard-blocked here — different angles of large
-        # flat objects (laptops/monitors) can hash close together and must still grade.
-        if len(images) > 1 and not skip_match:
-            try:
-                from ml.image_dedup import find_duplicates
-                _all_bytes = []
-                for f in images:
-                    _all_bytes.append(f.read()); f.seek(0)
-                dups = find_duplicates(_all_bytes)
-                if dups:
-                    return Response({
-                        'match': True,
-                        'duplicate_photos': True,
-                        'duplicate_pairs': dups,
-                        'message': (
-                            "Some photos look identical. Please capture each angle "
-                            "separately (e.g. front, back, soles) so we can verify the item."
-                        ),
-                    }, status=status.HTTP_200_OK)
-            except Exception as e:
-                logger.warning(f"duplicate check failed, skipping: {e}")
-
-        # ── Grade: video → multi-image → single ───────────────────────────────
-        grade_result = None
-        frames_sampled = len(images)
-        graded_bytes = []   # per-image bytes kept for the per-angle defect maps
-        try:
-            if video is not None:
-                import tempfile, os as _os
-                from ml.grade import grade_video
-                suffix = _os.path.splitext(video.name)[1] or '.mp4'
-                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                    for chunk in video.chunks():
-                        tmp.write(chunk)
-                    tmp_path = tmp.name
-                try:
-                    grade_result = grade_video(tmp_path, product_id=product_id, operator=operator, category=category)
-                    frames_sampled = grade_result.get('frames_sampled', frames_sampled)
-                finally:
-                    try: _os.unlink(tmp_path)
-                    except Exception: pass
-            elif len(images) > 1:
-                from ml.grade import grade_multi_image
-                graded_bytes = [f.read() for f in images]
-                grade_result = grade_multi_image(
-                    graded_bytes, product_id=product_id, operator=operator,
-                    category=category, slots=slots, slot_labels=slot_labels)
-                frames_sampled = grade_result.get('frames_sampled', len(images))
-        except Exception as e:
-            logger.warning(f"multi/video grade failed, falling back to single image: {e}")
-            grade_result = None
-
-        if grade_result is None:
-            grade_result = _run_grade(cover_bytes, product_id, category, operator)
-            frames_sampled = 1
-
-        if not graded_bytes and cover_bytes is not None:
-            graded_bytes = [cover_bytes]
-
-        # ── Defect map(s): render per-angle, drawing each image's OWN defects ─────
-        # (Previously every aggregated defect was drawn on the cover image, which put
-        #  a sole-photo defect onto the front photo. Now each angle gets its own map.)
-        if graded_bytes:
-            try:
-                from ml.heatmap import render_heatmap_b64
-                all_defects = grade_result.get('defects', [])
-                angle_heatmaps = []
-                for i, img_b in enumerate(graded_bytes):
-                    frame_defects = [d for d in all_defects if d.get('image_index', 0) == i]
-                    label = (slot_labels[i] if i < len(slot_labels)
-                             else (slots[i] if i < len(slots) else (f'Angle {i+1}')))
-                    b64 = render_heatmap_b64(img_b, {**grade_result, 'defects': frame_defects})
-                    entry = {'angle': slots[i] if i < len(slots) else '', 'angle_label': label,
-                             'b64': b64, 'n_defects': len(frame_defects)}
-                    angle_heatmaps.append(entry)
-                grade_result['angle_heatmaps'] = angle_heatmaps
-                # Backward-compat cover map: prefer the angle with the most defects.
-                cover = max(angle_heatmaps, key=lambda e: e['n_defects']) if angle_heatmaps else None
-                grade_result['heatmap_b64'] = (cover or angle_heatmaps[0])['b64'] if angle_heatmaps else None
-            except Exception as e:
-                logger.warning(f"Heatmap generation failed: {e}")
-
-        # ── Route ──────────────────────────────────────────────────────────────
-        # Translate the multi-angle grading signals into the Disposition Gate's flags
-        # so they actually DRIVE the disposition (sealed→Restock-New, not-functional
-        # electronics→Renewed), not just the price. Previously these were left at the
-        # gate's conservative defaults, so a sealed return could never restock as New.
-        _sealed = grade_result.get('seal_intact') is True
-        _completeness = grade_result.get('completeness')
-        _complete = (_completeness is None) or (float(_completeness) >= 0.8) \
-            or (grade_result.get('accessories_present') is True)
-        try:
-            from ml.route import route_item
-            route_result = route_item(
-                listing_id=str(product_id),
-                grade=grade_result.get('grade', 'C'),
-                category=category,
-                defects=grade_result.get('defects', []),
-                geohash5=geohash5,
-                mrp=mrp,
-                product_id=str(product_id),
-                title=expected_title,
-                condition_signals={
-                    'box_present': grade_result.get('box_present'),
-                    'accessories_present': grade_result.get('accessories_present'),
-                    'functional': grade_result.get('functional'),
-                    'tags_present': grade_result.get('tags_present'),
-                    'completeness': grade_result.get('completeness'),
-                },
-                sealed=_sealed,
-                opened=not _sealed,
-                verified_match=True,
-                complete=bool(_complete),
-                functional_pass=grade_result.get('functional'),
-            )
-        except Exception as e:
-            logger.warning(f"route_item() failed in inspect: {e}")
-            route_result = {
-                'chosen_path': 'resell_p2p', 'route_label': 'Resell Nearby',
-                'customer_message': 'Your item will be resold to someone nearby',
-                'tier': 1, 'price': mrp * 0.6, 'fallback': True,
-            }
-
-        grade_result['match'] = True
-        grade_result['frames_sampled'] = frames_sampled
-        grade_result['route'] = route_result
-        grade_result['category'] = category
-        return Response(grade_result)
+        from grade.inspect import run_return_inspect
+        result = run_return_inspect(
+            images=images_bytes, slots=slots, category=category,
+            expected_title=expected_title, product_id=product_id, operator=operator,
+            geohash5=geohash5, mrp=mrp, skip_match=skip_match,
+            video_bytes=video_bytes, video_suffix=video_suffix,
+        )
+        return Response(result)
 
 
 class HeatmapView(APIView):
@@ -579,3 +465,179 @@ class GradeStatusView(APIView):
         if result is None:
             return Response({'error': 'Job not found or expired.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(result)
+
+
+class AsyncInspectView(APIView):
+    """
+    POST /api/grade/inspect/async/
+
+    Non-blocking multi-angle seller grade + route. Same inputs as
+    /api/grade/inspect/ (images[], slots[], category, expected_title, mrp, …) but
+    returns a job_id immediately so a slow multi-second ML grade never ties up a
+    web worker. Poll GET /api/grade/inspect/status/<job_id>/ until status=="done".
+
+    Mode selection mirrors AsyncGradeView:
+      * REDIS_URL set → dispatch to a Celery worker (true horizontal scaling)
+      * else          → local background thread (dev, no separate worker)
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        import base64 as _b64
+
+        images = request.FILES.getlist('images') or (
+            [request.FILES['image']] if 'image' in request.FILES else [])
+        if not images:
+            return Response({'error': 'At least one image is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        raw_category = request.data.get('category', 'Electronics')
+        category = _CATEGORY_MAP.get(raw_category.lower(), raw_category)
+        expected_title = request.data.get('expected_title', '')
+        product_id = request.data.get('product_id', 'P2P-TEMP')
+        operator = request.data.get('operator', 'seller')
+        geohash5 = request.data.get('geohash5', 'tbxx1')
+        slots = list(request.data.getlist('slots')) if hasattr(request.data, 'getlist') else []
+        try:
+            mrp = float(request.data.get('mrp', 1000.0))
+        except (TypeError, ValueError):
+            mrp = 1000.0
+
+        images_bytes = [f.read() for f in images]
+        job_id = uuid.uuid4().hex
+        cache.set(f'inspect_job:{job_id}', {'status': 'processing', 'job_id': job_id}, 3600)
+
+        if os.environ.get('REDIS_URL'):
+            from grade.tasks import seller_inspect_task
+            images_b64 = [_b64.b64encode(b).decode('utf-8') for b in images_bytes]
+            seller_inspect_task.delay(images_b64, slots, category, expected_title,
+                                      product_id, operator, geohash5, mrp, job_id)
+        else:
+            def _worker():
+                try:
+                    from grade.inspect import run_seller_grade
+                    result = run_seller_grade(
+                        images=images_bytes, slots=slots, category=category,
+                        expected_title=expected_title, product_id=product_id,
+                        operator=operator, geohash5=geohash5, mrp=mrp,
+                    )
+                    result['status'] = 'done'
+                    result['job_id'] = job_id
+                except Exception as exc:
+                    logger.error(f"[inspect] local job {job_id} failed: {exc}")
+                    result = {
+                        'status': 'done', 'job_id': job_id, 'grade': None,
+                        'message': 'AI grading is temporarily unavailable — you can still submit manually.',
+                        'error': str(exc),
+                    }
+                cache.set(f'inspect_job:{job_id}', result, 3600)
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        return Response({'job_id': job_id, 'status': 'processing'}, status=status.HTTP_202_ACCEPTED)
+
+
+class InspectStatusView(APIView):
+    """
+    GET /api/grade/inspect/status/<job_id>/
+    Returns {status:"processing"} while grading, or the full inspect result once
+    done (grade + defects + angle_heatmaps + route). 404 if unknown/expired.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, job_id):
+        result = cache.get(f'inspect_job:{job_id}')
+        if result is None:
+            return Response({'error': 'Job not found or expired.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
+
+
+class AsyncReturnInspectView(APIView):
+    """
+    POST /api/grade/inspect/return/async/
+
+    Non-blocking RETURN inspection — keeps the full fraud/instance/duplicate gates
+    (unlike the seller path). Returns a job_id immediately so the heavy multi-image
+    + video ML never ties up a web worker. Poll GET /api/grade/inspect/status/<id>/.
+
+    Media handling:
+      * images        → base64 through the queue (small, same as grading)
+      * video_url     → a presigned storage URL; the worker fetches it (large video
+                        stays out of the queue — avoids Redis size/command blowup)
+      * video (file)  → fallback when storage isn't configured (base64 through queue)
+
+    A gate failure comes back as the job result ({status:"done", match:false, …}),
+    which the frontend handles exactly like the synchronous endpoint did.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        import base64 as _b64
+
+        images = request.FILES.getlist('images') or (
+            [request.FILES['image']] if 'image' in request.FILES else [])
+        video = request.FILES.get('video')
+        video_url = (request.data.get('video_url') or '').strip()
+        if not images and not video and not video_url:
+            return Response({'error': 'At least one image (or a video) is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        raw_category = request.data.get('category', 'Electronics')
+        category = _CATEGORY_MAP.get(raw_category.lower(), raw_category)
+        expected_title = request.data.get('expected_title', '')
+        product_id = request.data.get('product_id', 'return')
+        operator = request.data.get('operator', 'agent')
+        geohash5 = request.data.get('geohash5', 'tbxx1')
+        slots = list(request.data.getlist('slots')) if hasattr(request.data, 'getlist') else []
+        try:
+            mrp = float(request.data.get('mrp', 1000.0))
+        except (TypeError, ValueError):
+            mrp = 1000.0
+
+        images_bytes = [f.read() for f in images]
+        video_suffix = (os.path.splitext(video.name)[1] or '.mp4') if video else '.mp4'
+        job_id = uuid.uuid4().hex
+        cache.set(f'inspect_job:{job_id}', {'status': 'processing', 'job_id': job_id}, 3600)
+
+        if os.environ.get('REDIS_URL'):
+            from grade.tasks import return_inspect_task
+            images_b64 = [_b64.b64encode(b).decode('utf-8') for b in images_bytes]
+            # Prefer a presigned video URL; only base64 a raw video file as a fallback.
+            video_b64 = _b64.b64encode(video.read()).decode('utf-8') if (video and not video_url) else ''
+            return_inspect_task.delay(images_b64, video_url, video_b64, video_suffix, slots,
+                                      category, expected_title, product_id, operator,
+                                      geohash5, mrp, job_id)
+        else:
+            video_bytes_local = video.read() if video else None
+
+            def _worker():
+                try:
+                    vb = video_bytes_local
+                    if vb is None and video_url:
+                        import urllib.request
+                        from core.storage import to_internal_url
+                        req = urllib.request.Request(to_internal_url(video_url),
+                                                     headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(req, timeout=30) as resp:
+                            vb = resp.read()
+                    from grade.inspect import run_return_inspect
+                    result = run_return_inspect(
+                        images=images_bytes, slots=slots, category=category,
+                        expected_title=expected_title, product_id=product_id, operator=operator,
+                        geohash5=geohash5, mrp=mrp, skip_match=False,
+                        video_bytes=vb, video_suffix=video_suffix,
+                    )
+                    result['status'] = 'done'
+                    result['job_id'] = job_id
+                except Exception as exc:
+                    logger.error(f"[return_inspect] local job {job_id} failed: {exc}")
+                    result = {
+                        'status': 'done', 'job_id': job_id, 'grade': None,
+                        'message': 'AI grading is temporarily unavailable — showing the last verified grade.',
+                        'error': str(exc),
+                    }
+                cache.set(f'inspect_job:{job_id}', result, 3600)
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        return Response({'job_id': job_id, 'status': 'processing'}, status=status.HTTP_202_ACCEPTED)

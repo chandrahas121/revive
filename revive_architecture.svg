@@ -1,0 +1,244 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 1528" font-family="DejaVu Sans, Segoe UI, Helvetica, Arial, sans-serif">
+<defs><marker id="ah" markerWidth="11" markerHeight="11" refX="8" refY="4" orient="auto"><path d="M0,0 L9,4 L0,8 Z" fill="#8a8a8a"/></marker></defs>
+<rect x="0" y="0" width="1380" height="1528" fill="#ffffff"/>
+<text x="690.0" y="40" text-anchor="middle" font-weight="800" font-size="25" fill="#2a2a48">PROJECT REVIVE — Cloud Deployment Architecture</text>
+<text x="690.0" y="63" text-anchor="middle" font-size="13.2" fill="#5d5d70">React/Vite SPA · Django + DRF (Gunicorn) · Celery async ML · Redis · PostgreSQL · AWS S3 + CloudFront · stateless horizontal scaling</text>
+<text x="52" y="100" font-weight="700" font-size="12.5" fill="#2a2a48">Legend:</text>
+<rect x="112" y="86" width="20" height="20" rx="5" fill="#eae8e0" stroke="#b8b29a" stroke-width="1.4"/>
+<text x="139" y="101" font-size="12.3" fill="#2a2a48">Client &amp; Edge</text>
+<rect x="261.0" y="86" width="20" height="20" rx="5" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.4"/>
+<text x="288.0" y="101" font-size="12.3" fill="#2a2a48">API Service · Django/DRF</text>
+<rect x="487.0" y="86" width="20" height="20" rx="5" fill="#fbdcd6" stroke="#e89a86" stroke-width="1.4"/>
+<text x="514.0" y="101" font-size="12.3" fill="#2a2a48">Async Queue</text>
+<rect x="622.0" y="86" width="20" height="20" rx="5" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.4"/>
+<text x="649.0" y="101" font-size="12.3" fill="#2a2a48">ML Engine</text>
+<rect x="743.0" y="86" width="20" height="20" rx="5" fill="#d7efe4" stroke="#8ccdb0" stroke-width="1.4"/>
+<text x="770.0" y="101" font-size="12.3" fill="#2a2a48">Data &amp; Storage</text>
+<rect x="899.0" y="86" width="20" height="20" rx="5" fill="#f7ddd3" stroke="#e3a98f" stroke-width="1.4"/>
+<text x="926.0" y="101" font-size="12.3" fill="#2a2a48">External &amp; Sinks</text>
+<rect x="40" y="140" width="1300" height="150" rx="16" fill="none" stroke="#b3b3c0" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="58" y="127" width="232.4" height="26" rx="8" fill="#ffffff" stroke="#b3b3c0" stroke-width="1.2"/>
+<text x="66" y="145" font-weight="800" font-size="14" fill="#2a2a48">1 · Client &amp; Edge Delivery</text>
+<rect x="60.0" y="170" width="392" height="100" rx="12" fill="#eae8e0" stroke="#b8b29a" stroke-width="1.6"/>
+<text x="76.0" y="194" font-weight="700" font-size="13.2" fill="#2a2a48">User Browser / App</text>
+<line x1="76.0" y1="202" x2="436.0" y2="202" stroke="#b8b29a" stroke-width="1"/>
+<text x="76.0" y="220" font-size="10.8" fill="#5d5d70">Geolocation API → geohash5</text>
+<text x="76.0" y="235.5" font-size="10.8" fill="#5d5d70">JWT session · REST/JSON</text>
+<rect x="494.0" y="170" width="392" height="100" rx="12" fill="#eae8e0" stroke="#b8b29a" stroke-width="1.6"/>
+<text x="510.0" y="194" font-weight="700" font-size="13.2" fill="#2a2a48">Vercel Edge CDN — React/Vite SPA</text>
+<line x1="510.0" y1="202" x2="870.0" y2="202" stroke="#b8b29a" stroke-width="1"/>
+<text x="510.0" y="220" font-size="10.8" fill="#5d5d70">Storefront · Checkout · Sell-It</text>
+<text x="510.0" y="235.5" font-size="10.8" fill="#5d5d70">Return Wizard · Credits Wallet</text>
+<text x="510.0" y="251.0" font-size="10.8" fill="#5d5d70">Ops Console (Leaflet heatmap)</text>
+<rect x="928.0" y="170" width="392" height="100" rx="12" fill="#eae8e0" stroke="#b8b29a" stroke-width="1.6"/>
+<text x="944.0" y="194" font-weight="700" font-size="13.2" fill="#2a2a48">AWS CloudFront — Image CDN</text>
+<line x1="944.0" y1="202" x2="1304.0" y2="202" stroke="#b8b29a" stroke-width="1"/>
+<text x="944.0" y="220" font-size="10.8" fill="#5d5d70">product / listing media</text>
+<text x="944.0" y="235.5" font-size="10.8" fill="#5d5d70">fetches AWS S3 origin</text>
+<text x="944.0" y="251.0" font-size="10.8" fill="#5d5d70">cached at edge</text>
+<rect x="40" y="330" width="1300" height="300" rx="16" fill="none" stroke="#b3b3c0" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="58" y="317" width="585.2" height="26" rx="8" fill="#ffffff" stroke="#b3b3c0" stroke-width="1.2"/>
+<text x="66" y="335" font-weight="800" font-size="14" fill="#2a2a48">2 · API &amp; Load Balancing  (Render · stateless · horizontally scaled)</text>
+<rect x="430.0" y="352" width="520" height="46" rx="12" fill="#eae8e0" stroke="#b8b29a" stroke-width="1.6"/>
+<text x="690.0" y="380.0" text-anchor="middle" font-weight="700" font-size="12.8" fill="#2a2a48">Render Load Balancer — TLS · WhiteNoise static · round-robin</text>
+<rect x="338.0" y="426" width="322" height="72" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="354.0" y="450" font-weight="700" font-size="13" fill="#2a2a48">Django Instance 1  (Gunicorn)</text>
+<line x1="354.0" y1="458" x2="644.0" y2="458" stroke="#dcb275" stroke-width="1"/>
+<text x="354.0" y="476" font-size="10.8" fill="#5d5d70">DRF APIViews · stateless JWT auth</text>
+<rect x="720.0" y="426" width="322" height="72" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="736.0" y="450" font-weight="700" font-size="13" fill="#2a2a48">Django Instance N  (autoscaled)</text>
+<line x1="736.0" y1="458" x2="1026.0" y2="458" stroke="#dcb275" stroke-width="1"/>
+<text x="736.0" y="476" font-size="10.8" fill="#5d5d70">DRF APIViews · stateless JWT auth</text>
+<path d="M 630.0 400 L 499.0 424" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<path d="M 750.0 400 L 881.0 424" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="60.0" y="512" width="200" height="94" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="76.0" y="536" font-weight="700" font-size="12.7" fill="#2a2a48">core</text>
+<line x1="76.0" y1="544" x2="244.0" y2="544" stroke="#dcb275" stroke-width="1"/>
+<text x="76.0" y="562" font-size="10.8" fill="#5d5d70">/api/auth ·/listings</text>
+<text x="76.0" y="577.5" font-size="10.8" fill="#5d5d70">/orders · lifecycle</text>
+<text x="76.0" y="593.0" font-size="10.8" fill="#5d5d70">catalog · serializers</text>
+<rect x="272.0" y="512" width="200" height="94" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="288.0" y="536" font-weight="700" font-size="12.7" fill="#2a2a48">grade · Pillar 1</text>
+<line x1="288.0" y1="544" x2="456.0" y2="544" stroke="#dcb275" stroke-width="1"/>
+<text x="288.0" y="562" font-size="10.8" fill="#5d5d70">/api/grade ·/inspect</text>
+<text x="288.0" y="577.5" font-size="10.8" fill="#5d5d70">AI quality grading</text>
+<text x="288.0" y="593.0" font-size="10.8" fill="#5d5d70">/route ·/tryon</text>
+<rect x="484.0" y="512" width="200" height="94" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="500.0" y="536" font-weight="700" font-size="12.7" fill="#2a2a48">route · Pillar 2</text>
+<line x1="500.0" y1="544" x2="668.0" y2="544" stroke="#dcb275" stroke-width="1"/>
+<text x="500.0" y="562" font-size="10.8" fill="#5d5d70">/api/route ·/gate</text>
+<text x="500.0" y="577.5" font-size="10.8" fill="#5d5d70">two-stage routing</text>
+<text x="500.0" y="593.0" font-size="10.8" fill="#5d5d70">/heatmap ·/apply</text>
+<rect x="696.0" y="512" width="200" height="94" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="712.0" y="536" font-weight="700" font-size="12.7" fill="#2a2a48">prevent · Pillar 4</text>
+<line x1="712.0" y1="544" x2="880.0" y2="544" stroke="#dcb275" stroke-width="1"/>
+<text x="712.0" y="562" font-size="10.8" fill="#5d5d70">/api/prevent/risk</text>
+<text x="712.0" y="577.5" font-size="10.8" fill="#5d5d70">return prevention</text>
+<text x="712.0" y="593.0" font-size="10.8" fill="#5d5d70">/fit-twin</text>
+<rect x="908.0" y="512" width="200" height="94" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="924.0" y="536" font-weight="700" font-size="12.7" fill="#2a2a48">green · Pillar 5</text>
+<line x1="924.0" y1="544" x2="1092.0" y2="544" stroke="#dcb275" stroke-width="1"/>
+<text x="924.0" y="562" font-size="10.8" fill="#5d5d70">/api/credits</text>
+<text x="924.0" y="577.5" font-size="10.8" fill="#5d5d70">Green Credits</text>
+<text x="924.0" y="593.0" font-size="10.8" fill="#5d5d70">vest·redeem·donate</text>
+<rect x="1120.0" y="512" width="200" height="94" rx="12" fill="#f6e3c5" stroke="#dcb275" stroke-width="1.6"/>
+<text x="1136.0" y="536" font-weight="700" font-size="12.7" fill="#2a2a48">trust</text>
+<line x1="1136.0" y1="544" x2="1304.0" y2="544" stroke="#dcb275" stroke-width="1"/>
+<text x="1136.0" y="562" font-size="10.8" fill="#5d5d70">/api/card/generate</text>
+<text x="1136.0" y="577.5" font-size="10.8" fill="#5d5d70">Product Health Card</text>
+<text x="1136.0" y="593.0" font-size="10.8" fill="#5d5d70">verify · QR · ledger</text>
+<path d="M 499.0 498 L 690.0 506" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="619.0" y="485" width="142.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="690.0" y="497" text-anchor="middle" font-size="10.5" fill="#5d5d70">URLConf → DRF APIViews</text>
+<path d="M 881.0 498 L 690.0 506" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<path d="M 690.0 290 L 690.0 330" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="541.0" y="299.0" width="298.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="690.0" y="311.0" text-anchor="middle" font-size="10.5" fill="#5d5d70">HTTPS · REST API (JSON / JWT) · multipart upload</text>
+<rect x="40" y="668" width="1300" height="150" rx="16" fill="none" stroke="#b3b3c0" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="58" y="655" width="686.0" height="26" rx="8" fill="#ffffff" stroke="#b3b3c0" stroke-width="1.2"/>
+<text x="66" y="673" font-weight="800" font-size="14" fill="#2a2a48">3 · Decoupled AI Processing  (non-blocking — GPU work isolated from web threads)</text>
+<rect x="60.0" y="698" width="392" height="100" rx="12" fill="#fbdcd6" stroke="#e89a86" stroke-width="1.6"/>
+<text x="76.0" y="722" font-weight="700" font-size="13.2" fill="#2a2a48">Celery Task Queue</text>
+<line x1="76.0" y1="730" x2="436.0" y2="730" stroke="#e89a86" stroke-width="1"/>
+<text x="76.0" y="748" font-size="10.8" fill="#5d5d70">backed by Redis broker</text>
+<text x="76.0" y="763.5" font-size="10.8" fill="#5d5d70">grade &amp; route jobs</text>
+<rect x="494.0" y="698" width="392" height="100" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="510.0" y="722" font-weight="700" font-size="13.2" fill="#2a2a48">ML Worker Fleet</text>
+<line x1="510.0" y1="730" x2="870.0" y2="730" stroke="#a9a9e2" stroke-width="1"/>
+<text x="510.0" y="748" font-size="10.8" fill="#5d5d70">Celery concurrency</text>
+<text x="510.0" y="763.5" font-size="10.8" fill="#5d5d70">loads .keras + vision models</text>
+<text x="510.0" y="779.0" font-size="10.8" fill="#5d5d70">writes result → Postgres/Redis</text>
+<rect x="928.0" y="698" width="392" height="100" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="944.0" y="722" font-weight="700" font-size="13.2" fill="#2a2a48">EV Routing Optimizer</text>
+<line x1="944.0" y1="730" x2="1304.0" y2="730" stroke="#a9a9e2" stroke-width="1"/>
+<text x="944.0" y="748" font-size="10.8" fill="#5d5d70">stateless O(1) gravity math</text>
+<text x="944.0" y="763.5" font-size="10.8" fill="#5d5d70">demand/(1+d²/25)</text>
+<text x="944.0" y="779.0" font-size="10.8" fill="#5d5d70">runs in-request (no queue)</text>
+<path d="M 452 748 L 494.0 748" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="444.0" y="737.0" width="58.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="473.0" y="749.0" text-anchor="middle" font-size="10.5" fill="#5d5d70">consumes</text>
+<path d="M 690.0 606 L 690.0 668" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="577.0" y="626.0" width="226.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="690.0" y="638.0" text-anchor="middle" font-size="10.5" fill="#5d5d70">Django dispatches async job → Celery</text>
+<rect x="40" y="856" width="1300" height="286" rx="16" fill="none" stroke="#b3b3c0" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="58" y="843" width="543.2" height="26" rx="8" fill="#ffffff" stroke="#b3b3c0" stroke-width="1.2"/>
+<text x="66" y="861" font-weight="800" font-size="14" fill="#2a2a48">4 · ML Engine — Fusion Grading Pipeline &amp; models  (ml/ package)</text>
+<rect x="60.0" y="890" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="76.0" y="914" font-weight="700" font-size="13.0" fill="#2a2a48">grade.py — Fusion Grading</text>
+<line x1="76.0" y1="922" x2="349.0" y2="922" stroke="#a9a9e2" stroke-width="1"/>
+<text x="76.0" y="940" font-size="10.8" fill="#5d5d70">Grounding DINO defect detect</text>
+<text x="76.0" y="955.5" font-size="10.8" fill="#5d5d70">Claude Haiku severity (vision)</text>
+<text x="76.0" y="971.0" font-size="10.8" fill="#5d5d70">DINOv2 + CLIP fusion → A–F</text>
+<rect x="378.3333333333333" y="890" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="394.3333333333333" y="914" font-weight="700" font-size="13.0" fill="#2a2a48">verify.py · instance_match.py</text>
+<line x1="394.3333333333333" y1="922" x2="667.3333333333333" y2="922" stroke="#a9a9e2" stroke-width="1"/>
+<text x="394.3333333333333" y="940" font-size="10.8" fill="#5d5d70">CLIP category gate</text>
+<text x="394.3333333333333" y="955.5" font-size="10.8" fill="#5d5d70">DINOv2 catalog verification</text>
+<text x="394.3333333333333" y="971.0" font-size="10.8" fill="#5d5d70">pHash dedup · view check</text>
+<rect x="696.6666666666666" y="890" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="712.6666666666666" y="914" font-weight="700" font-size="13.0" fill="#2a2a48">catalog.py · risk_tier.py</text>
+<line x1="712.6666666666666" y1="922" x2="985.6666666666666" y2="922" stroke="#a9a9e2" stroke-width="1"/>
+<text x="712.6666666666666" y="940" font-size="10.8" fill="#5d5d70">catalog match → MRP</text>
+<text x="712.6666666666666" y="955.5" font-size="10.8" fill="#5d5d70">Risk Tier = value × fraud</text>
+<text x="712.6666666666666" y="971.0" font-size="10.8" fill="#5d5d70">HIGH / MED / LOW (backend)</text>
+<rect x="1015.0" y="890" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="1031.0" y="914" font-weight="700" font-size="13.0" fill="#2a2a48">disposition.py</text>
+<line x1="1031.0" y1="922" x2="1304.0" y2="922" stroke="#a9a9e2" stroke-width="1"/>
+<text x="1031.0" y="940" font-size="10.8" fill="#5d5d70">Disposition Gate tree</text>
+<text x="1031.0" y="955.5" font-size="10.8" fill="#5d5d70">New / Open-box / Used</text>
+<text x="1031.0" y="971.0" font-size="10.8" fill="#5d5d70">Renewed / Recycle-Donate</text>
+<rect x="60.0" y="1018" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="76.0" y="1042" font-weight="700" font-size="13.0" fill="#2a2a48">route.py · geohash.py</text>
+<line x1="76.0" y1="1050" x2="349.0" y2="1050" stroke="#a9a9e2" stroke-width="1"/>
+<text x="76.0" y="1068" font-size="10.8" fill="#5d5d70">demand_gate (Stage 1)</text>
+<text x="76.0" y="1083.5" font-size="10.8" fill="#5d5d70">EV optimizer (Stage 2)</text>
+<text x="76.0" y="1099.0" font-size="10.8" fill="#5d5d70">gravity demand/(1+d²/25)</text>
+<rect x="378.3333333333333" y="1018" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="394.3333333333333" y="1042" font-weight="700" font-size="13.0" fill="#2a2a48">price_keras.py</text>
+<line x1="394.3333333333333" y1="1050" x2="667.3333333333333" y2="1050" stroke="#a9a9e2" stroke-width="1"/>
+<text x="394.3333333333333" y="1068" font-size="10.8" fill="#5d5d70">Keras MLP ensemble</text>
+<text x="394.3333333333333" y="1083.5" font-size="10.8" fill="#5d5d70">MRP-anchored + per-defect</text>
+<text x="394.3333333333333" y="1099.0" font-size="10.8" fill="#5d5d70">RMSLE ≈ 0.42</text>
+<rect x="696.6666666666666" y="1018" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="712.6666666666666" y="1042" font-weight="700" font-size="13.0" fill="#2a2a48">prevent.py · fit_profile.py</text>
+<line x1="712.6666666666666" y1="1050" x2="985.6666666666666" y2="1050" stroke="#a9a9e2" stroke-width="1"/>
+<text x="712.6666666666666" y="1068" font-size="10.8" fill="#5d5d70">GBDT return-risk (F1/AUC)</text>
+<text x="712.6666666666666" y="1083.5" font-size="10.8" fill="#5d5d70">size/fit + bracket nudge</text>
+<text x="712.6666666666666" y="1099.0" font-size="10.8" fill="#5d5d70">brand-bias table</text>
+<rect x="1015.0" y="1018" width="305" height="110" rx="12" fill="#e3e3f7" stroke="#a9a9e2" stroke-width="1.6"/>
+<text x="1031.0" y="1042" font-weight="700" font-size="13.0" fill="#2a2a48">fittwin/ · recommend.py</text>
+<line x1="1031.0" y1="1050" x2="1304.0" y2="1050" stroke="#a9a9e2" stroke-width="1"/>
+<text x="1031.0" y="1068" font-size="10.8" fill="#5d5d70">RTR behavioral twins (192k)</text>
+<text x="1031.0" y="1083.5" font-size="10.8" fill="#5d5d70">ALS recommender</text>
+<text x="1031.0" y="1099.0" font-size="10.8" fill="#5d5d70">Recall@20 · NDCG@20</text>
+<path d="M 256.0 798 L 256.0 856" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="182.0" y="816.0" width="148.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="256.0" y="828.0" text-anchor="middle" font-size="10.5" fill="#5d5d70">ML Worker runs pipeline</text>
+<path d="M 690.0 798 L 690.0 856" fill="none" stroke="#8a8a8a" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+<rect x="40" y="1180" width="1300" height="146" rx="16" fill="none" stroke="#b3b3c0" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="58" y="1167" width="392.0" height="26" rx="8" fill="#ffffff" stroke="#b3b3c0" stroke-width="1.2"/>
+<text x="66" y="1185" font-weight="800" font-size="14" fill="#2a2a48">5 · Data, Cache &amp; Storage  (managed services)</text>
+<rect x="60.0" y="1214" width="305" height="98" rx="12" fill="#d7efe4" stroke="#8ccdb0" stroke-width="1.6"/>
+<text x="76.0" y="1238" font-weight="700" font-size="13.0" fill="#2a2a48">Supabase PostgreSQL</text>
+<line x1="76.0" y1="1246" x2="349.0" y2="1246" stroke="#8ccdb0" stroke-width="1"/>
+<text x="76.0" y="1264" font-size="10.8" fill="#5d5d70">users · listings · orders</text>
+<text x="76.0" y="1279.5" font-size="10.8" fill="#5d5d70">Health Card ledger (SHA-256)</text>
+<text x="76.0" y="1295.0" font-size="10.8" fill="#5d5d70">ACID · Aurora-compatible</text>
+<rect x="378.3333333333333" y="1214" width="305" height="98" rx="12" fill="#d7efe4" stroke="#8ccdb0" stroke-width="1.6"/>
+<text x="394.3333333333333" y="1238" font-weight="700" font-size="13.0" fill="#2a2a48">Upstash Redis</text>
+<line x1="394.3333333333333" y1="1246" x2="667.3333333333333" y2="1246" stroke="#8ccdb0" stroke-width="1"/>
+<text x="394.3333333333333" y="1264" font-size="10.8" fill="#5d5d70">cache + demand index</text>
+<text x="394.3333333333333" y="1279.5" font-size="10.8" fill="#5d5d70">HSET demand:{geohash5}{cat}</text>
+<text x="394.3333333333333" y="1295.0" font-size="10.8" fill="#5d5d70">Celery broker · 60s TTL</text>
+<rect x="696.6666666666666" y="1214" width="305" height="98" rx="12" fill="#d7efe4" stroke="#8ccdb0" stroke-width="1.6"/>
+<text x="712.6666666666666" y="1238" font-weight="700" font-size="13.0" fill="#2a2a48">AWS S3</text>
+<line x1="712.6666666666666" y1="1246" x2="985.6666666666666" y2="1246" stroke="#8ccdb0" stroke-width="1"/>
+<text x="712.6666666666666" y="1264" font-size="10.8" fill="#5d5d70">media blob storage</text>
+<text x="712.6666666666666" y="1279.5" font-size="10.8" fill="#5d5d70">listing / grading images</text>
+<text x="712.6666666666666" y="1295.0" font-size="10.8" fill="#5d5d70">CloudFront origin</text>
+<rect x="1015.0" y="1214" width="305" height="98" rx="12" fill="#d7efe4" stroke="#8ccdb0" stroke-width="1.6"/>
+<text x="1031.0" y="1238" font-weight="700" font-size="13.0" fill="#2a2a48">ML artifacts</text>
+<line x1="1031.0" y1="1246" x2="1304.0" y2="1246" stroke="#8ccdb0" stroke-width="1"/>
+<text x="1031.0" y="1264" font-size="10.8" fill="#5d5d70">.keras price models</text>
+<text x="1031.0" y="1279.5" font-size="10.8" fill="#5d5d70">fittwin_index.pkl</text>
+<text x="1031.0" y="1295.0" font-size="10.8" fill="#5d5d70">demand_index.json · caches</text>
+<path d="M 690.0 1142 L 690.0 1180" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="535.0" y="1150.0" width="310.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="690.0" y="1162.0" text-anchor="middle" font-size="10.5" fill="#5d5d70">SQL · Redis HSET/HGET · S3 put/get · artifact load</text>
+<rect x="40" y="1364" width="1300" height="130" rx="16" fill="none" stroke="#b3b3c0" stroke-width="1.6" stroke-dasharray="7 5"/>
+<rect x="58" y="1351" width="257.6" height="26" rx="8" fill="#ffffff" stroke="#b3b3c0" stroke-width="1.2"/>
+<text x="66" y="1369" font-weight="800" font-size="14" fill="#2a2a48">6 · External services &amp; sinks</text>
+<rect x="60.0" y="1392" width="235" height="90" rx="12" fill="#f7ddd3" stroke="#e3a98f" stroke-width="1.6"/>
+<text x="76.0" y="1416" font-weight="700" font-size="12.8" fill="#2a2a48">LLM providers</text>
+<line x1="76.0" y1="1424" x2="279.0" y2="1424" stroke="#e3a98f" stroke-width="1"/>
+<text x="76.0" y="1442" font-size="10.8" fill="#5d5d70">Claude Haiku (vision)</text>
+<text x="76.0" y="1457.5" font-size="10.8" fill="#5d5d70">OpenRouter / Bedrock</text>
+<text x="76.0" y="1473.0" font-size="10.8" fill="#5d5d70">captioning + severity</text>
+<rect x="316.25" y="1392" width="235" height="90" rx="12" fill="#f7ddd3" stroke="#e3a98f" stroke-width="1.6"/>
+<text x="332.25" y="1416" font-weight="700" font-size="12.8" fill="#2a2a48">Amazon Catalog API</text>
+<line x1="332.25" y1="1424" x2="535.25" y2="1424" stroke="#e3a98f" stroke-width="1"/>
+<text x="332.25" y="1442" font-size="10.8" fill="#5d5d70">product search</text>
+<text x="332.25" y="1457.5" font-size="10.8" fill="#5d5d70">ASIN · MRP · ref image</text>
+<text x="332.25" y="1473.0" font-size="10.8" fill="#5d5d70">matched, not hosted</text>
+<rect x="572.5" y="1392" width="235" height="90" rx="12" fill="#f7ddd3" stroke="#e3a98f" stroke-width="1.6"/>
+<text x="588.5" y="1416" font-weight="700" font-size="12.8" fill="#2a2a48">Training datasets</text>
+<line x1="588.5" y1="1424" x2="791.5" y2="1424" stroke="#e3a98f" stroke-width="1"/>
+<text x="588.5" y="1442" font-size="10.8" fill="#5d5d70">Amazon Reviews 2023</text>
+<text x="588.5" y="1457.5" font-size="10.8" fill="#5d5d70">Rent-the-Runway fit</text>
+<text x="588.5" y="1473.0" font-size="10.8" fill="#5d5d70">Mercari prices</text>
+<rect x="828.75" y="1392" width="235" height="90" rx="12" fill="#f7ddd3" stroke="#e3a98f" stroke-width="1.6"/>
+<text x="844.75" y="1416" font-weight="700" font-size="12.8" fill="#2a2a48">UPI payout</text>
+<line x1="844.75" y1="1424" x2="1047.75" y2="1424" stroke="#e3a98f" stroke-width="1"/>
+<text x="844.75" y="1442" font-size="10.8" fill="#5d5d70">seller settlement</text>
+<text x="844.75" y="1457.5" font-size="10.8" fill="#5d5d70">after return window</text>
+<text x="844.75" y="1473.0" font-size="10.8" fill="#5d5d70">escrow release</text>
+<rect x="1085.0" y="1392" width="235" height="90" rx="12" fill="#f7ddd3" stroke="#e3a98f" stroke-width="1.6"/>
+<text x="1101.0" y="1416" font-weight="700" font-size="12.8" fill="#2a2a48">NGO / e-waste</text>
+<line x1="1101.0" y1="1424" x2="1304.0" y2="1424" stroke="#e3a98f" stroke-width="1"/>
+<text x="1101.0" y="1442" font-size="10.8" fill="#5d5d70">donate (grade F)</text>
+<text x="1101.0" y="1457.5" font-size="10.8" fill="#5d5d70">recycle sink</text>
+<text x="1101.0" y="1473.0" font-size="10.8" fill="#5d5d70">exits marketplace</text>
+<path d="M 690.0 1326 L 690.0 1364" fill="none" stroke="#8a8a8a" stroke-width="1.7" marker-end="url(#ah)"/>
+<rect x="514.0" y="1334.0" width="352.0" height="17" rx="5" fill="#ffffff" opacity="0.92"/>
+<text x="690.0" y="1346.0" text-anchor="middle" font-size="10.5" fill="#5d5d70">external API calls · offline training · payout / disposal</text>
+</svg>

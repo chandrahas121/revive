@@ -2,6 +2,7 @@ from django.urls import path
 from core.views import (
     ListingListView, ListingDetailView, MyListingsView, RecommendView,
     ManageListingView, CatalogSuggestView, ReturnProcessView, AdvanceListingView,
+    PresignedUploadView,
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('returns/process/', ReturnProcessView.as_view(), name='return-process'),
     path('catalog/suggest/', CatalogSuggestView.as_view(), name='catalog-suggest'),
     path('recommend/', RecommendView.as_view(), name='recommend'),
+    path('uploads/presign/', PresignedUploadView.as_view(), name='presign-upload'),
 ]

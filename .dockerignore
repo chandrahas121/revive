@@ -10,6 +10,13 @@
 venv/
 env/
 
+# Secrets — never bake .env (prod keys) into the image. The container gets its
+# config from docker-compose `environment:` instead.
+.env
+.env.*
+backend/.env
+backend/.env.*
+
 # Django
 backend/db.sqlite3
 backend/staticfiles/

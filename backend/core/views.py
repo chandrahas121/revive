@@ -269,7 +269,13 @@ class ListingListView(APIView):
         image_bytes = None
         image_url = ''
         image_file = request.FILES.get('image')
-        if image_file:
+        presigned_url = (request.data.get('image_url') or '').strip()
+        if presigned_url:
+            # Browser uploaded straight to object storage via a presigned POST — we
+            # never receive the bytes, just record the public URL. This keeps web
+            # workers free under an upload surge (see core/storage.py).
+            image_url = presigned_url
+        elif image_file:
             image_bytes = image_file.read()
             image_file.seek(0)
             filename = f"listings/{uuid.uuid4().hex}_{image_file.name}"
@@ -753,11 +759,22 @@ class ReturnProcessView(APIView):
         order.save(update_fields=['status'])
 
         # Pillar 5: a return cancels the pending "keep it" credits for this order.
+        # (Fast + correctness-sensitive → stays synchronous.)
         try:
             from green.credits import cancel_pending_credits
             cancel_pending_credits(order)
         except Exception as e:
             logger.warning(f"cancel_pending_credits failed for order {order.pk}: {e}")
+
+        # Event-bus fan-out: one "return graded" event → independent Celery tasks
+        # (health card, local-supply signal, user notification). The slow/independent
+        # side-effects run in the worker so this response returns immediately.
+        try:
+            from .events import return_graded
+            return_graded.send(sender=self.__class__, listing=listing,
+                               order=order, route_result=route_result)
+        except Exception as e:
+            logger.warning(f"return_graded fan-out failed for order {order.pk}: {e}")
 
         data = ListingSerializer(listing).data
         data['route_result'] = route_result
@@ -800,3 +817,35 @@ class AdvanceListingView(APIView):
                 status=listing.status, disposition=listing.disposition,
                 source=listing.source, chosen_path=listing.chosen_path),
         })
+
+
+class PresignedUploadView(APIView):
+    """
+    POST /api/uploads/presign/
+    Body (JSON): { "filename": "photo.jpg", "content_type": "image/jpeg" }
+    Returns a presigned POST so the browser uploads the image straight to S3/MinIO:
+        { "upload_url", "fields", "s3_key", "file_url" }
+    Django never receives the image bytes — this keeps web workers free under an
+    upload surge (see core/storage.py).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from .storage import generate_presigned_upload
+
+        filename = request.data.get('filename', 'upload.jpg')
+        content_type = request.data.get('content_type', 'image/jpeg')
+        is_video = str(content_type).startswith('video/')
+        if not (str(content_type).startswith('image/') or is_video):
+            return Response({'error': 'Only image or video uploads are allowed.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Videos are larger and go under a separate prefix.
+        prefix, max_mb = ('returns/video', 60) if is_video else ('listings', 15)
+        result = generate_presigned_upload(filename, content_type, prefix=prefix, max_mb=max_mb)
+        if result is None:
+            return Response(
+                {'error': 'Object storage is not configured on this server.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(result)
