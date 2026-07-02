@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/amazon-revive-component-library-62917732-3885-420c-9f19-b642e1e3d237/revive/styles.css">
+<script src="_ds/amazon-revive-component-library-62917732-3885-420c-9f19-b642e1e3d237/_ds_bundle.js"></script>
+<style>
+  body{background:#f3f3f3;font-family:"Amazon Ember","Inter","Helvetica Neue",Arial,sans-serif;}
+  .sc-link{color:#0066c0;cursor:pointer;}
+  .sc-link:hover{color:#c45500;text-decoration:underline;}
+  .sc-teal{color:#007185;cursor:pointer;}
+  .sc-teal:hover{color:#c45500;text-decoration:underline;}
+  .sn-link{color:#fff;font-size:13px;padding:6px 9px;border-radius:3px;white-space:nowrap;cursor:pointer;}
+  .sn-link:hover{outline:1px solid #fff;}
+  .cat-row:hover{background:#f0f2f2;}
+  .mi-row:hover{background:#f0f2f2;}
+  .act-row:hover{background:#f0f2f2;}
+  ::placeholder{color:#8a8f8f;}
+  input:focus,select:focus{outline:2px solid #e77600;outline-offset:-1px;}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#f3f3f3;color:#0f1111;">
+
+  <!-- ===================== SIGN IN ===================== -->
+  <sc-if value="{{ isSignin }}" hint-placeholder-val="{{ true }}">
+  <div style="min-height:100vh;background:#fff;display:flex;flex-direction:column;">
+    <div style="height:4px;background:#131a22;"></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:22px 16px 40px;">
+      <div style="margin:8px 0 22px;">
+        <svg width="366" height="70" viewBox="0 0 366 70" fill="none">
+          <text x="0" y="46" font-family="Arial,Helvetica,sans-serif" font-size="46" font-weight="700" letter-spacing="-1" fill="#131a22">amazon</text>
+          <path d="M6 52 C 55 70, 135 70, 172 53" stroke="#FF9900" stroke-width="6" stroke-linecap="round" fill="none"/>
+          <path d="M172 53 l 3 -9 l -12 3 Z" fill="#FF9900"/>
+          <text x="182" y="46" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="400" fill="#131a22">seller central</text>
+        </svg>
+      </div>
+      <div style="width:350px;max-width:100%;border:1px solid #ddd;border-radius:8px;padding:20px 24px 26px;">
+        <h1 style="font-size:28px;font-weight:400;margin:0 0 16px;">Create account</h1>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Your name</div>
+          <input placeholder="First and last name" style="width:100%;height:38px;border:1px solid #e77600;box-shadow:0 0 3px 2px rgba(228,121,17,.3);border-radius:3px;padding:0 8px;font-size:14px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Email</div>
+          <input style="width:100%;height:38px;border:1px solid #a6a6a6;border-radius:3px;padding:0 8px;font-size:14px;">
+        </div>
+        <div style="margin-bottom:6px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Password</div>
+          <input type="password" placeholder="At least 6 characters" style="width:100%;height:38px;border:1px solid #a6a6a6;border-radius:3px;padding:0 8px;font-size:14px;">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;font-size:12px;color:#0066c0;margin-bottom:12px;">
+          <span style="display:inline-flex;width:15px;height:15px;border-radius:50%;background:#0066c0;color:#fff;align-items:center;justify-content:center;font-style:italic;font-weight:700;font-size:10px;">i</span>
+          <span style="color:#111;">Passwords must be at least 6 characters.</span>
+        </div>
+        <div style="margin-bottom:18px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Re-enter password</div>
+          <input type="password" style="width:100%;height:38px;border:1px solid #a6a6a6;border-radius:3px;padding:0 8px;font-size:14px;">
+        </div>
+        <button onClick="{{ signIn }}" style="width:100%;height:36px;background:linear-gradient(180deg,#f7dfa5,#f0c14b);border:1px solid #a88734;border-bottom-color:#9c7e31;border-radius:3px;font-size:14px;color:#111;cursor:pointer;">Next</button>
+        <div style="height:1px;background:#e7e7e7;margin:20px 0 14px;"></div>
+        <div style="font-size:13px;">Already have an account? <span onClick="{{ signIn }}" class="sc-link">Sign in</span></div>
+      </div>
+    </div>
+    <div style="height:70px;background:#131a22;"></div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== CHROME ===================== -->
+  <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+  <div>
+    <sc-if value="{{ chromeBars }}" hint-placeholder-val="{{ true }}">
+    <!-- top bar -->
+    <div style="background:#232f3e;display:flex;align-items:center;gap:12px;padding:7px 14px;position:sticky;top:0;z-index:50;">
+      <button onClick="{{ toggleMenu }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff;border-radius:3px;background:transparent;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div onClick="{{ goHome }}" style="cursor:pointer;flex-shrink:0;">
+        <svg width="192" height="30" viewBox="0 0 192 30" fill="none">
+          <text x="0" y="22" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" letter-spacing="-.6" fill="#fff">amazon</text>
+          <path d="M3 25 C 27 34, 66 34, 84 26" stroke="#FF9900" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <path d="M84 26 l 1.5 -4.5 l -6 1.5 Z" fill="#FF9900"/>
+          <text x="90" y="22" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="400" fill="#fff">seller central</text>
+        </svg>
+      </div>
+      <div style="display:flex;align-items:center;background:#fff;border-radius:3px;padding:4px 12px;font-size:13px;color:#111;flex-shrink:0;gap:10px;height:30px;">
+        <b style="font-weight:700;">{{ storeName }}</b>
+        <span style="width:1px;height:14px;background:#ccc;"></span>
+        <span style="color:#333;">{{ marketplace }}</span>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;height:36px;">
+        <input placeholder="Search" style="flex:1;min-width:0;border:none;border-radius:4px 0 0 4px;padding:0 12px;font-size:14px;background:#fff;color:#111;">
+        <button style="width:46px;background:#37475a;border-radius:0 4px 4px 0;display:flex;align-items:center;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;color:#fff;">
+        <button style="width:36px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff;border-radius:3px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        </button>
+        <button onClick="{{ goSignin }}" title="Account" style="width:36px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff;border-radius:3px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 003.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H8a1.65 1.65 0 001-1.51V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V8a1.65 1.65 0 001.51 1H22a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+        <button style="display:flex;align-items:center;gap:3px;color:#fff;font-size:13px;padding:6px 8px;border-radius:3px;">EN <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <button style="color:#fff;font-size:13px;padding:6px 8px;border-radius:3px;">Help</button>
+      </div>
+    </div>
+    <!-- sub nav -->
+    <div style="background:#232f3e;border-top:1px solid #3a4553;display:flex;align-items:center;gap:2px;padding:2px 10px;overflow-x:auto;">
+      <button style="width:26px;height:30px;display:flex;align-items:center;justify-content:center;color:#febd69;flex-shrink:0;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12a2 2 0 012 2v18l-8-4-8 4V4a2 2 0 012-2z"/></svg>
+      </button>
+      <span onClick="{{ goInventory }}" class="sn-link">Add Products</span>
+      <span class="sn-link">Campaign Manager</span>
+      <span onClick="{{ goHome }}" class="sn-link">Business Reports</span>
+      <span onClick="{{ goMcf }}" class="sn-link">Fulfillment</span>
+      <span class="sn-link">Advertising Reports</span>
+      <span onClick="{{ goInventory }}" class="sn-link">Manage All Inventory</span>
+      <span onClick="{{ goReturns }}" class="sn-link">Manage Returns</span>
+      <span class="sn-link">Certifications</span>
+      <span class="sn-link">Manage Seller Fulfilled Products</span>
+      <div style="flex:1;"></div>
+      <button style="color:#fff;font-size:12px;border:1px solid #adb1b8;border-radius:3px;padding:4px 14px;flex-shrink:0;margin-left:8px;">Edit</button>
+    </div>
+    </sc-if>
+
+    <!-- ===================== HOME / DASHBOARD ===================== -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <div style="max-width:1500px;margin:0 auto;padding:16px 16px 60px;">
+      <!-- widget cards -->
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;">
+        <sc-for list="{{ widgets }}" as="w" hint-placeholder-count="6">
+          <div style="background:#fff;border:1px solid #d5d9d9;border-radius:8px;padding:12px 14px;min-height:92px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12.5px;color:#111;font-weight:600;">{{ w.label }}</div>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div style="height:1px;background:#eaeded;margin:8px 0;"></div>
+            <sc-if value="{{ w.stars }}" hint-placeholder-val="{{ true }}">
+              <div style="color:#e77600;font-size:14px;letter-spacing:1px;">★★★★★ <b style="color:#111;font-size:16px;">{{ w.value }}</b></div>
+            </sc-if>
+            <sc-if value="{{ w.plain }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:22px;font-weight:700;">{{ w.value }}</div>
+            </sc-if>
+            <div style="font-size:11px;color:#565959;margin-top:3px;">{{ w.sub }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- compare sales -->
+      <div style="background:#eaf4fb;border:1px solid #d5e3f0;border-radius:8px;padding:18px 20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h2 style="font-size:20px;font-weight:700;margin:0;">Compare Sales</h2>
+          <div style="display:flex;border:1px solid #007185;border-radius:4px;overflow:hidden;font-size:13px;">
+            <span style="padding:6px 14px;background:#007185;color:#fff;">Graph view</span>
+            <span style="padding:6px 14px;background:#fff;color:#007185;cursor:pointer;">Table view</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <!-- chart 1: units -->
+          <div style="background:#fff;border:1px solid #d5d9d9;border-radius:6px;padding:12px 10px 6px;">
+            <svg viewBox="0 0 530 190" style="width:100%;height:auto;">
+              <line x1="40" y1="16" x2="524" y2="16" stroke="#eaeded"/>
+              <line x1="40" y1="68.7" x2="524" y2="68.7" stroke="#eaeded"/>
+              <line x1="40" y1="121.3" x2="524" y2="121.3" stroke="#eaeded"/>
+              <line x1="40" y1="176" x2="524" y2="176" stroke="#d5d9d9"/>
+              <text x="30" y="20" text-anchor="end" font-size="10" fill="#888">6</text>
+              <text x="30" y="72" text-anchor="end" font-size="10" fill="#888">4</text>
+              <text x="30" y="125" text-anchor="end" font-size="10" fill="#888">2</text>
+              <text x="30" y="180" text-anchor="end" font-size="10" fill="#888">0</text>
+              <text x="14" y="120" text-anchor="middle" font-size="10" fill="#565959" transform="rotate(-90 14 120)">Units ordered</text>
+              <polyline points="{{ u_year }}" fill="none" stroke="#9aa0a0" stroke-width="1.4"/>
+              <polyline points="{{ u_week }}" fill="none" stroke="#f6a623" stroke-width="1.6"/>
+              <polyline points="{{ u_yest }}" fill="none" stroke="#d0491f" stroke-width="1.6"/>
+              <polyline points="{{ u_today }}" fill="none" stroke="#24b0c9" stroke-width="1.6"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;padding:2px 6px 4px 40px;">
+              <sc-for list="{{ hours }}" as="h" hint-placeholder-count="24">
+                <span style="font-size:7.5px;color:#888;transform:rotate(-45deg);transform-origin:center;white-space:nowrap;">{{ h }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <!-- chart 2: sales -->
+          <div style="background:#fff;border:1px solid #d5d9d9;border-radius:6px;padding:12px 10px 6px;">
+            <svg viewBox="0 0 530 190" style="width:100%;height:auto;">
+              <line x1="46" y1="16" x2="524" y2="16" stroke="#eaeded"/>
+              <line x1="46" y1="68.7" x2="524" y2="68.7" stroke="#eaeded"/>
+              <line x1="46" y1="121.3" x2="524" y2="121.3" stroke="#eaeded"/>
+              <line x1="46" y1="176" x2="524" y2="176" stroke="#d5d9d9"/>
+              <text x="36" y="20" text-anchor="end" font-size="10" fill="#888">300</text>
+              <text x="36" y="72" text-anchor="end" font-size="10" fill="#888">200</text>
+              <text x="36" y="125" text-anchor="end" font-size="10" fill="#888">100</text>
+              <text x="36" y="180" text-anchor="end" font-size="10" fill="#888">0</text>
+              <text x="14" y="118" text-anchor="middle" font-size="10" fill="#565959" transform="rotate(-90 14 118)">Ordered product sales</text>
+              <polyline points="{{ s_year }}" fill="none" stroke="#9aa0a0" stroke-width="1.4"/>
+              <polyline points="{{ s_week }}" fill="none" stroke="#f6a623" stroke-width="1.6"/>
+              <polyline points="{{ s_yest }}" fill="none" stroke="#d0491f" stroke-width="1.6"/>
+              <polyline points="{{ s_today }}" fill="none" stroke="#24b0c9" stroke-width="1.6"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;padding:2px 6px 4px 46px;">
+              <sc-for list="{{ hours }}" as="h" hint-placeholder-count="24">
+                <span style="font-size:7.5px;color:#888;transform:rotate(-45deg);transform-origin:center;white-space:nowrap;">{{ h }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <!-- compare legend -->
+        <div style="display:grid;grid-template-columns:150px repeat(4,1fr);gap:0;margin-top:14px;background:#fff;border:1px solid #d5d9d9;border-radius:6px;padding:14px 16px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;">Compare</div>
+            <div class="sc-teal" style="font-size:12.5px;margin-top:3px;">What's this</div>
+          </div>
+          <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+            <div style="border-left:1px solid #eaeded;padding-left:16px;">
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="width:15px;height:15px;border:1px solid #888;border-radius:2px;display:flex;align-items:center;justify-content:center;background:{{ l.check }};">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <b style="font-size:13px;color:{{ l.color }};">{{ l.name }}</b>
+              </div>
+              <div style="font-size:11.5px;color:#565959;margin:5px 0 0 22px;">{{ l.when }}</div>
+              <div style="font-size:11.5px;color:#111;margin:2px 0 0 22px;">{{ l.units }}</div>
+              <div style="font-size:11.5px;color:#111;margin:1px 0 0 22px;">{{ l.money }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- deep dive -->
+      <div style="background:#fff;border:1px solid #d5d9d9;border-radius:8px;padding:18px 20px;margin-top:16px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;margin:0;">Deep dive your ASIN performance</h2>
+            <div style="font-size:12px;color:#565959;margin-top:2px;">Comparing Monday-Sunday ending Jun 1, 2025 to the previous Monday-Sunday</div>
+          </div>
+          <div class="sc-teal" style="font-size:13px;">Hide ASINs</div>
+        </div>
+        <div style="display:flex;gap:10px;margin:16px 0;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:600;padding:6px 15px;border-radius:16px;background:#007185;color:#fff;cursor:pointer;">Products with Declining Sales</span>
+          <span style="font-size:13px;padding:6px 15px;border-radius:16px;border:1px solid #007185;color:#007185;cursor:pointer;">Products with Increasing Sales</span>
+          <span style="font-size:13px;padding:6px 15px;border-radius:16px;border:1px solid #d5d9d9;color:#565959;cursor:pointer;">Declining Traffic Products</span>
+          <span style="font-size:13px;padding:6px 15px;border-radius:16px;border:1px solid #007185;color:#007185;cursor:pointer;">Products Below Market Average</span>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <sc-for list="{{ deepCards }}" as="d" hint-placeholder-count="2">
+            <div style="width:340px;border:1px solid #d5d9d9;border-radius:8px;padding:14px;">
+              <div style="display:flex;gap:12px;">
+                <div style="width:48px;height:48px;border-radius:4px;background:{{ d.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M8 21h8a2 2 0 002-2l1-11H5l1 11a2 2 0 002 2z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-size:13px;color:#565959;line-height:1.35;">{{ d.title }}</div>
+                  <div style="font-size:12px;color:#565959;margin-top:3px;">{{ d.asin }}</div>
+                </div>
+              </div>
+              <div style="font-size:13px;color:#111;margin:12px 0 10px;">This ASIN observed <b>{{ d.decline }}</b> decline in OPS</div>
+              <button onClick="{{ goInventory }}" style="background:#007185;color:#fff;font-size:13px;border-radius:4px;padding:6px 16px;">View Details</button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== INVENTORY ===================== -->
+    <sc-if value="{{ isInventory }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#fff;min-height:80vh;">
+    <div style="max-width:1500px;margin:0 auto;padding:12px 16px 60px;">
+      <div style="font-size:12.5px;color:#111;padding:6px 0;border-bottom:1px solid #eaeded;">
+        <b>Listing Tools:</b>
+        <span class="sc-teal" style="margin:0 4px;text-decoration:underline;">All Inventory</span> |
+        <span class="sc-teal" style="margin:0 4px;">Search Suppressed and Inactive Listings (1)</span> |
+        <span class="sc-teal" style="margin:0 4px;">Improve Listing Quality in bulk</span> |
+        <span class="sc-teal" style="margin:0 4px;">Potential Duplicates</span> |
+        <span class="sc-teal" style="margin:0 4px;">Complete your drafts</span> |
+        <span class="sc-teal" style="margin:0 4px;">Review compliance</span>
+      </div>
+      <div style="font-size:12.5px;color:#111;padding:6px 0;">
+        <b>FBA Inventory Tools:</b>
+        <span class="sc-teal" style="margin:0 4px;">FBA Dashboard</span> |
+        <span class="sc-teal" style="margin:0 4px;">FBA Inventory</span> |
+        <span class="sc-teal" style="margin:0 4px;">Shipments</span> |
+        <span class="sc-teal" style="margin:0 4px;">FBA Opportunities</span> |
+        <span class="sc-teal" style="margin:0 4px;">FBA Analytics</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-top:10px;">
+        <div>
+          <h1 style="font-size:28px;font-weight:400;margin:0;">Manage All Inventory</h1>
+          <div style="font-size:12.5px;color:#565959;margin-top:4px;">Manage your inventory across marketplaces from a single place.
+            <span class="sc-teal">Learn more</span> | <span class="sc-teal">View product tour</span> | <span class="sc-teal">Provide feedback</span></div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button style="background:#232f3e;color:#fff;font-size:13px;border-radius:8px;padding:8px 16px;">Add a variation</button>
+          <button style="background:#232f3e;color:#fff;font-size:13px;border-radius:8px;padding:8px 16px;">Add a product</button>
+        </div>
+      </div>
+
+      <!-- filter bar -->
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-top:18px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:12.5px;font-weight:700;margin-bottom:4px;">Search</div>
+          <div style="display:flex;">
+            <select style="height:34px;border:1px solid #888c8c;border-radius:8px 0 0 8px;background:#f0f2f2;font-size:13px;padding:0 8px;border-right:none;"><option>All</option></select>
+            <input placeholder="Search SKU, Title/Keyword, FNSKU, ASIN, UPC/EAN" style="width:340px;height:34px;border:1px solid #888c8c;padding:0 10px;font-size:13px;">
+            <button style="width:40px;height:34px;background:#f0f2f2;border:1px solid #888c8c;border-left:none;border-radius:0 8px 8px 0;display:flex;align-items:center;justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><span style="width:32px;height:16px;background:#ccc;border-radius:10px;position:relative;display:inline-block;"><span style="position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;"></span></span>Show only Favorites</label>
+        </div>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:4px;">Listing status <span style="background:#007185;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;vertical-align:1px;">Updated</span></div>
+          <select style="height:34px;border:1px solid #888c8c;border-radius:8px;font-size:13px;padding:0 8px;min-width:120px;"><option>Active (3)</option></select>
+        </div>
+        <div>
+          <div style="font-size:11.5px;font-weight:700;margin-bottom:4px;">Fulfilled by</div>
+          <select style="height:34px;border:1px solid #888c8c;border-radius:8px;font-size:13px;padding:0 8px;min-width:110px;"><option>All</option></select>
+        </div>
+        <button style="height:34px;align-self:flex-end;border:1px solid #007185;color:#007185;background:#fff;border-radius:8px;font-size:13px;padding:0 14px;display:flex;align-items:center;gap:6px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>All filters</button>
+        <button style="height:34px;align-self:flex-end;border:1px solid #007185;color:#007185;background:#fff;border-radius:8px;font-size:13px;padding:0 14px;display:flex;align-items:center;gap:6px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v10M4.2 4.2l4.2 4.2m7.2 7.2l4.2 4.2"/></svg>Preferences</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;margin:14px 0 4px;font-size:12.5px;">
+        <span>1 - 3 of 3</span>
+        <span style="font-weight:700;">Sort by:</span>
+        <select style="height:30px;border:1px solid #888c8c;border-radius:6px;font-size:12.5px;padding:0 8px;"><option>Sales: Highest on top</option></select>
+      </div>
+
+      <!-- table header -->
+      <div style="display:grid;grid-template-columns:36px 130px 1fr 150px 160px 220px 150px 30px;gap:12px;padding:8px 6px;border-bottom:2px solid #d5d9d9;font-size:12px;">
+        <div></div>
+        <div><b>Listing status</b><div style="color:#565959;">Next step</div></div>
+        <div><b>Product details</b><div style="color:#565959;">Image, Title, ASIN, and SKU</div></div>
+        <div><b>Performance</b> <span style="color:#007185;">&#9432;</span><div style="color:#565959;">Last 30 days</div></div>
+        <div><b>Inventory</b><div style="color:#565959;">Fulfilled by and quantity</div></div>
+        <div><b>Price and shipping cost</b><div style="color:#565959;">Pricing details</div></div>
+        <div><b>Estimated fees</b><div style="color:#565959;">per unit sold</div></div>
+        <div></div>
+      </div>
+
+      <!-- rows -->
+      <sc-for list="{{ products }}" as="p" hint-placeholder-count="3">
+        <div style="display:grid;grid-template-columns:36px 130px 1fr 150px 160px 220px 150px 30px;gap:12px;padding:14px 6px;border-bottom:1px solid #eaeded;font-size:12.5px;position:relative;">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+            <input type="checkbox" style="width:15px;height:15px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.8"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:700;color:#111;">{{ p.status }}</div>
+            <div style="color:#565959;font-size:11.5px;margin-top:2px;">{{ p.date }}</div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <div style="width:46px;height:46px;border-radius:4px;background:{{ p.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{ p.ink }}" stroke-width="1.5"><path d="M8 21h8a2 2 0 002-2l1-11H5l1 11a2 2 0 002 2z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
+            </div>
+            <div style="min-width:0;">
+              <div onClick="{{ p.onEdit }}" class="sc-teal" style="line-height:1.34;">{{ p.title }}</div>
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin-top:6px;color:#565959;">
+                <span>ASIN</span><span style="color:#111;">{{ p.asin }}</span>
+                <span>SKU</span><span style="color:#111;">{{ p.sku }}</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;border:1px solid #d5d9d9;border-radius:6px;padding:3px 8px;color:#007185;font-size:11.5px;cursor:pointer;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Variation Family Details</div>
+            </div>
+          </div>
+          <div style="color:#565959;">
+            <div style="display:flex;justify-content:space-between;"><span>Sales</span><b style="color:#111;">{{ p.sales }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>Units sold</span><b style="color:#111;">{{ p.units }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>Page views</span><b style="color:#111;">{{ p.views }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>Sales rank</span><b style="color:#111;">{{ p.rank }}</b></div>
+            <div style="font-size:11px;">{{ p.category }}</div>
+          </div>
+          <div style="color:#565959;">
+            <div style="display:flex;justify-content:space-between;"><span>Available (FBA)</span><b style="color:#111;">{{ p.fba }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>Inbound</span><b style="color:#111;">{{ p.inbound }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>Unfulfillable</span><b style="color:#111;">{{ p.unfulfillable }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>Reserved</span><b style="color:#111;">{{ p.reserved }}</b></div>
+          </div>
+          <div style="color:#565959;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;"><span>Price</span>
+              <span style="display:flex;align-items:center;border:1px solid #888c8c;border-radius:4px;overflow:hidden;">
+                <span style="background:#f0f2f2;padding:2px 5px;font-size:11px;border-right:1px solid #888c8c;">USD</span>
+                <input value="{{ p.price }}" style="width:52px;border:none;padding:2px 5px;font-size:12px;text-align:right;">
+              </span>
+            </div>
+            <div style="display:flex;justify-content:space-between;"><span>Shipping cost</span><span>+ $0.00</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:5px 0;"><span>Minimum price</span>
+              <span style="display:flex;align-items:center;border:1px solid #888c8c;border-radius:4px;overflow:hidden;"><span style="background:#f0f2f2;padding:2px 5px;font-size:11px;border-right:1px solid #888c8c;">USD</span><input style="width:52px;border:none;padding:2px 5px;"></span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;"><span>Maximum price</span>
+              <span style="display:flex;align-items:center;border:1px solid #888c8c;border-radius:4px;overflow:hidden;"><span style="background:#f0f2f2;padding:2px 5px;font-size:11px;border-right:1px solid #888c8c;">USD</span><input style="width:52px;border:none;padding:2px 5px;"></span>
+            </div>
+            <div style="margin-top:8px;font-size:11.5px;">
+              <div style="display:flex;align-items:center;gap:5px;"><span style="color:#007600;">&#10004;</span> Featured offer</div>
+              <div style="display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:5px;"><span style="color:#007600;">&#10004;</span>Competitive price</span><span>{{ p.comp }}</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:5px;"><span style="color:#007600;">&#10004;</span>Lowest price</span><span>{{ p.low }}</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:5px;"><span style="color:#007600;">&#10004;</span>Business price</span><span>{{ p.biz }}</span></div>
+              <div class="sc-teal" style="margin-top:3px;">View reference prices</div>
+            </div>
+          </div>
+          <div style="color:#565959;">
+            <div style="display:flex;justify-content:space-between;"><span>Total fees</span><b style="color:#111;">{{ p.totalFees }}</b></div>
+            <div style="display:flex;justify-content:space-between;"><span>FBA fee</span><b style="color:#111;">{{ p.fbaFee }}</b></div>
+            <div class="sc-teal" style="margin-top:4px;">Calculate revenue</div>
+          </div>
+          <div style="position:relative;">
+            <button onClick="{{ p.onMenu }}" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid #d5d9d9;border-radius:6px;color:#333;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+            </button>
+            <sc-if value="{{ p.menuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:30px;right:0;width:220px;background:#fff;border:1px solid #d5d9d9;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:30;padding:4px 0;font-size:13px;">
+                <div onClick="{{ p.onEdit }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Edit listing</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Manage images</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Copy listing</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Add another condition</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Change to Fulfilled by Merchant</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Send or replenish inventory</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Set replenishment alerts</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Create removal order</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Create fulfillment order</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Print item labels</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Close listing</div>
+                <div onClick="{{ p.onClose }}" class="act-row" style="padding:9px 14px;cursor:pointer;">Delete listing</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+      <div style="font-size:12px;color:#565959;padding:20px 0;">Help | Program Policies | English | Download the Amazon Seller mobile app | Next gen selling</div>
+    </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== PRODUCT DETAIL ===================== -->
+    <sc-if value="{{ isProduct }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#fff;min-height:80vh;">
+      <div style="padding:10px 20px;border-bottom:1px solid #eaeded;display:flex;align-items:center;justify-content:space-between;">
+        <svg width="158" height="24" viewBox="0 0 158 24" fill="none">
+          <text x="0" y="18" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#131a22">amazon</text>
+          <text x="72" y="18" font-family="Arial,Helvetica,sans-serif" font-size="12" fill="#565959">seller central</text>
+        </svg>
+        <span class="sc-link" onClick="{{ goInventory }}" style="font-size:13px;">Need help?</span>
+      </div>
+      <div style="max-width:1200px;margin:0 auto;padding:22px 24px 60px;">
+        <div class="sc-teal" onClick="{{ goInventory }}" style="font-size:13px;margin-bottom:14px;">&#8592; Back to Manage All Inventory</div>
+        <div style="display:flex;gap:26px;">
+          <div style="width:200px;height:200px;border:1px solid #eaeded;border-radius:6px;background:#fde7f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#d16fa0" stroke-width="1.3"><path d="M8 21h8a2 2 0 002-2l1-11H5l1 11a2 2 0 002 2z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:16px;color:#111;line-height:1.4;">Buuvu Pickleball Bag With 2 Towels &ndash; Large Paddle Shoulder Tote With Zipper, Adjustable Strap Pocket | Unisex Sling Backpack For Travel &amp; Gym | Durable Sports Paddle Bag (Pink)</div>
+            <div style="font-size:13px;margin-top:12px;"><b>ASIN:</b> B0DK7V5NXL</div>
+            <div style="font-size:13px;margin-top:4px;"><b>Amazon Sales Rank:</b> 160528</div>
+            <div style="font-size:13px;margin-top:12px;font-weight:700;">Competing Marketplace Offers:</div>
+            <div style="font-size:13px;margin-top:2px;">1 New from $54.97+ $0.00 shipping</div>
+            <div class="sc-teal" style="font-size:13px;margin-top:4px;">View Listings on Amazon</div>
+            <div class="sc-teal" style="font-size:13px;margin-top:6px;">More Info &#8250;</div>
+          </div>
+        </div>
+        <!-- tabs -->
+        <div style="display:flex;gap:0;border-bottom:1px solid #d5d9d9;margin-top:22px;">
+          <span style="padding:11px 18px;font-size:14px;font-weight:700;border-bottom:3px solid #e77600;color:#111;">Product Details</span>
+          <span style="padding:11px 18px;font-size:14px;color:#565959;cursor:pointer;">Images</span>
+          <span style="padding:11px 18px;font-size:14px;color:#565959;cursor:pointer;">Variations</span>
+          <span style="padding:11px 18px;font-size:14px;color:#565959;cursor:pointer;">Offer</span>
+          <span style="padding:11px 18px;font-size:14px;color:#565959;cursor:pointer;">Safety &amp; Compliance</span>
+        </div>
+        <div style="display:flex;gap:24px;margin-top:20px;">
+          <div style="width:130px;flex-shrink:0;">
+            <div style="font-size:13px;color:#565959;margin-bottom:6px;">Listing Language <span class="sc-teal">?</span></div>
+            <select style="width:100%;height:32px;border:1px solid #888c8c;border-radius:6px;font-size:13px;padding:0 8px;"><option>English</option></select>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;gap:12px;background:#f0f7fc;border:1px solid #cfe3f2;border-radius:6px;padding:14px 16px;font-size:13px;color:#111;">
+              <span style="color:#0066c0;font-size:16px;">&#9432;</span>
+              <div>
+                <div>When multiple sellers sell the same product through a single detail page, we combine and present the best product data to ensure customers get the best experience.</div>
+                <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;"><input type="checkbox" checked style="width:15px;height:15px;">Show content currently live on the detail page</label>
+              </div>
+            </div>
+            <!-- editable fields -->
+            <div style="margin-top:22px;">
+              <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Product Title <span style="color:#c00;">*</span></div>
+              <input value="Buuvu Pickleball Bag With 2 Towels – Large Paddle Shoulder Tote With Zipper, Adjustable Strap Pocket" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;font-size:13px;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px;">
+              <div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Brand Name</div>
+                <input value="Buuvu" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;font-size:13px;">
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Manufacturer</div>
+                <input value="Buuvu" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;font-size:13px;">
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Item Type</div>
+                <input value="Sports Paddle Bag" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;font-size:13px;">
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Color</div>
+                <input value="Pink" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;font-size:13px;">
+              </div>
+            </div>
+            <div style="margin-top:18px;">
+              <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Product Description</div>
+              <textarea style="width:100%;height:90px;border:1px solid #888c8c;border-radius:6px;padding:10px;font-size:13px;resize:vertical;">Large capacity pickleball bag with dedicated paddle pocket, two included towels, and an adjustable sling strap for travel and gym use.</textarea>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:22px;">
+              <button style="background:#232f3e;color:#fff;font-size:13px;border-radius:8px;padding:9px 22px;">Save and finish</button>
+              <button onClick="{{ goInventory }}" style="background:#fff;color:#111;border:1px solid #888c8c;font-size:13px;border-radius:8px;padding:9px 22px;">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== CREATE MCF ORDER ===================== -->
+    <sc-if value="{{ isMcf }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#fff;min-height:80vh;">
+    <div style="max-width:1500px;margin:0 auto;padding:18px 20px 60px;">
+      <h1 style="font-size:26px;font-weight:400;margin:0;">Create MCF Order</h1>
+      <div style="font-size:12.5px;color:#565959;margin-top:4px;">Go to <span class="sc-teal">Multi-Channel Fulfillment</span> to learn more. Watch <span class="sc-teal">our video tutorial</span> to learn how to place an order and set up automated order placement.</div>
+      <div class="sc-teal" style="position:relative;float:right;margin-top:-30px;font-size:13px;display:flex;align-items:center;gap:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v13m0 0l-4-4m4 4l4-4"/><path d="M20 16v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3"/></svg>
+        Create a Bulk Order</div>
+      <div style="clear:both;background:#eef6f7;border:1px solid #cfe3e5;border-radius:6px;padding:12px 16px;margin:16px 0;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:#111;">
+        <span>Estimate the return on investment (ROI) that Buy with Prime may provide to your business when you offer Prime shopping benefits such as fast, free delivery, and easy returns on your ecommerce website. <span class="sc-teal">Try the ROI Calculator</span></span>
+        <span style="color:#888;cursor:pointer;font-size:16px;">&times;</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+        <!-- col 1 -->
+        <div style="border:1px solid #d5d9d9;border-radius:8px;padding:20px;">
+          <div style="font-size:16px;font-weight:700;margin-bottom:18px;">1. Enter customer address</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">Country <span class="sc-teal">?</span></div>
+          <select style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;font-size:13px;padding:0 8px;"><option>&#127482;&#127480; United States</option></select>
+          <div style="font-size:11.5px;color:#565959;margin:4px 0 16px;">International postal addresses allowed</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">Full name</div>
+          <input style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;margin-bottom:16px;padding:0 10px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">Street address</div>
+          <input placeholder="Street address, P.O. box, company name, c/o" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;">
+          <div class="sc-teal" style="font-size:13px;margin:6px 0 16px;">+ Add a line</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">City</div>
+          <input style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;margin-bottom:16px;padding:0 10px;">
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;"><div style="font-size:13px;font-weight:700;margin-bottom:5px;">State / Province</div><select style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;"><option></option></select></div>
+            <div style="flex:1;"><div style="font-size:13px;font-weight:700;margin-bottom:5px;">ZIP / Postal code</div><input style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;"></div>
+          </div>
+        </div>
+        <!-- col 2 -->
+        <div style="border:1px solid #d5d9d9;border-radius:8px;padding:20px;">
+          <div style="font-size:16px;font-weight:700;margin-bottom:18px;">2. Add items</div>
+          <div style="display:flex;align-items:center;border:1px solid #888c8c;border-radius:6px;padding:0 10px;height:38px;gap:8px;margin-bottom:16px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+            <span style="color:#8a8f8f;font-size:13px;">Search by title, MSKU, ASIN, or FNSKU</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;cursor:pointer;"><span style="width:32px;height:16px;background:#ccc;border-radius:10px;position:relative;display:inline-block;flex-shrink:0;"><span style="position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;"></span></span>Only ship with blank boxes <span class="sc-teal">&#9432;</span></label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer;"><span style="width:32px;height:16px;background:#ccc;border-radius:10px;position:relative;display:inline-block;flex-shrink:0;"><span style="position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;"></span></span>Block Amazon Logistics as a carrier for this order <span class="sc-teal">&#9432;</span></label>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #eaeded;"><span>SKUs</span><span>Units</span></div>
+          <div style="text-align:center;color:#565959;font-size:13px;padding:26px 10px;border-bottom:1px solid #eaeded;">Use the search field above to add items to this order</div>
+          <div style="font-size:13px;font-weight:700;margin:16px 0 5px;">Order ID</div>
+          <input placeholder="Will generate if left blank" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">Packing slip comments <span class="sc-teal">&#9432;</span></div>
+          <input value="Thank you for your order" style="width:100%;height:38px;border:1px solid #888c8c;border-radius:6px;padding:0 10px;">
+          <div class="sc-teal" style="font-size:13px;margin-top:10px;">+ Optional details</div>
+        </div>
+        <!-- col 3 -->
+        <div style="border:1px solid #d5d9d9;border-radius:8px;padding:20px;">
+          <div style="font-size:16px;font-weight:700;margin-bottom:18px;">3. Select shipping options</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Shipping speed</div>
+          <label style="display:flex;align-items:flex-start;gap:9px;margin-bottom:14px;cursor:pointer;"><span style="width:16px;height:16px;border-radius:50%;border:2px solid #007185;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;"><span style="width:8px;height:8px;border-radius:50%;background:#007185;"></span></span><span><b style="font-weight:700;">Standard</b><div style="font-size:12px;color:#565959;">Arrives by:</div></span></label>
+          <label style="display:flex;align-items:flex-start;gap:9px;margin-bottom:20px;cursor:pointer;"><span style="width:16px;height:16px;border-radius:50%;border:2px solid #888;flex-shrink:0;margin-top:1px;"></span><span><b style="font-weight:700;">Expedited</b><div style="font-size:12px;color:#565959;">Arrives by:</div></span></label>
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Shipping details estimates</div>
+          <div style="font-size:12.5px;color:#565959;line-height:1.9;">Shipping weight : -<br>Estimated ship date : -<br>Latest delivery date : -<br>Order total : -</div>
+          <div style="display:flex;gap:12px;margin-top:22px;">
+            <button style="background:#232f3e;color:#fff;font-size:13px;border-radius:8px;padding:9px 18px;">Create order</button>
+            <button style="background:#fff;color:#007185;border:1px solid #007185;font-size:13px;border-radius:8px;padding:9px 18px;">Create hold order <span>&#9432;</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== MANAGE RETURNS ===================== -->
+    <sc-if value="{{ isReturns }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#fff;min-height:80vh;">
+    <div style="max-width:1500px;margin:0 auto;padding:18px 20px 60px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:26px;font-weight:400;margin:0;">Manage Returns</h1>
+          <div style="font-size:12.5px;color:#565959;margin-top:4px;">View and manage customer return requests for your FBA and seller-fulfilled orders. <span class="sc-teal">Learn more</span></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;background:#131a22;color:#febd69;border-radius:999px;padding:8px 15px;font-size:12.5px;font-weight:700;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#3ad29f;box-shadow:0 0 0 3px rgba(58,210,159,.25);flex-shrink:0;"></span>
+            AI Grading Assistant &middot; Active
+          </div>
+          <button onClick="{{ goReturnsDash }}" style="background:#fff;border:1px solid #007185;color:#007185;font-size:13px;border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Returns analytics</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;background:linear-gradient(180deg,#fffdf6,#fdf6e6);border:1px solid #ecd6a0;border-radius:10px;padding:12px 16px;">
+        <div style="width:34px;height:34px;border-radius:9px;background:radial-gradient(120% 120% at 30% 20%,#fbe3a8,#febd69 55%,#e7a93f);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#1c2a16"><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14l-1.6-4.6L6 8l4.4-1.4L12 2z"/><circle cx="18.5" cy="16.5" r="1.8"/><circle cx="5.5" cy="15.5" r="1.3"/></svg>
+        </div>
+        <div style="font-size:13px;color:#4a4540;"><b>The AI is managing this queue.</b> Every request has been triaged against policy window, category and item value. Rows that need your decision are marked <b>Needs review</b>.</div>
+      </div>
+      <div style="display:flex;gap:0;border-bottom:1px solid #d5d9d9;margin-top:16px;">
+        <sc-for list="{{ returnTabs }}" as="t" hint-placeholder-count="3">
+          <span onClick="{{ t.onClick }}" style="position:relative;padding:11px 18px;font-size:14px;cursor:pointer;color:#111;">
+            {{ t.label }} <span style="color:#565959;font-weight:400;">{{ t.count }}</span>
+            <sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:-1px;height:3px;background:#e77600;border-radius:2px;"></span></sc-if>
+          </span>
+        </sc-for>
+      </div>
+
+      <!-- ===== TAB: Return requests ===== -->
+      <sc-if value="{{ isReqTab }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:12px;margin:16px 0;flex-wrap:wrap;">
+        <div style="display:flex;">
+          <input placeholder="Search by Order ID, ASIN, or RMA" style="width:300px;height:34px;border:1px solid #888c8c;border-radius:8px 0 0 8px;padding:0 10px;font-size:13px;">
+          <button style="width:40px;height:34px;background:#f0f2f2;border:1px solid #888c8c;border-left:none;border-radius:0 8px 8px 0;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+        </div>
+        <select style="height:34px;border:1px solid #888c8c;border-radius:8px;font-size:13px;padding:0 8px;"><option>Return date: Last 30 days</option></select>
+        <select style="height:34px;border:1px solid #888c8c;border-radius:8px;font-size:13px;padding:0 8px;"><option>Status: All</option></select>
+      </div>
+      <div style="border:1px solid #d5d9d9;border-radius:8px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:170px 1fr 155px 200px 130px 90px 150px;gap:12px;padding:12px 16px;background:#f7f8f8;border-bottom:1px solid #d5d9d9;font-size:12px;font-weight:700;color:#111;">
+          <div>Order ID / Date</div><div>Product</div><div>Return reason</div>
+          <div style="display:flex;align-items:center;gap:5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#e7a93f"><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14l-1.6-4.6L6 8z"/></svg>AI decision</div>
+          <div>Status</div><div>Refund</div><div>Action</div>
+        </div>
+        <sc-for list="{{ reqRows }}" as="r" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:170px 1fr 155px 200px 130px 90px 150px;gap:12px;padding:14px 16px;border-bottom:1px solid #eaeded;font-size:12.5px;align-items:center;">
+            <div><div class="sc-teal">{{ r.orderId }}</div><div style="color:#565959;font-size:11.5px;margin-top:2px;">{{ r.date }}</div></div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:38px;height:38px;border-radius:4px;background:{{ r.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ r.ink }}" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg></div>
+              <div><div style="color:#111;">{{ r.product }}</div><div style="color:#565959;font-size:11.5px;">{{ r.asin }}</div></div>
+            </div>
+            <div style="color:#111;">{{ r.reason }}</div>
+            <div><span style="display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:{{ r.aiBg }};color:{{ r.aiInk }};line-height:1.35;">{{ r.ai }}</span></div>
+            <div><span style="font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:12px;background:{{ r.statusBg }};color:{{ r.statusInk }};">{{ r.status }}</span></div>
+            <div style="color:#111;font-weight:700;">{{ r.refund }}</div>
+            <div>
+              <sc-if value="{{ r.normalAction }}" hint-placeholder-val="{{ true }}"><button style="background:#fff;border:1px solid #007185;color:#007185;font-size:12px;border-radius:16px;padding:5px 14px;">{{ r.action }}</button></sc-if>
+              <sc-if value="{{ r.undecided }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <button onClick="{{ r.onAccept }}" style="background:#131a22;color:#fff;font-size:12px;border-radius:16px;padding:6px 12px;">Accept &middot; decline</button>
+                  <button onClick="{{ r.onOverride }}" style="background:#fff;border:1px solid #888c8c;color:#111;font-size:12px;border-radius:16px;padding:6px 12px;">Authorize anyway</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.decidedAccept }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;font-weight:700;color:#b3261e;">Declined &#10003;</span></sc-if>
+              <sc-if value="{{ r.decidedOverride }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;font-weight:700;color:#107a45;">Authorized &#10003;</span></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- ===== TAB: Returns received ===== -->
+      <sc-if value="{{ isRecvTab }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:12.5px;color:#565959;margin:16px 0 10px;">Physically arrived items. Click <b style="color:#111;">Inspect</b> to open the AI Grading Assistant.</div>
+      <div style="border:1px solid #d5d9d9;border-radius:8px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:170px 1fr 190px 130px 1fr 150px;gap:12px;padding:12px 16px;background:#f7f8f8;border-bottom:1px solid #d5d9d9;font-size:12px;font-weight:700;color:#111;">
+          <div>Order ID / Date</div><div>Product</div><div>Arrival note</div><div>Status</div><div>AI grade / outcome</div><div>Action</div>
+        </div>
+        <sc-for list="{{ recvRows }}" as="r" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:170px 1fr 190px 130px 1fr 150px;gap:12px;padding:14px 16px;border-bottom:1px solid #eaeded;font-size:12.5px;align-items:center;">
+            <div><div class="sc-teal">{{ r.orderId }}</div><div style="color:#565959;font-size:11.5px;margin-top:2px;">{{ r.date }}</div></div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:38px;height:38px;border-radius:4px;background:{{ r.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ r.ink }}" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg></div>
+              <div><div style="color:#111;">{{ r.product }}</div><div style="color:#565959;font-size:11.5px;">{{ r.sku }}</div></div>
+            </div>
+            <div style="color:#565959;">
+              {{ r.note }}
+              <sc-if value="{{ r.flagged }}" hint-placeholder-val="{{ false }}"><div style="display:inline-block;margin-top:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;background:#fbe5e3;color:#b3261e;">&#9888; {{ r.flagText }}</div></sc-if>
+            </div>
+            <div>
+              <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ true }}"><span style="font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:12px;background:#e7f0fb;color:#1d4ed8;">Ready to grade</span></sc-if>
+              <sc-if value="{{ r.complete }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:12px;background:#e6f4ea;color:#107a45;">Complete</span></sc-if>
+            </div>
+            <div>
+              <sc-if value="{{ r.complete }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="width:26px;height:26px;border-radius:7px;background:{{ r.gradeBg }};color:{{ r.gradeColor }};display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0;">{{ r.grade }}</span>
+                  <div><div style="color:#111;font-weight:700;">{{ r.gradeLabelD }}</div><div style="color:#107a45;font-size:11.5px;">{{ r.recovered }} recovered &middot; <span class="sc-teal" style="text-decoration:underline;">{{ r.relistSku }}</span></div></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ true }}"><span style="color:#8a8f8f;">&mdash; awaiting inspection &mdash;</span></sc-if>
+            </div>
+            <div>
+              <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ true }}"><button onClick="{{ r.onInspect }}" style="background:linear-gradient(180deg,#ffd99e,#febd69);border:1px solid #c88c1a;color:#1c1303;font-size:12.5px;font-weight:700;border-radius:16px;padding:7px 16px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>Inspect</button></sc-if>
+              <sc-if value="{{ r.complete }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.onHC }}" style="background:#fff;border:1px solid #007185;color:#007185;font-size:12px;border-radius:16px;padding:6px 12px;">Health Card</button></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- ===== TAB: SAFE-T claims ===== -->
+      <sc-if value="{{ isSafetTab }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:12.5px;color:#565959;margin:16px 0 12px;">AI-drafted SAFE-T reimbursement claims. Eligibility, reason code, evidence bundle and filing deadline are prepared &mdash; review and submit in one click.</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <sc-for list="{{ safetRows }}" as="c" hint-placeholder-count="3">
+          <div style="border:1px solid #d5d9d9;border-radius:10px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;background:#f7f8f8;border-bottom:1px solid #eaeded;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:8px;background:{{ c.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ c.ink }}" stroke-width="1.6"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg></div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:#111;">{{ c.reason }}</div>
+                  <div style="font-size:11.5px;color:#565959;">Reason code: {{ c.code }} &middot; {{ c.product }}</div>
+                </div>
+              </div>
+              <span style="font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:12px;background:{{ c.statusBg }};color:{{ c.statusInk }};">{{ c.statusText }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:0;">
+              <div style="padding:14px 18px;border-right:1px solid #eaeded;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#8a8f8f;margin-bottom:8px;">Eligibility check</div>
+                <sc-for list="{{ c.checks }}" as="k" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#111;padding:3px 0;">
+                    <sc-if value="{{ k.ok }}" hint-placeholder-val="{{ true }}"><span style="color:#107a45;font-weight:900;">&#10003;</span></sc-if>
+                    <sc-if value="{{ k.bad }}" hint-placeholder-val="{{ false }}"><span style="color:#b3261e;font-weight:900;">&#10007;</span></sc-if>
+                    <span>{{ k.t }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding:14px 18px;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#8a8f8f;margin-bottom:8px;">Evidence bundle</div>
+                <sc-if value="{{ c.eligible }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+                    <sc-for list="{{ c.evidence }}" as="e" hint-placeholder-count="4">
+                      <span style="font-size:11px;background:#eff1f1;color:#3b4042;border-radius:6px;padding:3px 9px;display:inline-flex;align-items:center;gap:5px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>{{ e }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#b06f00;font-weight:700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ c.deadline }}</div>
+                    <sc-if value="{{ c.canSubmit }}" hint-placeholder-val="{{ true }}"><button onClick="{{ c.onSubmit }}" style="background:#131a22;color:#fff;font-size:13px;font-weight:700;border-radius:8px;padding:8px 18px;">Review &amp; submit</button></sc-if>
+                    <sc-if value="{{ c.showGranted }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#107a45;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>Granted &middot; {{ c.reimb }} reimbursed</span></sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ c.ineligReason }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:12.5px;color:#b3261e;line-height:1.5;background:#fbe5e3;border:1px solid #f0bdb8;border-radius:8px;padding:10px 12px;margin-bottom:10px;">{{ c.ineligReason }}</div>
+                  <div style="font-size:12px;color:#565959;line-height:1.5;"><b>AI suggestion:</b> {{ c.suggestion }}</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+    </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== AI GRADING ASSISTANT ===================== -->
+    <sc-if value="{{ isGrade }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#f3f3f3;min-height:80vh;">
+    <div style="max-width:1180px;margin:0 auto;padding:18px 20px 60px;">
+      <div onClick="{{ gc.goBack }}" class="sc-teal" style="font-size:13px;margin-bottom:14px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">&#8592; Back to Returns received</div>
+      <div style="background:#131a22;border-radius:12px 12px 0 0;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;color:#febd69;font-weight:800;font-size:15px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14l-1.6-4.6L6 8z"/><circle cx="18.5" cy="16.5" r="1.6"/></svg>
+          AI Grading Assistant
+        </div>
+        <div style="font-family:monospace;font-size:12px;color:#9aa6b2;">{{ gc.orderId }} &middot; {{ gc.sku }}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #d5d9d9;border-top:none;border-radius:0 0 12px 12px;padding:20px;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;">
+          <div style="width:44px;height:44px;border-radius:8px;background:{{ gc.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ gc.ink }}" stroke-width="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7"/></svg></div>
+          <div><div style="font-size:15px;font-weight:700;">{{ gc.product }}</div><div style="font-size:12px;color:#565959;">{{ gc.category }}</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#8a8f8f;margin-bottom:8px;">Guided capture &middot; AI defect detection</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
+          <sc-for list="{{ gc.photos }}" as="ph" hint-placeholder-count="3">
+            <div style="position:relative;height:130px;border-radius:8px;background:{{ ph.tint }};overflow:hidden;display:flex;align-items:center;justify-content:center;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="{{ ph.ink }}" stroke-width="1.2" opacity="0.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7"/></svg>
+              <sc-if value="{{ ph.box }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:{{ ph.box.x }}%;top:{{ ph.box.y }}%;width:{{ ph.box.w }}%;height:{{ ph.box.h }}%;border:2px solid #e4362a;border-radius:3px;box-shadow:0 0 0 2px rgba(228,54,42,.2);"><span style="position:absolute;top:-16px;left:-2px;background:#e4362a;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;white-space:nowrap;">{{ ph.box.t }}</span></div>
+              </sc-if>
+              <span style="position:absolute;bottom:6px;left:6px;background:rgba(15,17,17,.72);color:#fff;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;">{{ ph.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ gc.integrityOk }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:10px;background:#e6f4ea;border:1px solid #bfe2ca;border-radius:8px;padding:11px 14px;margin-bottom:16px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#107a45" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
+            <div style="font-size:12.5px;color:#0a6b4a;"><b>Integrity check passed</b> &mdash; the returned item matches what was sold ({{ gc.integrity.got }}).</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ gc.integrityBad }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:flex-start;gap:10px;background:#fbe5e3;border:1px solid #f0bdb8;border-radius:8px;padding:13px 16px;margin-bottom:16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b3261e" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><path d="M12 9v4m0 4h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6A2 2 0 0022 18L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+            <div style="font-size:12.5px;color:#b3261e;line-height:1.5;"><b>Integrity gate &mdash; item mismatch. Grading halted.</b><br>Sold: {{ gc.integrity.sold }}. Returned: {{ gc.integrity.got }}. A fraud flag has been raised and grading cannot proceed.</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ gc.blocked }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="border:1px solid #f0bdb8;border-radius:10px;overflow:hidden;">
+              <div style="background:#b3261e;color:#fff;padding:10px 16px;font-weight:700;font-size:13px;">Refund verdict &middot; withhold / reverse</div>
+              <div style="padding:16px;">
+                <div style="font-size:14px;font-weight:700;color:#111;">{{ gc.refund.headline }}</div>
+                <div style="font-size:12.5px;color:#565959;margin-top:4px;">{{ gc.refund.sub }}. The AI has auto-drafted a SAFE-T claim for the {{ gc.refund.amount }} refund.</div>
+              </div>
+            </div>
+            <div style="border:1px solid #d5d9d9;border-radius:10px;overflow:hidden;">
+              <div style="background:#131a22;color:#febd69;padding:10px 16px;font-weight:700;font-size:13px;">Recovery action</div>
+              <div style="padding:16px;">
+                <div style="font-size:13px;color:#111;line-height:1.5;">No resale path &mdash; the returned unit is not the item sold. Recovery moves to the <b>SAFE-T claim</b> the AI has prepared with the photo mismatch as evidence.</div>
+                <button onClick="{{ gc.onConfirm }}" style="margin-top:14px;background:#131a22;color:#fff;font-size:13px;font-weight:700;border-radius:8px;padding:9px 18px;">Go to SAFE-T claim &#8594;</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ gc.hasRecovery }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:22px;border:1px solid #d5d9d9;border-radius:10px;padding:18px 20px;margin-bottom:14px;flex-wrap:wrap;">
+            <div style="position:relative;width:96px;height:96px;flex-shrink:0;">
+              <svg viewBox="0 0 76 76" style="width:100%;height:100%;transform:rotate(-90deg);"><circle cx="38" cy="38" r="32" fill="none" stroke="{{ gc.line }}" stroke-width="6"/><circle cx="38" cy="38" r="32" fill="none" stroke="{{ gc.col }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ gc.ringDash }}"/></svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;color:{{ gc.col }};">{{ gc.grade }}</div>
+            </div>
+            <div style="flex:1;min-width:220px;">
+              <div style="font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:{{ gc.col }};">Amazon condition &middot; {{ gc.gradeLabel }}</div>
+              <div style="font-size:12.5px;color:#565959;margin:6px 0;">AI confidence <b style="color:#111;">{{ gc.confidence }}%</b> &middot; Overall score <b style="color:#111;">{{ gc.score }}/100</b> &middot; Functional <b style="color:#111;">{{ gc.functional }}</b></div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ gc.defectsC }}" as="d" hint-placeholder-count="2">
+                  <span style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:12px;background:{{ d.dbg }};color:{{ d.dink }};">{{ d.t }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:16px;">
+            <sc-for list="{{ gc.scale }}" as="sc" hint-placeholder-count="5">
+              <div style="border-radius:7px;padding:9px 6px;text-align:center;background:{{ sc.bg }};">
+                <div style="font-size:16px;font-weight:900;color:{{ sc.col }};">{{ sc.g }}</div>
+                <div style="font-size:9.5px;font-weight:700;color:{{ sc.col }};margin-top:2px;">{{ sc.l }}</div>
+                <sc-if value="{{ sc.on }}" hint-placeholder-val="{{ false }}"><div style="height:3px;background:{{ sc.col }};border-radius:2px;margin-top:6px;"></div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-bottom:18px;">
+            <div style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#8a8f8f;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#e7a93f"><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14z"/></svg>Auto-written condition note &middot; editable</div>
+            <textarea style="width:100%;min-height:64px;border:1px solid #888c8c;border-radius:8px;padding:10px 12px;font-size:13px;color:#111;resize:vertical;line-height:1.5;">{{ gc.note }}</textarea>
+          </div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#8a8f8f;margin-bottom:8px;">Two independent decisions</div>
+          <div style="display:grid;grid-template-columns:1fr 1.1fr;gap:16px;">
+            <div style="border:1px solid #d5d9d9;border-radius:10px;overflow:hidden;align-self:start;">
+              <div style="padding:12px 16px;display:flex;align-items:center;gap:11px;background:linear-gradient(110deg,#077a52,#0a8f63);color:#fff;">
+                <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+                <div><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;opacity:.9;">A &middot; Refund verdict</div><div style="font-size:15px;font-weight:900;">{{ gc.refund.headline }}</div></div>
+              </div>
+              <div style="padding:14px 16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;font-size:14px;padding:4px 0;"><span style="color:#565959;">Refund amount</span><b>{{ gc.refund.amount }}</b></div>
+                <div style="font-size:12px;color:#565959;line-height:1.5;margin-top:6px;">{{ gc.refund.sub }}</div>
+              </div>
+            </div>
+            <div style="border:1px solid #d5d9d9;border-radius:10px;overflow:hidden;">
+              <div style="background:#131a22;padding:12px 16px;"><div style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#febd69;opacity:.85;">B &middot; Recovery action</div><div style="font-size:14px;font-weight:800;color:#fff;">Ranked by estimated recovery</div></div>
+              <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ gc.recovery }}" as="o" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:8px;background:{{ o.rowBg }};border:{{ o.rowBorder }};opacity:{{ o.rowOp }};">
+                    <div style="min-width:0;">
+                      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                        <span style="font-size:13.5px;font-weight:700;color:#111;">{{ o.label }}</span>
+                        <sc-if value="{{ o.chosen }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:900;letter-spacing:.5px;background:#f0a500;color:#fff;padding:2px 7px;border-radius:5px;">AI PICK</span></sc-if>
+                        <sc-if value="{{ o.disabled }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;font-weight:700;background:#eff1f1;color:#8a8f8f;padding:2px 7px;border-radius:5px;">Blocked</span></sc-if>
+                      </div>
+                      <div style="font-size:11.5px;color:#565959;margin-top:2px;">{{ o.sub }}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                      <div style="font-size:14px;font-weight:800;color:#107a45;">{{ o.value }}</div>
+                      <div style="font-size:10.5px;color:#8a8f8f;">{{ o.pct }} recovery</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <sc-if value="{{ gc.notRelisted }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:#131a22;border-radius:10px;padding:16px 20px;flex-wrap:wrap;">
+              <div style="color:#c4ccd4;font-size:12.5px;max-width:560px;line-height:1.5;">
+                <sc-if value="{{ gc.isRelist }}" hint-placeholder-val="{{ true }}"><b style="color:#febd69;">One-click relist.</b> Creates the condition-SKU under the same ASIN, price pre-filled from the recovery ladder, condition note attached, and generates the AI-grade Health Card.</sc-if>
+                <sc-if value="{{ gc.isWarranty }}" hint-placeholder-val="{{ false }}"><b style="color:#febd69;">Draft warranty claim.</b> Routes this defective unit to the supplier for ~60% credit &mdash; no consumer relist.</sc-if>
+                <sc-if value="{{ gc.isDispose }}" hint-placeholder-val="{{ false }}"><b style="color:#febd69;">Confirm safe disposal.</b> Hygiene seal broken &mdash; the only enabled recovery path. The refund decision is unaffected.</sc-if>
+              </div>
+              <button onClick="{{ gc.onConfirm }}" style="background:linear-gradient(180deg,#ffd99e,#febd69);border:1px solid #c88c1a;color:#1c1303;font-size:14px;font-weight:800;border-radius:8px;padding:11px 22px;">
+                <sc-if value="{{ gc.isRelist }}" hint-placeholder-val="{{ true }}">Confirm &amp; relist</sc-if>
+                <sc-if value="{{ gc.isWarranty }}" hint-placeholder-val="{{ false }}">Draft warranty claim</sc-if>
+                <sc-if value="{{ gc.isDispose }}" hint-placeholder-val="{{ false }}">Confirm disposal</sc-if>
+              </button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ gc.relisted }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:18px;display:flex;align-items:center;gap:12px;background:#e6f4ea;border:1px solid #bfe2ca;border-radius:10px;padding:14px 18px;flex-wrap:wrap;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#107a45" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style="font-size:13.5px;color:#0a6b4a;font-weight:700;flex:1;min-width:180px;">
+                <sc-if value="{{ gc.isRelist }}" hint-placeholder-val="{{ true }}">Relisted as {{ gc.relistLabel }} &middot; {{ gc.relistSku }} &mdash; live on the storefront with an AI-grade Health Card attached.</sc-if>
+                <sc-if value="{{ gc.isWarranty }}" hint-placeholder-val="{{ false }}">Warranty claim drafted to supplier for {{ gc.product }}.</sc-if>
+                <sc-if value="{{ gc.isDispose }}" hint-placeholder-val="{{ false }}">Marked for safe disposal &mdash; hygiene rule applied. The refund remains full.</sc-if>
+              </div>
+              <sc-if value="{{ gc.hasHC }}" hint-placeholder-val="{{ true }}"><button onClick="{{ gc.onHC }}" style="background:#131a22;color:#fff;font-size:13px;font-weight:700;border-radius:8px;padding:9px 16px;">View Health Card</button></sc-if>
+              <button onClick="{{ gc.goInv }}" style="background:#fff;border:1px solid #007185;color:#007185;font-size:13px;border-radius:8px;padding:9px 16px;">View in inventory</button>
+            </div>
+          </sc-if>
+        </sc-if>
+
+      </div>
+    </div>
+    </div>
+    </sc-if>
+
+    <!-- ===================== RETURNS DASHBOARD ===================== -->
+    <sc-if value="{{ isReturnsDash }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:1500px;margin:0 auto;padding:16px 16px 60px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 style="font-size:24px;font-weight:700;margin:0;">Returns &amp; Recovery &mdash; this month</h1>
+          <div style="font-size:12.5px;color:#565959;margin-top:3px;">AARAV RETAIL &middot; Jun 2025 &middot; powered by the AI Grading Assistant</div>
+        </div>
+        <button onClick="{{ goReturns }}" style="background:#fff;border:1px solid #007185;color:#007185;font-size:13px;border-radius:8px;padding:8px 14px;">&#8592; Manage Returns</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:16px;">
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:16px;">
+          <div style="font-size:12px;color:#565959;font-weight:600;">Returns processed</div>
+          <div style="font-size:30px;font-weight:800;margin-top:4px;">{{ dash.processed }}</div>
+          <div style="font-size:11px;color:#8a8f8f;">this month</div>
+        </div>
+        <div style="background:#e6f4ea;border:1px solid #bfe2ca;border-radius:10px;padding:16px;">
+          <div style="font-size:12px;color:#0a6b4a;font-weight:600;">Value recovered</div>
+          <div style="font-size:30px;font-weight:800;margin-top:4px;color:#0a6b4a;">{{ dash.recovered }}</div>
+          <div style="font-size:11px;color:#107a45;">resale + fees + SAFE-T + warranty</div>
+        </div>
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:16px;">
+          <div style="font-size:12px;color:#565959;font-weight:600;">Hours saved</div>
+          <div style="font-size:30px;font-weight:800;margin-top:4px;">{{ dash.hours }}</div>
+          <div style="font-size:11px;color:#8a8f8f;">vs. manual grading</div>
+        </div>
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:16px;">
+          <div style="font-size:12px;color:#565959;font-weight:600;">Avg AI confidence</div>
+          <div style="font-size:30px;font-weight:800;margin-top:4px;">{{ dash.confidence }}</div>
+          <div style="font-size:11px;color:#8a8f8f;">across all grades</div>
+        </div>
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:16px;">
+          <div style="font-size:12px;color:#565959;font-weight:600;">SAFE-T win rate</div>
+          <div style="font-size:30px;font-weight:800;margin-top:4px;">{{ dash.safetWin }}</div>
+          <div style="font-size:11px;color:#8a8f8f;">{{ dash.safetWinSub }}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:18px 20px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px;">Where the {{ dash.recovered }} came from</div>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-top:8px;">
+            <sc-for list="{{ dash.breakdown }}" as="b" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eaeded;">
+                <span style="display:flex;align-items:center;gap:9px;font-size:13px;color:#111;"><span style="width:10px;height:10px;border-radius:3px;background:{{ b.c }};"></span>{{ b.k }}</span>
+                <b style="font-size:13.5px;">{{ b.v }}</b>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:18px 20px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Grade distribution</div>
+          <div style="display:flex;align-items:flex-end;gap:14px;height:150px;">
+            <sc-for list="{{ dashGrades }}" as="g" hint-placeholder-count="5">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+                <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:4px;">{{ g.n }}</div>
+                <div style="width:100%;max-width:44px;border-radius:6px 6px 0 0;background:{{ g.c }};height:{{ g.h }}%;"></div>
+                <div style="font-size:12px;font-weight:800;color:{{ g.c }};margin-top:6px;">{{ g.g }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:18px 20px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Recovery action mix</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ dashActions }}" as="a" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:82px;font-size:12px;color:#111;flex-shrink:0;">{{ a.k }}</div>
+                <div style="flex:1;height:16px;background:#eff1f1;border-radius:8px;overflow:hidden;"><div style="height:100%;width:{{ a.w }}%;background:{{ a.c }};border-radius:8px;"></div></div>
+                <div style="width:22px;text-align:right;font-size:12px;font-weight:700;">{{ a.n }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #d5d9d9;border-radius:10px;padding:18px 20px;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Recent activity</div>
+          <div style="display:flex;flex-direction:column;">
+            <sc-for list="{{ dash.activity }}" as="a" hint-placeholder-count="5">
+              <div style="display:flex;gap:11px;padding:10px 0;border-bottom:1px solid #eaeded;">
+                <span style="width:9px;height:9px;border-radius:50%;background:{{ a.c }};margin-top:4px;flex-shrink:0;"></span>
+                <div style="flex:1;"><div style="font-size:13px;color:#111;">{{ a.t }}</div><div style="font-size:11.5px;color:#565959;margin-top:1px;">{{ a.m }}</div></div>
+                <div style="font-size:11px;color:#8a8f8f;white-space:nowrap;">{{ a.when }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <!-- ===================== MENU FLYOUT OVERLAY ===================== -->
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;" onClick="{{ toggleMenu }}"></div>
+    <div style="position:fixed;top:0;left:0;bottom:0;display:flex;z-index:81;">
+      <!-- categories -->
+      <div style="width:200px;background:#fff;height:100vh;overflow-y:auto;box-shadow:2px 0 8px rgba(0,0,0,.1);">
+        <div style="background:#232f3e;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;" onClick="{{ toggleMenu }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg> Menu
+        </div>
+        <sc-for list="{{ cats }}" as="c" hint-placeholder-count="12">
+          <div onClick="{{ c.onClick }}" class="cat-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:14px;cursor:pointer;background:{{ c.bg }};border-left:3px solid {{ c.bar }};">
+            <span>{{ c.name }}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
+          </div>
+        </sc-for>
+      </div>
+      <!-- items -->
+      <div style="width:250px;background:#fff;height:100vh;overflow-y:auto;box-shadow:2px 0 8px rgba(0,0,0,.08);padding:8px 0;">
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="8">
+          <sc-if value="{{ it.header }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:12px 18px 5px;font-size:12px;font-weight:700;color:#111;border-top:1px solid #eaeded;margin-top:4px;">{{ it.label }}</div>
+          </sc-if>
+          <sc-if value="{{ it.normal }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ it.onClick }}" class="mi-row" style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;font-size:14px;cursor:pointer;">
+              <span>{{ it.label }}</span>
+              <sc-if value="{{ it.pinned }}" hint-placeholder-val="{{ false }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#232f3e"><path d="M6 2h12a2 2 0 012 2v18l-8-4-8 4V4a2 2 0 012-2z"/></svg>
+              </sc-if>
+            </div>
+          </sc-if>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:820},&quot;storeName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;AARAV RETAIL&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;marketplace&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;India&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { screen:'home', menuOpen:false, menuCat:'Inventory', rowMenu:null, returnsTab:'requests', gradeCase:'hp', hcOpen:null, relisted:{}, reviewDecision:{}, safetSubmitted:{} };
+
+  pts(vals, maxY){
+    const x0=44, x1=520, y0=16, y1=176, n=vals.length;
+    return vals.map((v,i)=>{
+      const x = x0 + (x1-x0)*i/(n-1);
+      const y = y1 - (y1-y0)*(Math.min(v,maxY)/maxY);
+      return x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+  }
+
+  renderVals(){
+    const s = this.state;
+    const go = (screen)=> this.setState({ screen, menuOpen:false, rowMenu:null });
+    const toggleMenu = ()=> this.setState(st=>({ menuOpen:!st.menuOpen }));
+    const toggleRow = (i)=> this.setState(st=>({ rowMenu: st.rowMenu===i ? null : i }));
+    const rup = (n)=> '\u20b9'+Number(n).toLocaleString('en-IN');
+    const setTab = (t)=> this.setState({ returnsTab:t, rowMenu:null });
+    const inspect = (id)=> this.setState({ screen:'grade', gradeCase:id, menuOpen:false, rowMenu:null });
+    const openHC = (id)=> this.setState({ hcOpen:id });
+    const closeHC = ()=> this.setState({ hcOpen:null });
+    const decideReview = (id,d)=> this.setState(st=>({ reviewDecision:{...st.reviewDecision,[id]:d} }));
+    const confirmRelist = (id)=> this.setState(st=>({ relisted:{...st.relisted,[id]:true} }));
+    const submitSafet = (id)=> this.setState(st=>({ safetSubmitted:{...st.safetSubmitted,[id]:true} }));
+    const goReturnsDash = ()=> go('returnsdash');
+
+    const hours = ['12AM','1AM','2AM','3AM','4AM','5AM','6AM','7AM','8AM','9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM','11PM'];
+    const u_today=[0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    const u_yest =[0,0,0,0,0,0,1,2,1,1,2,3,1,2,2,1,1,1,0,1,1,1,1,1];
+    const u_week =[0,0,0,0,0,2,4,5,2,1,1,3,3,1,0,1,2,4,1,0,2,1,0,1];
+    const u_year =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    const s_today=[0,0,0,0,40,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    const s_yest =[0,0,0,0,10,20,60,110,70,60,120,150,90,170,120,60,80,60,20,90,60,40,50,30];
+    const s_week =[0,0,0,0,20,60,180,240,90,40,60,120,110,40,10,40,90,150,40,20,90,40,10,40];
+    const s_year =[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+    const legend = [
+      {name:'Today so far', color:'#24b0c9', check:'#24b0c9', when:'So far', units:'6 Units', money:'\u20b98,940'},
+      {name:'Yesterday', color:'#d0491f', check:'#d0491f', when:'By end of day', units:'34 Units', money:'\u20b948,210'},
+      {name:'Same day last week', color:'#f0a500', check:'#f0a500', when:'By end of day', units:'41 Units', money:'\u20b957,880'},
+      {name:'Same day last year', color:'#9aa0a0', check:'#9aa0a0', when:'By end of day', units:'0 Units', money:'\u20b90'},
+    ];
+
+    const widgets = [
+      {label:'Buyer Messages', value:'0', sub:'Cases requiring attention', plain:true},
+      {label:'Seller Feedback', value:'4.8', sub:'Past Year (61)', stars:true},
+      {label:'Payments', value:'\u20b91,24,860', sub:'Total Balance', plain:true},
+      {label:'Inventory Performance', value:'612', sub:'Current IPI', plain:true},
+      {label:'Ad Sales', value:'\u20b94,120', sub:'Today so far', plain:true},
+      {label:'Ad Impressions', value:'3,180', sub:'Today so far', plain:true},
+    ];
+
+    const deepCards = [
+      {title:'boAt Rockerz 550 Bluetooth Headphones (Black)', asin:'B09XYZ1234', decline:'\u20b918,400', tint:'#3b6fb5'},
+      {title:'Insta Men Cotton Kurta, Full Sleeve (Off-White)', asin:'B0KUR9012', decline:'\u20b96,990', tint:'#c96a99'},
+    ];
+
+    const gCol = {A:{ink:'#107a45',bg:'#e6f4ea',line:'#bfe2ca'}, B:{ink:'#b06f00',bg:'#fbf1d9',line:'#ecd6a0'}, C:{ink:'#bd4a17',bg:'#fbe9dd',line:'#f0c9ac'}, D:{ink:'#b3261e',bg:'#fbe5e3',line:'#f0bdb8'}};
+    const mkProduct = (idx, o)=> {
+      const g = o.hcGrade ? gCol[o.hcGrade] : null;
+      return {
+        ...o, idx,
+        hc: !!o.hcCase, onHC: o.hcCase ? ()=> openHC(o.hcCase) : (()=>{}),
+        hcInk: g?g.ink:'', hcBg: g?g.bg:'', hcLine: g?g.line:'',
+        menuOpen: s.rowMenu===idx,
+        onMenu: ()=> toggleRow(idx),
+        onClose: ()=> this.setState({rowMenu:null}),
+        onEdit: ()=> go('product'),
+      };
+    };
+    const products = [
+      mkProduct(0,{status:'Active', date:'Feb 14, 2025, 11:04 AM', tint:'#dbeafe', ink:'#3b6fb5',
+        title:'boAt Rockerz 550 Over-Ear Bluetooth Headphones with 20 Hours Playback, 50mm Drivers, ASAP Charge (Black)',
+        asin:'B09XYZ1234', sku:'BR550-BLK', sales:'\u20b942,376', units:'236', views:'—', rank:'412', category:'(Electronics)',
+        fba:'142', inbound:'0', unfulfillable:'0', reserved:'9', price:'1799', comp:'\u20b91,799 + \u20b90', low:'\u20b91,749 + \u20b90', biz:'\u20b91,699 + \u20b90', totalFees:'\u20b9312', fbaFee:'\u20b978'}),
+      mkProduct(1,{status:'Active', date:'Jun 30, 2025, 09:12 AM', tint:'#dbeafe', ink:'#3b6fb5', cond:'Used \u2013 Very Good', hcCase:'hp', hcGrade:'B',
+        title:'boAt Rockerz 550 Over-Ear Bluetooth Headphones (Blue) \u2014 AI-inspected via Amazon Revive',
+        asin:'B09XYZ1234', sku:'BR550-BLU-UVG', sales:'\u20b90', units:'0', views:'—', rank:'—', category:'(Electronics \u00b7 Revive)',
+        fba:'1', inbound:'0', unfulfillable:'0', reserved:'0', price:'1299', comp:'\u20b91,799 + \u20b90', low:'\u20b91,299 + \u20b90', biz:'—', totalFees:'\u20b9236', fbaFee:'\u20b978'}),
+      mkProduct(2,{status:'Active', date:'Mar 2, 2025, 03:41 PM', tint:'#e6fbf4', ink:'#0a8f63',
+        title:'Noise ColorFit Pulse 2 Smart Watch with 1.85" Display, Bluetooth Calling, 100 Sports Modes (Jet Black)',
+        asin:'B0ABC5678', sku:'NCF-P2', sales:'\u20b928,481', units:'190', views:'—', rank:'689', category:'(Electronics)',
+        fba:'96', inbound:'12', unfulfillable:'0', reserved:'4', price:'1499', comp:'\u20b91,499 + \u20b90', low:'\u20b91,499 + \u20b90', biz:'\u20b91,449 + \u20b90', totalFees:'\u20b9268', fbaFee:'\u20b972'}),
+      mkProduct(3,{status:'Active', date:'Jun 26, 2025, 05:22 PM', tint:'#e6fbf4', ink:'#0a8f63', cond:'Open Box', hcCase:'watch', hcGrade:'A',
+        title:'Noise ColorFit Pulse 2 Smart Watch (Jet Black) \u2014 AI-inspected via Amazon Revive',
+        asin:'B0ABC5678', sku:'NCF-P2-OB', sales:'\u20b90', units:'0', views:'—', rank:'—', category:'(Electronics \u00b7 Revive)',
+        fba:'1', inbound:'0', unfulfillable:'0', reserved:'0', price:'1274', comp:'\u20b91,499 + \u20b90', low:'\u20b91,274 + \u20b90', biz:'—', totalFees:'\u20b9232', fbaFee:'\u20b972'}),
+      mkProduct(4,{status:'Active', date:'Jan 20, 2025, 10:15 AM', tint:'#fdeef4', ink:'#c96a99',
+        title:'Insta Men\u2019s Cotton Straight Kurta, Full Sleeve, Mandarin Collar (Off-White, L)',
+        asin:'B0KUR9012', sku:'KURTA-L', sales:'\u20b918,780', units:'142', views:'—', rank:'1,204', category:'(Clothing)',
+        fba:'64', inbound:'0', unfulfillable:'0', reserved:'3', price:'1199', comp:'\u20b91,199 + \u20b90', low:'\u20b91,149 + \u20b90', biz:'\u20b91,099 + \u20b90', totalFees:'\u20b9214', fbaFee:'\u20b966'}),
+      mkProduct(5,{status:'Active', date:'Apr 5, 2025, 02:08 PM', tint:'#e2e4e6', ink:'#4a4f55',
+        title:'Redmi Note 13 5G (Midnight Black, 8GB RAM, 128GB Storage) — 108MP Camera, Snapdragon 6 Gen 1',
+        asin:'B0RMI3456', sku:'RN13-128', sales:'\u20b96,39,960', units:'40', views:'—', rank:'58', category:'(Electronics)',
+        fba:'23', inbound:'0', unfulfillable:'0', reserved:'2', price:'15999', comp:'\u20b915,999 + \u20b90', low:'\u20b915,999 + \u20b90', biz:'\u20b915,499 + \u20b90', totalFees:'\u20b91,120', fbaFee:'\u20b90'}),
+    ];
+
+    // (legacy returns table removed — replaced by the full returns workflow below)
+
+    // ---- flyout menu ----
+    const catNames = ['Catalog','Inventory','Pricing','Orders','Advertising','Stores','Growth','Reports','Payments','Performance','Brands','Learn'];
+    const cats = catNames.map(name=>({
+      name,
+      bg: s.menuCat===name ? '#eaf3f3' : '#fff',
+      bar: s.menuCat===name ? '#007185' : 'transparent',
+      onClick: ()=> this.setState({menuCat:name}),
+    }));
+    const H = (label)=>({header:true, normal:false, label});
+    const I = (label, target, pinned)=>({header:false, normal:true, label, pinned:!!pinned, onClick: target ? ()=>go(target) : ()=>this.setState({menuOpen:false})});
+    const menuMap = {
+      Catalog: [I('Add Products',null,true), I('Add Products via Upload'), I('Complete Your Drafts'), I('View Selling Applications'), I('Improve listing quality'), I('Upload images'), I('Upload and Manage Videos')],
+      Inventory: [I('Manage All Inventory','inventory',true), I('Manage Seller Fulfilled Products',null,true), I('Sell Globally'), H('Fulfillment by Amazon (FBA)'), I('FBA Inventory'), I('Shipments'), I('Opportunities'), I('Remote Fulfillment with FBA')],
+      Pricing: [I('Pricing Health'), I('Manage Pricing'), I('Automate Pricing'), I('Fees Discounts')],
+      Orders: [I('Manage Orders'), I('Order Reports'), I('Manage Returns','returns'), I('Manage SAFE-T Claims'), I('Create MCF Order','mcf')],
+      Advertising: [I('Campaign Manager'), I('Advertising Reports'), I('Deals'), I('Coupons'), I('Prime Exclusive Discounts')],
+      Stores: [I('Manage Stores'), I('Posts')],
+      Growth: [I('Explore Programs'), I('Growth Opportunities'), I('Restock Inventory'), I('Selling Coach')],
+      Reports: [I('Business Reports','home'), I('Returns Analytics','returnsdash'), I('Manage Returns','returns'), I('Payments'), I('Fulfillment'), I('Tax Document Library')],
+      Payments: [I('Payments Dashboard'), I('Transaction View'), I('All Statements'), I('Disbursements')],
+      Performance: [I('Account Health'), I('Feedback'), I('A-to-z Guarantee Claims'), I('Chargeback Claims'), I('Performance Notifications')],
+      Brands: [I('Brand Dashboard'), I('Brand Analytics'), I('A+ Content Manager'), I('Manage Experiments'), I('Brand Registry')],
+      Learn: [I('Seller University'), I('Help'), I('New Seller Guide')],
+    };
+    const items = (menuMap[s.menuCat]||[]).map(x=>({pinned:false, ...x}));
+
+    // ==================== RETURNS WORKFLOW DATA ====================
+    const CIRC = 201.06;
+    const returnTabs = [
+      {key:'requests', label:'Return requests', count:'(6)', on:s.returnsTab==='requests', onClick:()=>setTab('requests')},
+      {key:'received',  label:'Returns received', count:'(6)', on:s.returnsTab==='received',  onClick:()=>setTab('received')},
+      {key:'safet',     label:'SAFE-T claims',    count:'(3)', on:s.returnsTab==='safet',     onClick:()=>setTab('safet')},
+    ];
+
+    // --- Step 1: Return requests (AI triage) ---
+    const rd = s.reviewDecision['rev1'];
+    const reqRows = [
+      {orderId:'402-1156743-8890231', date:'Jun 28, 2025', product:'boAt Rockerz 550 (Blue)', asin:'B09XYZ1234', tint:'#dbeafe', ink:'#3b6fb5', reason:'No longer needed', ai:'Auto-authorized \u00b7 in policy', aiBg:'#e6f4ea', aiInk:'#107a45', status:'Authorized', statusBg:'#e6f4ea', statusInk:'#107a45', refund:'\u20b91,799', action:'View', normalAction:true},
+      {orderId:'407-9921044-1120765', date:'Jun 27, 2025', product:'Noise ColorFit Pulse 2', asin:'B0ABC5678', tint:'#e6fbf4', ink:'#0a8f63', reason:'Found a better price', ai:'Auto-authorized \u00b7 in policy', aiBg:'#e6f4ea', aiInk:'#107a45', status:'In transit', statusBg:'#e7f0fb', statusInk:'#1d4ed8', refund:'\u20b91,499', action:'Track', normalAction:true},
+      {orderId:'405-3320981-4432107', date:'Jun 26, 2025', product:'boAt Type-C Charging Cable', asin:'B0CBL0099', tint:'#eff1f1', ink:'#6b7076', reason:'No longer needed', ai:'Returnless refund \u00b7 \u20b9149 item', aiBg:'#e7f0fb', aiInk:'#1d4ed8', status:'Closed', statusBg:'#eff1f1', statusInk:'#565959', refund:'\u20b9149', action:'View', normalAction:true},
+      {orderId:'408-7745120-9980142', date:'Jun 25, 2025', product:'Redmi Note 13 5G (128GB)', asin:'B0RMI3456', tint:'#e2e4e6', ink:'#4a4f55', reason:'Item defective \u2014 screen', ai:'Authorized \u00b7 verified pickup', aiBg:'#efe9fb', aiInk:'#6d28d9', status:'Pickup scheduled', statusBg:'#efe9fb', statusInk:'#6d28d9', refund:'\u20b915,999', action:'View', normalAction:true, flag:'High-value \u00b7 Phase B'},
+      {orderId:'404-1180765-2231098', date:'Jun 22, 2025', product:'boAt Wireless Mouse', asin:'B0MSE0021', tint:'#fbe9dd', ink:'#bd4a17', reason:'No longer needed \u00b7 46 days', ai:'Recommend decline \u00b7 outside 30-day window', aiBg:'#fbe5e3', aiInk:'#b3261e', status:'Needs review', statusBg:'#fbf1d9', statusInk:'#b06f00', refund:'\u20b9699', needsReview:true,
+        undecided: !rd, decidedAccept: rd==='accept', decidedOverride: rd==='override',
+        onAccept: ()=>decideReview('rev1','accept'), onOverride: ()=>decideReview('rev1','override')},
+      {orderId:'403-6650129-7781234', date:'Jun 21, 2025', product:'Oral-B Vitality Toothbrush', asin:'B0ORB7890', tint:'#e7f0fb', ink:'#1d4ed8', reason:'Changed my mind', ai:'Auto-authorized \u00b7 hygiene flag', aiBg:'#fbf1d9', aiInk:'#b06f00', status:'Authorized', statusBg:'#e6f4ea', statusInk:'#107a45', refund:'\u20b91,899', action:'View', normalAction:true},
+    ];
+
+    // --- Step 3: Returns received (grading queue) ---
+    const recvRows = [
+      {caseId:'hp',      orderId:'402-1156743-8890231', date:'Received Jun 30', product:'boAt Rockerz 550 (Blue)', sku:'BR550-BLU', tint:'#dbeafe', ink:'#3b6fb5', note:'Arrived \u00b7 opened, used', flagged:false},
+      {caseId:'phone',   orderId:'408-7745120-9980142', date:'Received Jun 29', product:'Redmi Note 13 5G (128GB)', sku:'RN13-128', tint:'#e2e4e6', ink:'#4a4f55', note:'Arrived \u00b7 defect reported', flagged:false},
+      {caseId:'kurta',   orderId:'406-2231087-5540912', date:'Received Jun 29', product:'Insta Men Cotton Kurta (L)', sku:'KURTA-L', tint:'#fdeef4', ink:'#c96a99', note:'Arrived \u00b7 sealed, unopened', flagged:false},
+      {caseId:'hygiene', orderId:'403-6650129-7781234', date:'Received Jun 28', product:'Oral-B Vitality Toothbrush', sku:'ORB-VIT', tint:'#e7f0fb', ink:'#1d4ed8', note:'Arrived \u00b7 hygiene seal broken', flagged:true, flagText:'Hygiene'},
+      {caseId:'wrong',   orderId:'409-8841200-1123045', date:'Received Jun 27', product:'Ordered: boAt Rockerz 550', sku:'BR550-BLK', tint:'#fbe5e3', ink:'#b3261e', note:'Integrity flag \u00b7 item mismatch', flagged:true, flagText:'Integrity'},
+      {caseId:'watch',   orderId:'407-5540982-3320167', date:'Graded Jun 26', product:'Noise ColorFit Pulse 2', sku:'NCF-P2', tint:'#e6fbf4', ink:'#0a8f63', note:'Open Box \u00b7 relisted', done:true, grade:'A', gradeLabel:'Open Box', gradeColor:'#107a45', gradeBg:'#e6f4ea', recovered:'\u20b91,274', relistSku:'NCF-P2-OB'},
+    ];
+    const recvRowsC = recvRows.map(r=>({ ...r,
+      complete: r.done || !!s.relisted[r.caseId],
+      pending: !(r.done || !!s.relisted[r.caseId]),
+      onInspect: ()=>inspect(r.caseId), onHC: ()=>openHC(r.caseId),
+      gradeLabelD: r.gradeLabel || 'Graded',
+    }));
+
+    // --- Steps 3-5: Grade cases ---
+    const scaleDef = [
+      {g:'A',l:'Like New',col:'#107a45',bg:'#e6f4ea'},
+      {g:'B',l:'Very Good',col:'#b06f00',bg:'#fbf1d9'},
+      {g:'C',l:'Good',col:'#bd4a17',bg:'#fbe9dd'},
+      {g:'D',l:'Acceptable',col:'#b3261e',bg:'#fbe5e3'},
+      {g:'F',l:'Not resellable',col:'#7a2622',bg:'#f1dede'},
+    ];
+    const mkScale=(a)=> scaleDef.map(x=>({...x,on:x.g===a}));
+    const sevC = (sv)=> sv==='major'?{dbg:'#fbe5e3',dink:'#b3261e'}: sv==='moderate'?{dbg:'#fbe9dd',dink:'#bd4a17'}:{dbg:'#fbf1d9',dink:'#b06f00'};
+    const gradeCases = {
+      hp:{ product:'boAt Rockerz 550 (Blue)', sku:'BR550-BLU', orderId:'402-1156743-8890231', category:'Over-ear headphones', tint:'#dbeafe', ink:'#3b6fb5',
+        photos:[{label:'Ear cups',tint:'#dbeafe',ink:'#3b6fb5',box:{t:'Scuff',x:56,y:30,w:26,h:22}},{label:'Headband',tint:'#e7f0fb',ink:'#3b6fb5',box:{t:'Wear',x:28,y:14,w:44,h:16}},{label:'Powered on',tint:'#e6fbf4',ink:'#0a8f63'}],
+        integrity:{ok:true, sold:'boAt Rockerz 550 (Blue)', got:'boAt Rockerz 550 (Blue)'},
+        blocked:false, grade:'B', gradeLabel:'Very Good', col:'#b06f00', bg:'#fbf1d9', line:'#ecd6a0',
+        confidence:92, score:84, completeness:100, functional:'Pass',
+        defects:[{t:'Minor scuffs \u00b7 left ear cup',s:'minor'},{t:'Light headband wear',s:'minor'}],
+        note:'Fully functional with strong Bluetooth pairing. Minor cosmetic scuffs on the left ear cup and light headband wear consistent with light use. All accessories and original box included.',
+        refund:{type:'full', amount:'\u20b91,799', headline:'Confirm full refund', sub:'Item in returnable condition \u00b7 refund not yet issued'},
+        recovery:[
+          {label:'Relist as New', sub:'Item opened \u2014 path unavailable', pct:'100%', value:'—', disabled:true, reason:'Item opened'},
+          {label:'Open Box', sub:'Requires flawless cosmetic', pct:'85%', value:'\u20b91,529', disabled:true, reason:'Cosmetic scuffs present'},
+          {label:'Relist Used \u2013 Very Good', sub:'Matches AI grade \u00b7 condition note attached', pct:'85%', value:'\u20b91,299', chosen:true},
+          {label:'Relist Used \u2013 Good', sub:'Lower ladder rung', pct:'70%', value:'\u20b91,079'},
+          {label:'Liquidate', sub:'Warehouse-Deals-style', pct:'9%', value:'\u20b9162'},
+        ],
+        mode:'relist', relistLabel:'Used \u2013 Very Good', relistSku:'BR550-BLU-UVG' },
+      phone:{ product:'Redmi Note 13 5G (128GB)', sku:'RN13-128', orderId:'408-7745120-9980142', category:'Smartphone', tint:'#e2e4e6', ink:'#4a4f55',
+        photos:[{label:'Rear',tint:'#e2e4e6',ink:'#4a4f55'},{label:'Powered-on screen',tint:'#fbe5e3',ink:'#b3261e',box:{t:'Flicker',x:18,y:18,w:64,h:48}},{label:'Ports',tint:'#eff1f1',ink:'#6b7076'}],
+        integrity:{ok:true, sold:'Redmi Note 13 5G', got:'Redmi Note 13 5G'},
+        blocked:false, grade:'D', gradeLabel:'Defective', col:'#b3261e', bg:'#fbe5e3', line:'#f0bdb8',
+        confidence:96, score:41, completeness:100, functional:'Fail \u2014 display flicker',
+        defects:[{t:'Display flicker on power-on',s:'major'},{t:'Cosmetically clean',s:'minor'}],
+        note:'Powers on but the display exhibits intermittent flicker \u2014 a functional / manufacturing fault, not customer-inflicted damage. Cosmetically clean; all accessories present. Not resellable to a consumer; eligible for supplier warranty recovery.',
+        refund:{type:'full', amount:'\u20b915,999', headline:'Confirm full refund', sub:'Defective on arrival \u00b7 buyer not at fault'},
+        recovery:[
+          {label:'Warranty claim to supplier', sub:'Manufacturing defect \u00b7 ~60% credit', pct:'60%', value:'\u20b99,600', chosen:true},
+          {label:'Relist (any condition)', sub:'Blocked \u2014 unit is non-functional', pct:'—', value:'—', disabled:true, reason:'Functional check failed'},
+          {label:'Liquidate for parts', sub:'Salvage channel', pct:'8%', value:'\u20b91,280'},
+        ],
+        mode:'warranty', relistLabel:'Warranty claim', relistSku:null },
+      kurta:{ product:'Insta Men Cotton Kurta (L)', sku:'KURTA-L', orderId:'406-2231087-5540912', category:'Apparel \u00b7 sealed', tint:'#fdeef4', ink:'#c96a99',
+        photos:[{label:'Sealed poly-bag',tint:'#fdeef4',ink:'#c96a99'},{label:'Tags attached',tint:'#fbf1d9',ink:'#b06f00'},{label:'Seal intact',tint:'#e6f4ea',ink:'#107a45'}],
+        integrity:{ok:true, sold:'Insta Cotton Kurta (L)', got:'Insta Cotton Kurta (L)'},
+        blocked:false, grade:'A', gradeLabel:'Like New', col:'#107a45', bg:'#e6f4ea', line:'#bfe2ca',
+        confidence:98, score:97, completeness:100, functional:'N/A',
+        defects:[],
+        note:'Returned sealed and unopened. Factory poly-bag intact, all tags attached. No handling detected. Eligible to relist as New.',
+        refund:{type:'full', amount:'\u20b91,199', headline:'Confirm full refund', sub:'Unopened \u00b7 fully returnable'},
+        recovery:[
+          {label:'Relist as New', sub:'Sealed, unopened, verified', pct:'100%', value:'\u20b91,199', chosen:true},
+          {label:'Open Box', sub:'Not needed \u2014 item is sealed', pct:'85%', value:'\u20b91,019'},
+          {label:'Liquidate', sub:'Unnecessary for New stock', pct:'9%', value:'\u20b9108'},
+        ],
+        mode:'relist', relistLabel:'New', relistSku:'KURTA-L' },
+      hygiene:{ product:'Oral-B Vitality Toothbrush', sku:'ORB-VIT', orderId:'403-6650129-7781234', category:'Personal care \u00b7 hygiene', tint:'#e7f0fb', ink:'#1d4ed8',
+        photos:[{label:'Brush head',tint:'#fbe5e3',ink:'#b3261e',box:{t:'Seal broken',x:22,y:24,w:56,h:36}},{label:'Handle',tint:'#e7f0fb',ink:'#1d4ed8'},{label:'Box opened',tint:'#eff1f1',ink:'#6b7076'}],
+        integrity:{ok:true, sold:'Oral-B Vitality Toothbrush', got:'Oral-B Vitality Toothbrush'},
+        blocked:false, grade:'F', gradeLabel:'Not resellable', col:'#7a2622', bg:'#f1dede', line:'#e2b8b4',
+        confidence:99, score:0, completeness:100, functional:'Pass (cosmetic)', hygiene:true,
+        defects:[{t:'Hygiene seal broken',s:'major'}],
+        note:'Hygiene seal broken \u2014 the brush-head compartment has been opened. The item is cosmetically fine and functional, but cannot be resold under hygiene policy. The refund decision is independent and remains full.',
+        refund:{type:'full', amount:'\u20b91,899', headline:'Confirm full refund', sub:'Refund independent of resale \u00b7 buyer entitled'},
+        recovery:[
+          {label:'Dispose safely', sub:'Rule: hygiene seal broken', pct:'0%', value:'\u20b90', chosen:true},
+          {label:'Relist (any condition)', sub:'Blocked \u2014 opened hygiene item', pct:'—', value:'—', disabled:true, reason:'Hygiene seal broken'},
+          {label:'Liquidate', sub:'Blocked \u2014 hygiene category', pct:'—', value:'—', disabled:true, reason:'Hygiene seal broken'},
+        ],
+        mode:'dispose', relistLabel:'Safe disposal', relistSku:null },
+      wrong:{ product:'Ordered: boAt Rockerz 550 (Black)', sku:'BR550-BLK', orderId:'409-8841200-1123045', category:'Integrity mismatch', tint:'#fbe5e3', ink:'#b3261e',
+        photos:[{label:'Sold: headphones',tint:'#dbeafe',ink:'#3b6fb5'},{label:'Returned: power bank',tint:'#fbe5e3',ink:'#b3261e',box:{t:'Mismatch',x:14,y:14,w:72,h:62}}],
+        integrity:{ok:false, sold:'boAt Rockerz 550 (Black) headphones', got:'Anker 10000mAh power bank'},
+        blocked:true, grade:null, confidence:97,
+        note:'The returned item does not match the item sold. Delivery-time and return-time photos show a different product (power bank vs. headphones). Grading is halted and a fraud flag has been raised.',
+        refund:{type:'blocked', amount:'\u20b91,799', headline:'Refund already issued at first scan', sub:'Refund-at-first-scan cannot be reversed automatically'},
+        mode:'safet', safetId:'wrong' },
+      watch:{ product:'Noise ColorFit Pulse 2', sku:'NCF-P2', orderId:'407-5540982-3320167', category:'Smartwatch', tint:'#e6fbf4', ink:'#0a8f63',
+        photos:[{label:'Face',tint:'#e6fbf4',ink:'#0a8f63'},{label:'Strap',tint:'#eff1f1',ink:'#6b7076'},{label:'Powered on',tint:'#e7f0fb',ink:'#1d4ed8'}],
+        integrity:{ok:true, sold:'Noise ColorFit Pulse 2', got:'Noise ColorFit Pulse 2'},
+        blocked:false, grade:'A', gradeLabel:'Like New', col:'#107a45', bg:'#e6f4ea', line:'#bfe2ca',
+        confidence:95, score:93, completeness:100, functional:'Pass',
+        defects:[{t:'Opened but flawless',s:'minor'}],
+        note:'Opened but flawless. Screen, buttons and sensors all functional. Original box and charging cable present. Best routed as Open Box.',
+        refund:{type:'full', amount:'\u20b91,499', headline:'Full refund issued', sub:'Original condition confirmed'},
+        recovery:[
+          {label:'Relist as New', sub:'Box opened', pct:'100%', value:'—', disabled:true, reason:'Box opened'},
+          {label:'Open Box', sub:'Opened but flawless \u00b7 chosen', pct:'85%', value:'\u20b91,274', chosen:true},
+          {label:'Relist Used \u2013 Very Good', sub:'Lower rung', pct:'70%', value:'\u20b91,049'},
+        ],
+        mode:'relist', relistLabel:'Open Box', relistSku:'NCF-P2-OB' },
+    };
+    const gcR = gradeCases[s.gradeCase] || gradeCases.hp;
+    const gc = { ...gcR,
+      scale: gcR.grade ? mkScale(gcR.grade) : [],
+      defectsC: (gcR.defects||[]).map(d=>({...d, ...sevC(d.s)})),
+      ringDash: gcR.score!=null ? (CIRC*gcR.score/100).toFixed(1)+' '+CIRC : '0 '+CIRC,
+      relisted: !!s.relisted[s.gradeCase], notRelisted: !s.relisted[s.gradeCase],
+      recovery: (gcR.recovery||[]).map(o=>({...o, chosen:!!o.chosen, disabled:!!o.disabled, rowBg:o.chosen?'#fff8ec':'#f7f8f8', rowBorder:o.chosen?'2px solid #f0a500':'1px solid #eaeded', rowOp:o.disabled?'.55':'1'})),
+      isRelist: gcR.mode==='relist', isWarranty: gcR.mode==='warranty', isDispose: gcR.mode==='dispose', isSafet: gcR.mode==='safet',
+      onConfirm: gcR.mode==='safet' ? ()=>this.setState({screen:'returns', returnsTab:'safet'}) : ()=>confirmRelist(s.gradeCase),
+      onHC: gcR.relistSku ? ()=>openHC(s.gradeCase) : (()=>{}),
+      hasHC: !!gcR.relistSku, hasRecovery: !gcR.blocked && !!gcR.recovery,
+      integrityOk: gcR.integrity ? gcR.integrity.ok : true,
+      integrityBad: gcR.integrity ? !gcR.integrity.ok : false,
+      refundFull: gcR.refund && gcR.refund.type==='full',
+      refundBlocked: gcR.refund && gcR.refund.type==='blocked',
+      goBack: ()=>this.setState({screen:'returns', returnsTab:'received'}),
+      goSafet: ()=>this.setState({screen:'returns', returnsTab:'safet'}),
+      goInv: ()=>go('inventory'),
+    };
+
+    // --- Step 6: SAFE-T claims ---
+    const safetRows = [
+      { id:'wrong', reason:'Different item returned', code:'Item materially different / different item returned',
+        orderId:'409-8841200-1123045', product:'boAt Rockerz 550 (Black)', tint:'#fbe5e3', ink:'#b3261e',
+        eligible:true, checks:[{t:'Amazon-issued refund (first scan)',ok:true},{t:'Seller not at fault',ok:true},{t:'Within 30-day filing window',ok:true},{t:'Evidence bundle complete',ok:true}],
+        evidence:['Delivery photo','Return photo','AI grade report','Condition note','Health Card hash'],
+        deadline:'12 days left to file', reimb:'\u20b91,799' },
+      { id:'notret', reason:'Item not returned', code:'Item not returned',
+        orderId:'407-5540982-9980771', product:'boAt Airdopes 141 (first-scan refund)', tint:'#e7f0fb', ink:'#1d4ed8',
+        eligible:true, checks:[{t:'Refund-at-first-scan issued',ok:true},{t:'No carrier delivery scan after 14 days',ok:true},{t:'Within 30-day filing window',ok:true},{t:'Tracking evidence attached',ok:true}],
+        evidence:['First-scan record','Carrier tracking','Refund record'],
+        deadline:'8 days left to file', reimb:'\u20b91,299' },
+      { id:'voluntary', reason:'Customer-damaged \u00b7 seller refunded voluntarily', code:'Not eligible per policy',
+        orderId:'404-3320981-7745002', product:'boAt Stone 350 Speaker', tint:'#eff1f1', ink:'#6b7076',
+        eligible:false, checks:[{t:'Refund issued voluntarily by seller',ok:false},{t:'Damage occurred in buyer possession',ok:true},{t:'Amazon-issued refund required',ok:false}],
+        ineligReason:'SAFE-T requires an Amazon-issued refund. This refund was issued voluntarily by the seller, so the claim is not eligible.',
+        suggestion:'Next time, capture up to a 20% restocking fee at grading instead of refunding in full.' },
+    ];
+    const safetRowsC = safetRows.map(r=>({ ...r,
+      checks: r.checks.map(k=>({...k, bad:!k.ok})),
+      submitted: !!s.safetSubmitted[r.id], onSubmit: ()=>submitSafet(r.id),
+      statusText: s.safetSubmitted[r.id] ? 'Granted' : (r.eligible ? 'Draft' : 'Ineligible'),
+      statusBg: s.safetSubmitted[r.id] ? '#e6f4ea' : (r.eligible ? '#fbf1d9' : '#eff1f1'),
+      statusInk: s.safetSubmitted[r.id] ? '#107a45' : (r.eligible ? '#b06f00' : '#565959'),
+      showGranted: !!s.safetSubmitted[r.id], canSubmit: r.eligible && !s.safetSubmitted[r.id],
+      eligibleDraft: r.eligible && !s.safetSubmitted[r.id],
+    }));
+
+    // --- Step 7: Returns dashboard ---
+    const dash = {
+      processed:'26', recovered:'\u20b934,970', hours:'38', confidence:'94%', safetWin:'80%', safetWinSub:'4 of 5 granted',
+      breakdown:[
+        {k:'Resale (relist / open box / liquidate)', v:'\u20b919,800', c:'#107a45'},
+        {k:'Restocking fees captured', v:'\u20b92,400', c:'#b06f00'},
+        {k:'SAFE-T reimbursements', v:'\u20b99,970', c:'#1d4ed8'},
+        {k:'Warranty credits', v:'\u20b92,800', c:'#6d28d9'},
+      ],
+      activity:[
+        {t:'Relisted boAt Rockerz 550 (Blue) as Used \u2013 Very Good', m:'\u20b91,299 recovered', when:'2h ago', c:'#107a45'},
+        {t:'SAFE-T claim granted \u00b7 different item returned', m:'\u20b91,799 reimbursed', when:'5h ago', c:'#1d4ed8'},
+        {t:'Warranty claim drafted \u00b7 Redmi Note 13 defective', m:'\u20b99,600 est. credit', when:'1d ago', c:'#6d28d9'},
+        {t:'Disposed Oral-B toothbrush \u00b7 hygiene seal broken', m:'\u20b90 \u00b7 full refund issued', when:'1d ago', c:'#b3261e'},
+        {t:'Open Box relist \u00b7 Noise ColorFit Pulse 2', m:'\u20b91,274 recovered', when:'2d ago', c:'#0a8f63'},
+      ],
+    };
+    const dashGrades = [{g:'A',n:7,c:'#107a45'},{g:'B',n:9,c:'#b06f00'},{g:'C',n:5,c:'#bd4a17'},{g:'D',n:3,c:'#b3261e'},{g:'F',n:2,c:'#7a2622'}].map(x=>({...x,h:(x.n/9*100).toFixed(0)}));
+    const dashActions = [{k:'Relist Used',n:11,c:'#107a45'},{k:'Open Box',n:4,c:'#0a8f63'},{k:'Relist New',n:3,c:'#1d4ed8'},{k:'Liquidate',n:3,c:'#b06f00'},{k:'Warranty',n:2,c:'#6d28d9'},{k:'Dispose',n:3,c:'#b3261e'}].map(x=>({...x,w:(x.n/11*100).toFixed(0)}));
+
+    // --- Health Card modal ---
+    const hcMap = {
+      hp:{grade:'B',label:'Very Good',col:'#b06f00',bg:'#fbf1d9',line:'#ecd6a0',score:84,completeness:100,functional:'Pass',note:'Fully functional. Minor cosmetic scuffs on left ear cup, light headband wear. All accessories and original box included.',item:'boAt Rockerz 550 (Blue)',sku:'BR550-BLU-UVG',asin:'B09XYZ1234',hash:'0x9f2a\u2026c41b'},
+      watch:{grade:'A',label:'Open Box',col:'#107a45',bg:'#e6f4ea',line:'#bfe2ca',score:93,completeness:100,functional:'Pass',note:'Opened but flawless. Screen, buttons and sensors functional. Original box and charging cable present.',item:'Noise ColorFit Pulse 2',sku:'NCF-P2-OB',asin:'B0ABC5678',hash:'0x71c8\u20269d0e'},
+      kurta:{grade:'A',label:'Like New',col:'#107a45',bg:'#e6f4ea',line:'#bfe2ca',score:97,completeness:100,functional:'N/A',note:'Returned sealed and unopened. Tags attached, seal intact. Relisted as New.',item:'Insta Men Cotton Kurta (L)',sku:'KURTA-L',asin:'B0KUR9012',hash:'0x3ad4\u20267f22'},
+      phone:{grade:'D',label:'Defective',col:'#b3261e',bg:'#fbe5e3',line:'#f0bdb8',score:41,completeness:100,functional:'Fail \u2014 display flicker',note:'Functional fault (display flicker) confirmed. Routed to supplier warranty, not consumer resale.',item:'Redmi Note 13 5G (128GB)',sku:'RN13-128',asin:'B0RMI3456',hash:'0x5b90\u201212ac'},
+    };
+    const hcR = s.hcOpen ? hcMap[s.hcOpen] : null;
+    const hc = hcR ? { ...hcR, open:true, ringDash:(CIRC*hcR.score/100).toFixed(1)+' '+CIRC } : { open:false };
+
+    return {
+      storeName: this.props.storeName ?? 'AARAV RETAIL',
+      marketplace: this.props.marketplace ?? 'India',
+      isSignin: s.screen==='signin',
+      showChrome: s.screen!=='signin',
+      chromeBars: s.screen!=='product',
+      isHome: s.screen==='home',
+      isInventory: s.screen==='inventory',
+      isProduct: s.screen==='product',
+      isMcf: s.screen==='mcf',
+      isReturns: s.screen==='returns',
+      hours, legend, widgets, deepCards, products, cats, items,
+      returnTabs, isReqTab:s.returnsTab==='requests', isRecvTab:s.returnsTab==='received', isSafetTab:s.returnsTab==='safet',
+      reqRows, recvRows:recvRowsC, safetRows:safetRowsC,
+      gc, dash, dashGrades, dashActions, hc,
+      isReturnsDash:s.screen==='returnsdash', isGrade:s.screen==='grade',
+      goReturnsDash, closeHC,
+      menuOpen: s.menuOpen,
+      u_today:this.pts(u_today,6), u_yest:this.pts(u_yest,6), u_week:this.pts(u_week,6), u_year:this.pts(u_year,6),
+      s_today:this.pts(s_today,300), s_yest:this.pts(s_yest,300), s_week:this.pts(s_week,300), s_year:this.pts(s_year,300),
+      go, toggleMenu, toggleRow,
+      goHome:()=>go('home'), goInventory:()=>go('inventory'), goMcf:()=>go('mcf'), goReturns:()=>go('returns'),
+      signIn:()=>go('home'),
+      goSignin:()=>go('signin'),
+    };
+  }
+}
+</script>
+</body>
+</html>

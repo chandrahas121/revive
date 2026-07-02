@@ -15,6 +15,7 @@ const NAV_ITEMS = (user, navigate, close) => [
   ...(user ? [{ label: 'My Listings', action: () => { navigate('/my-listings'); close(); } }] : []),
   ...(user ? [{ label: 'Green Credits', action: () => { navigate('/credits'); close(); } }] : []),
   ...(user ? [{ label: 'Orders',      action: () => { navigate('/orders'); close(); } }] : []),
+  { label: 'Seller Central', action: () => { navigate('/seller'); close(); } },
 ];
 
 const Header = () => {

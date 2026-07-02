@@ -47,6 +47,17 @@ export const advanceListingStage = (listingId) =>
 export const suggestCatalog = ({ q, category, grade = 'B' }) =>
   api.get('/api/catalog/suggest/', { params: { q, category, grade } });
 
+// ── Seller Central (Phase A) ─────────────────────────────────────────────────
+// The 'Returns received' queue, backed by REAL catalog products (real images).
+export const getSellerQueue = () => api.get('/api/seller/queue/');
+// Grade a return against ITS catalog product: integrity gate (DINOv2 vs the
+// product's own image) then the real grading pipeline. multipart: images[], product_id.
+export const sellerGrade = (formData) =>
+  api.post('/api/seller/grade/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+// One-click relist → creates a real storefront Listing. Fails soft on the caller.
+export const sellerRelist = (payload) => api.post('/api/seller/relist/', payload);
+export const getSellerDashboard = () => api.get('/api/seller/dashboard/');
+
 // ── Pillar 3 — Product Health Card ───────────────────────────────────────────
 export const generateHealthCard = (payload) => api.post('/api/card/generate/', payload);
 export const getHealthCard = (listingId) => api.get(`/api/card/${listingId}/`);

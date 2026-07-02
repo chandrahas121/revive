@@ -12,6 +12,7 @@ import GradingResultPage from './pages/GradingResultPage'
 import DashboardPage from './pages/DashboardPage'
 import CreditsWalletPage from './pages/CreditsWalletPage'
 import SellIt from './components/stitch/SellIt'
+import SellerApp from './seller/SellerApp'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 
@@ -29,6 +30,8 @@ function App() {
     <Router>
       <ScrollToTop />
       <Routes>
+        {/* Seller Central — isolated shell, no consumer chrome/footer */}
+        <Route path="/seller/*" element={<SellerApp />} />
         <Route element={<Layout />}>
           <Route path="/"                       element={<HomePage />} />
           <Route path="/login"                  element={<LoginPage />} />
