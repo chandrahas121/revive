@@ -1,0 +1,17 @@
+{
+  "name": "amazon-hackon",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:consumer": "npm run dev -w @amazon-hackon/consumer",
+    "dev:seller": "npm run dev -w @amazon-hackon/seller",
+    "build": "npm run build -w @amazon-hackon/consumer && npm run build -w @amazon-hackon/seller",
+    "build:consumer": "npm run build -w @amazon-hackon/consumer",
+    "build:seller": "npm run build -w @amazon-hackon/seller",
+    "lint": "npm run lint -w @amazon-hackon/consumer && npm run lint -w @amazon-hackon/seller"
+  }
+}

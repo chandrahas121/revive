@@ -30,12 +30,38 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class SellerRegisterSerializer(serializers.ModelSerializer):
+    """Seller-portal sign-up. Creates a User flagged is_seller=True."""
+    password = serializers.CharField(write_only=True, min_length=6)
+    name = serializers.CharField(write_only=True)
+    store_name = serializers.CharField(required=False, allow_blank=True, default='')
+
+    class Meta:
+        model = User
+        fields = ('name', 'email', 'password', 'store_name')
+
+    def create(self, validated_data):
+        name = validated_data.pop('name')
+        store_name = validated_data.pop('store_name', '')
+        first, *rest = name.split(' ', 1)
+        user = User.objects.create_user(
+            username=validated_data['email'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=first,
+            last_name=rest[0] if rest else '',
+            is_seller=True,
+            store_name=store_name,
+        )
+        return user
+
+
 class UserSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'name', 'return_rate')
+        fields = ('id', 'email', 'name', 'return_rate', 'is_seller', 'store_name')
 
     def get_name(self, obj):
         return obj.get_full_name() or obj.email.split('@')[0]
