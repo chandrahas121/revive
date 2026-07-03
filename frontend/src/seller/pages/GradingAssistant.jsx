@@ -12,7 +12,7 @@ import { capturePrompts } from '../../utils/categoryProfiles';
 export default function GradingAssistant() {
   const { caseId } = useParams();
   const nav = useNavigate();
-  const { relisted, confirmRelist, openHealthCard } = useSellerUI();
+  const { relisted, confirmRelist, openHealthCard, addSafetClaim } = useSellerUI();
   const slotInputs = useRef({});
 
   const [caseInfo, setCaseInfo] = useState(null);
@@ -25,6 +25,9 @@ export default function GradingAssistant() {
   const [mismatch, setMismatch] = useState(null);
   const [gradeErr, setGradeErr] = useState(null);
   const [storefrontUrl, setStorefrontUrl] = useState(null);
+  const [decision, setDecision] = useState(null);   // ARCA {fault, disposition, financial, claim_narrative}
+  const [functional, setFunctional] = useState('pass');  // seller's on-camera functional test
+  const [evidence, setEvidence] = useState(null);   // tamper-evident bundle {assets, bundle_hash}
 
   const isRelisted = !!relisted[caseId];
 
@@ -62,10 +65,20 @@ export default function GradingAssistant() {
         fd.append('slots', key);
       });
       fd.append('product_id', caseInfo.product_id);
+      // Context the ARCA decision engine needs (fault + disposition + SAFE-T).
+      fd.append('functional', functional);
+      fd.append('reason_code', caseInfo.reason || '');
+      fd.append('order_value', String(price));
+      fd.append('sealed', caseInfo.sealed ? 'true' : 'false');
+      fd.append('order_id', caseInfo.orderId || '');
+      fd.append('days_since_delivered', '2');
+      fd.append('refund_issued_by', 'amazon');
       const { data } = await sellerGrade(fd);
+      setEvidence(data.evidence || null);
       if (data.match === false) {
         setMismatch(data);
       } else {
+        setDecision(data.decision || null);
         setReal(adaptRealGrade(data, {
           product: caseInfo.product, sku: caseInfo.sku, category: caseInfo.category,
           orderId: caseInfo.orderId, isHygiene: false,
@@ -81,22 +94,43 @@ export default function GradingAssistant() {
   };
 
   const onConfirm = () => {
-    if (!gc || gc.mode === 'safet') { nav('/seller/returns?tab=safet'); return; }
-    const label = gc.mode !== 'relist' ? gc.gradeLabel
-      : gc.gradeLabel === 'Like New' ? 'Open Box' : 'Used - ' + gc.gradeLabel;
-    // Relist at the AI-recommended recovery value (discounted off MRP), not full MRP.
-    const relistPrice = gc.relistPrice || price;
-    sellerRelist({
-      product_id: caseInfo.product_id, grade: gc.grade, price: relistPrice,
-      condition_label: label, source: gc.grade === 'A' && caseInfo.sealed ? 'new' : 'return',
-    })
-      .then((res) => { if (res?.data?.storefront_url) setStorefrontUrl(res.data.storefront_url); })
-      .catch(() => {});
+    // The real ARCA disposition decides the action; fall back to the grade-only mode.
+    const dispo = decision?.disposition?.disposition;
+    const isResell = dispo ? (dispo === 'GRADE_RESELL' || dispo === 'RESTOCK_NEW') : (real && real.mode === 'relist');
+    if (isResell) {
+      const label = decision?.disposition?.condition_label
+        || (real?.gradeLabel === 'Like New' ? 'Open Box' : 'Used - ' + (real?.gradeLabel || 'Good'));
+      const relistPrice = real?.relistPrice || price;
+      sellerRelist({
+        product_id: caseInfo.product_id, grade: real?.grade, price: relistPrice,
+        condition_label: label, source: (real?.grade === 'A' && caseInfo.sealed) ? 'new' : 'return',
+        evidence_hash: evidence?.bundle_hash || '',
+      })
+        .then((res) => { if (res?.data?.storefront_url) setStorefrontUrl(res.data.storefront_url); })
+        .catch(() => {});
+    }
     confirmRelist(caseId);
   };
   const openStorefront = () => {
     const base = import.meta.env.VITE_APP_URL || window.location.origin;
     window.open(base + (storefrontUrl || '/?source=revive'), '_blank');
+  };
+  // Persist the ARCA-drafted SAFE-T claim into the SAFE-T tab, then jump there.
+  const fileClaim = () => {
+    const fin = decision?.financial;
+    if (fin?.safet_eligible && caseInfo) {
+      addSafetClaim({
+        id: caseInfo.orderId || caseInfo.sku,
+        reason: fin.safet_sub_reason === 'materially_different' ? 'Different item returned' : 'Item returned damaged / used by buyer',
+        code: fin.safet_sub_reason, product: caseInfo.product, orderId: caseInfo.orderId,
+        reimb: '₹' + Math.round(Number(caseInfo.mrp) || 0).toLocaleString('en-IN'),
+        deadline: (fin.filing_deadline_days ?? 15) + ' days left to file',
+        narrative: decision.claim_narrative,
+        evidence: [`${evidence?.count || 0} hashed photos`, 'Return package + label', 'AI grade report', 'Tamper-evident bundle'],
+        bundleHash: evidence?.bundle_hash,
+      });
+    }
+    nav('/seller/returns?tab=safet');
   };
 
   if (loadErr) return <Shell><div style={panelErr}>Couldn't load this return — is the backend running on :8000? <span className="sc-teal" onClick={() => nav('/seller/returns?tab=received')}>Back to Returns received</span></div></Shell>;
@@ -104,6 +138,10 @@ export default function GradingAssistant() {
 
   const graded = !!real || isRelisted;
   const gc = real; // grade view is only ever the live ML result
+  // Confirm action follows the real ARCA disposition when present.
+  const _dispo = decision?.disposition?.disposition;
+  const confirmMode = _dispo === 'WARRANTY' ? 'warranty' : _dispo === 'DISPOSE' ? 'dispose'
+    : _dispo === 'LIQUIDATE' ? 'liquidate' : (real?.mode === 'warranty' || real?.mode === 'dispose' ? real.mode : 'relist');
 
   return (
     <Shell>
@@ -191,6 +229,18 @@ export default function GradingAssistant() {
           );
         })()}
 
+        {/* Functional test — the seller confirms the on-camera power-on/works check.
+            This is a separate axis from cosmetic grade and drives warranty vs resale. */}
+        {!graded && !mismatch && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#f7f8f8', border: '1px solid #eaeded', borderRadius: 8, padding: '10px 14px', margin: '4px 0 12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111' }}>Functional test</span>
+            <span style={{ fontSize: 11.5, color: '#8a8f8f', flex: 1, minWidth: 160 }}>Does the item power on / work as intended? (shown on camera)</span>
+            {[['pass', 'Works ✓', '#107a45', '#e6f4ea', '#bfe2ca'], ['fail', 'Faulty ✕', '#b3261e', '#fbe5e3', '#f0bdb8']].map(([v, lbl, col, bg, br]) => (
+              <button key={v} onClick={() => setFunctional(v)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '6px 14px', cursor: 'pointer', color: functional === v ? '#fff' : col, background: functional === v ? col : bg, border: `1px solid ${functional === v ? col : br}` }}>{lbl}</button>
+            ))}
+          </div>
+        )}
+
         {/* Post-grade heatmaps */}
         {real && real.heatmaps && real.heatmaps.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, real.heatmaps.length)},1fr)`, gap: 10, margin: '8px 0 16px' }}>
@@ -216,6 +266,8 @@ export default function GradingAssistant() {
                 {mismatch.similarity != null && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, background: '#f0bdb8', padding: '1px 7px', borderRadius: 10 }}>Visual similarity: {Math.round(mismatch.similarity * 100)}%</span>}
               </div>
             </div>
+
+            <EvidenceBundle evidence={evidence} />
 
             {/* Auto-drafted SAFE-T claim */}
             <div style={{ border: '1px solid #d5d9d9', borderRadius: 10, overflow: 'hidden' }}>
@@ -339,46 +391,58 @@ export default function GradingAssistant() {
               <textarea defaultValue={gc.note} style={{ width: '100%', minHeight: 64, border: '1px solid #888c8c', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#111', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box' }} />
             </div>
 
-            <Cap>Recommended recovery · ranked by estimated value</Cap>
-            <div style={{ border: '1px solid #d5d9d9', borderRadius: 10, overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {(gc.recovery || []).map((o, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', borderRadius: 8, background: o.chosen ? '#fff8ec' : '#f7f8f8', border: o.chosen ? '2px solid #f0a500' : '1px solid #eaeded', opacity: o.disabled ? 0.55 : 1 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111' }}>{o.label}</span>
-                        {o.chosen && <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: .5, background: '#f0a500', color: '#fff', padding: '2px 7px', borderRadius: 5 }}>AI PICK</span>}
-                        {o.disabled && <span style={{ fontSize: 9, fontWeight: 700, background: '#eff1f1', color: '#8a8f8f', padding: '2px 7px', borderRadius: 5 }}>Blocked</span>}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: '#565959', marginTop: 2 }}>{o.sub}</div>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#107a45' }}>{o.value}</div>
-                      <div style={{ fontSize: 10.5, color: '#8a8f8f' }}>{o.pct} recovery</div>
+            {decision
+              ? <ArcaDecision decision={decision} caseInfo={caseInfo} onFile={fileClaim} />
+              : (
+                <>
+                  <Cap>Recommended recovery · ranked by estimated value</Cap>
+                  <div style={{ border: '1px solid #d5d9d9', borderRadius: 10, overflow: 'hidden', marginBottom: 4 }}>
+                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {(gc.recovery || []).map((o, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', borderRadius: 8, background: o.chosen ? '#fff8ec' : '#f7f8f8', border: o.chosen ? '2px solid #f0a500' : '1px solid #eaeded', opacity: o.disabled ? 0.55 : 1 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111' }}>{o.label}</span>
+                              {o.chosen && <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: .5, background: '#f0a500', color: '#fff', padding: '2px 7px', borderRadius: 5 }}>AI PICK</span>}
+                              {o.disabled && <span style={{ fontSize: 9, fontWeight: 700, background: '#eff1f1', color: '#8a8f8f', padding: '2px 7px', borderRadius: 5 }}>Blocked</span>}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: '#565959', marginTop: 2 }}>{o.sub}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: '#107a45' }}>{o.value}</div>
+                            <div style={{ fontSize: 10.5, color: '#8a8f8f' }}>{o.pct} recovery</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </>
+              )}
+
+            <EvidenceBundle evidence={evidence} />
 
             {!isRelisted ? (
               <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, background: '#131a22', borderRadius: 10, padding: '16px 20px', flexWrap: 'wrap' }}>
                 <div style={{ color: '#c4ccd4', fontSize: 12.5, maxWidth: 560, lineHeight: 1.5 }}>
-                  {gc.mode === 'relist' && <><b style={{ color: '#febd69' }}>One-click relist.</b> Creates the condition listing under the same product, price from the recovery ladder, condition note attached, and a Health Card.</>}
-                  {gc.mode === 'warranty' && <><b style={{ color: '#febd69' }}>Draft warranty claim.</b> Routes this defective unit to the supplier for ~60% credit — no consumer relist.</>}
-                  {gc.mode === 'dispose' && <><b style={{ color: '#febd69' }}>Confirm safe disposal.</b> Not resellable — the only enabled recovery path.</>}
+                  {confirmMode === 'relist' && <><b style={{ color: '#febd69' }}>One-click relist.</b> Creates the condition listing under the same product, price from the recovery ladder, condition note attached, and a Health Card.</>}
+                  {confirmMode === 'warranty' && <><b style={{ color: '#febd69' }}>Route to supplier warranty.</b> This defective unit goes to the supplier for credit — no consumer relist.</>}
+                  {confirmMode === 'liquidate' && <><b style={{ color: '#febd69' }}>Send to liquidation.</b> Customer/carrier-damaged and not resellable — recover salvage value via Warehouse-Deals-style liquidation.</>}
+                  {confirmMode === 'dispose' && <><b style={{ color: '#febd69' }}>Confirm safe disposal.</b> Not resellable and not liquidatable — dispose per policy.</>}
                 </div>
                 <button onClick={onConfirm} style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #c88c1a', color: '#1c1303', fontSize: 14, fontWeight: 800, borderRadius: 8, padding: '11px 22px', cursor: 'pointer' }}>
-                  {gc.mode === 'relist' && 'Confirm & relist'}{gc.mode === 'warranty' && 'Draft warranty claim'}{gc.mode === 'dispose' && 'Confirm disposal'}
+                  {confirmMode === 'relist' && 'Confirm & relist'}{confirmMode === 'warranty' && 'Route to warranty'}{confirmMode === 'liquidate' && 'Send to liquidation'}{confirmMode === 'dispose' && 'Confirm disposal'}
                 </button>
               </div>
             ) : (
               <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, background: '#e6f4ea', border: '1px solid #bfe2ca', borderRadius: 10, padding: '14px 18px', flexWrap: 'wrap' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#107a45" strokeWidth="2.4"><polyline points="20 6 9 17 4 12" /></svg>
                 <div style={{ fontSize: 13.5, color: '#0a6b4a', fontWeight: 700, flex: 1, minWidth: 180 }}>
-                  {gc.mode === 'relist' ? <>Relisted as {gc.gradeLabel} — live on the storefront with an AI-grade Health Card attached.</> : gc.mode === 'warranty' ? <>Warranty claim drafted for {caseInfo.product}.</> : <>Marked for safe disposal.</>}
+                  {confirmMode === 'relist' ? <>Relisted as {decision?.disposition?.condition_label || gc.gradeLabel} — live on the storefront with an AI-grade Health Card attached.</>
+                    : confirmMode === 'warranty' ? <>Routed to supplier warranty for {caseInfo.product}.</>
+                    : confirmMode === 'liquidate' ? <>Sent to liquidation — salvage value recovered.</>
+                    : <>Marked for safe disposal.</>}
                 </div>
-                {gc.mode === 'relist' && <button onClick={openStorefront} style={{ background: '#fff', border: '1px solid #107a45', color: '#107a45', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>View on storefront ↗</button>}
+                {confirmMode === 'relist' && <button onClick={openStorefront} style={{ background: '#fff', border: '1px solid #107a45', color: '#107a45', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>View on storefront ↗</button>}
                 <button onClick={() => nav('/seller/inventory')} style={{ background: '#fff', border: '1px solid #007185', color: '#007185', fontSize: 13, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>View in inventory</button>
               </div>
             )}
@@ -386,6 +450,117 @@ export default function GradingAssistant() {
         )}
       </div>
     </Shell>
+  );
+}
+
+const FAULT_UI = {
+  none: ['No fault', '#107a45', '#e6f4ea', '#bfe2ca'],
+  customer: ['Buyer-handled', '#b06f00', '#fbf1d9', '#ecd6a0'],
+  fraud: ['Return fraud', '#b3261e', '#fbe5e3', '#f0bdb8'],
+  carrier: ['Carrier damage', '#1d4ed8', '#e7f0fb', '#cfe0fb'],
+  defective: ['Defective / DOA', '#bd4a17', '#fbe9dd', '#f0c9ac'],
+  warehouse: ['Warehouse damage', '#565959', '#eff1f1', '#d5d9d9'],
+};
+const DISPO_LABEL = { RESTOCK_NEW: 'Restock as New', GRADE_RESELL: 'Grade & Resell (used)', LIQUIDATE: 'Liquidate', WARRANTY: 'Supplier warranty', DISPOSE: 'Dispose' };
+const REFUND_LABEL = { full: 'Full refund', restocking_fee: 'Refund − restocking fee', withhold: 'Withhold refund', withhold_pending_amazon: 'Withhold — await Amazon refund' };
+const ROUTE_LABEL = { SAFE_T: 'SAFE-T claim', SUPPLIER_WARRANTY: 'Supplier warranty', A_TO_Z: 'A-to-z', NONE: 'No reimbursement' };
+
+// The ARCA two coordinated decisions: money (financial) and where-it-goes (disposition).
+function ArcaDecision({ decision, caseInfo, onFile }) {
+  const { fault, disposition: dp, financial: fin, claim_narrative } = decision;
+  const [flabel, fcol, fbg, fbr] = FAULT_UI[fault?.fault] || FAULT_UI.customer;
+  return (
+    <>
+      <Cap>AI decision · fault → recovery & reimbursement</Cap>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11.5, fontWeight: 800, padding: '5px 12px', borderRadius: 999, color: fcol, background: fbg, border: `1px solid ${fbr}` }}>Fault: {flabel}{fault?.llm ? ' · AI' : ''}</span>
+        <span style={{ fontSize: 12, color: '#565959', flex: 1, minWidth: 200, lineHeight: 1.5 }}>{fault?.rationale}</span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        {/* Disposition */}
+        <div style={{ border: '1px solid #d5d9d9', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ background: '#131a22', padding: '10px 14px' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: .6, textTransform: 'uppercase', color: '#febd69', opacity: .85 }}>A · Where it goes</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#fff' }}>{DISPO_LABEL[dp?.disposition] || dp?.disposition}</div>
+          </div>
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 12.5, color: '#111', fontWeight: 700 }}>{dp?.condition_label}</div>
+            <div style={{ fontSize: 11.5, color: '#565959', marginTop: 4, lineHeight: 1.5 }}>{dp?.rationale}</div>
+          </div>
+        </div>
+
+        {/* Financial */}
+        <div style={{ border: '1px solid #d5d9d9', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(110deg,#077a52,#0a8f63)', padding: '10px 14px' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: .6, textTransform: 'uppercase', color: '#d6f5e6' }}>B · The money</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#fff' }}>{REFUND_LABEL[fin?.refund_verdict] || fin?.refund_verdict}</div>
+          </div>
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 12, color: '#565959' }}>Reimbursement route: <b style={{ color: '#111' }}>{ROUTE_LABEL[fin?.reimbursement_route] || fin?.reimbursement_route}</b></div>
+
+            {fin?.awaiting_amazon_refund && (
+              <div style={{ marginTop: 8, fontSize: 11.5, color: '#b06f00', background: '#fbf1d9', border: '1px solid #ecd6a0', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
+                <b>Do not refund yet.</b> SAFE-T needs an Amazon-issued refund — let the 48-hour SLA lapse so Amazon auto-refunds, then file.
+              </div>
+            )}
+
+            {fin?.reimbursement_route === 'SAFE_T' && fin?.safet_eligible && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, color: '#107a45' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><polyline points="20 6 9 17 4 12" /></svg>
+                  SAFE-T eligible · {fin.safet_sub_reason}
+                  {fin.filing_deadline_days != null && <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 700, color: fin.filing_deadline_days <= 5 ? '#b3261e' : '#b06f00', background: fin.filing_deadline_days <= 5 ? '#fbe5e3' : '#fbf1d9', padding: '1px 8px', borderRadius: 10 }}>{fin.filing_deadline_days} days left</span>}
+                </div>
+                {claim_narrative && <div style={{ marginTop: 6, fontSize: 11, color: '#3b4042', background: '#f7f8f8', border: '1px solid #eaeded', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5, maxHeight: 92, overflow: 'auto' }}>{claim_narrative}</div>}
+                <button onClick={onFile} style={{ marginTop: 8, background: '#131a22', color: '#fff', fontSize: 12.5, fontWeight: 700, borderRadius: 8, padding: '8px 16px', border: 'none', cursor: 'pointer' }}>File SAFE-T claim →</button>
+              </div>
+            )}
+
+            {fin?.suppress && fin?.suppress_reason && (
+              <div style={{ marginTop: 8, fontSize: 11.5, color: '#b3261e', background: '#fbe5e3', border: '1px solid #f0bdb8', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>{fin.suppress_reason}</div>
+            )}
+
+            {fin?.reimbursement_route === 'SAFE_T' && !fin?.safet_eligible && !fin?.awaiting_amazon_refund && (fin?.ineligible_reasons || []).length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#b3261e', marginBottom: 4 }}>SAFE-T not eligible:</div>
+                {fin.ineligible_reasons.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6, fontSize: 11.5, color: '#565959', padding: '2px 0' }}><span style={{ color: '#b3261e' }}>✕</span>{r}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Tamper-evident evidence bundle — each captured photo SHA-256'd, chained into a
+// bundle hash. This IS the forensic evidence a SAFE-T investigator needs.
+function EvidenceBundle({ evidence }) {
+  if (!evidence) return null;
+  return (
+    <div style={{ margin: '14px 0 4px', border: '1px solid #d5d9d9', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f7f8f8', borderBottom: '1px solid #eaeded' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0a6b4a" strokeWidth="1.8"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z" /></svg>
+        <span style={{ fontSize: 12.5, fontWeight: 800, color: '#111' }}>Tamper-evident evidence bundle</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10.5, color: '#565959' }}>{evidence.count} assets · SHA-256 chained</span>
+      </div>
+      <div style={{ padding: '10px 14px' }}>
+        {(evidence.assets || []).map((a, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: '#565959', padding: '2px 0' }}>
+            <span style={{ color: '#107a45' }}>✓</span>
+            <span style={{ minWidth: 90, color: '#111', fontWeight: 600 }}>{a.slot}</span>
+            <span style={{ fontFamily: 'monospace', color: '#8a8f8f' }}>{a.sha256.slice(0, 16)}…</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #eaeded', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
+          <span style={{ fontWeight: 700, color: '#111' }}>Bundle hash</span>
+          <span style={{ fontFamily: 'monospace', color: '#0a6b4a' }}>{(evidence.bundle_hash || '').slice(0, 24)}…</span>
+        </div>
+      </div>
+    </div>
   );
 }
 

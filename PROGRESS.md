@@ -117,6 +117,38 @@ Root fix: **drive the whole seller-returns flow from real seeded catalog product
 - NOTE: seed images are category-generic (all Nike shoes share one Unsplash photo), so matching is effectively **category-level anti-fraud** (can't return a shoe as a phone / a face as a shoe) — honest and reliable offline. True per-serial matching would need per-product photos + an LLM vision key.
 - **VERIFIED HTTP:** queue=6 real products; grade Nike photo→match A; grade face→`match=false` ("doesn't look like the Nike Air Max 270 from the order"); relist(product_id)→listing on storefront (revive 16→17). Build clean (1912 modules), `manage.py check` clean.
 
+## ARCA RETURNS AGENT — BUILD LOG (2026-07-03)
+Building the multi-agent decision model from `ARCA_RETURNS_AGENT_PLAN.md` (+ `SELLER_DECISION_MODEL_PLAN.md`).
+OpenRouter key is now in root `.env` (`OPENROUTER_API_KEY`, model `anthropic/claude-3-haiku`); `settings.py`
+loads root `.env` (line 22). **Restart the backend with `--noreload` after `.env` changes** so the key loads.
+
+- [x] **`ml/llm.py`** — central OpenRouter helper (`llm_json`, `llm_text`), fails open to None if no key.
+- [x] **`ml/seller_decision.py`** (Phase 1) — the two-track engine, all deterministic + optional LLM refine:
+  - `attribute_fault()` → customer|fraud|carrier|defective|warehouse|none
+  - `disposition_decision()` → wraps `ml/disposition.py`, **hard functional-gate on resale**, adds LIQUIDATE/WARRANTY/DISPOSE per fault (customer/carrier→liquidate; defective/warehouse/hygiene/hazmat→dispose).
+  - `financial_decision()` → refund verdict + reimbursement route + **SAFE-T eligibility** (excluded categories, ₹25k cap, 15-day window, superficial-damage exclusion, Amazon-issued-refund requirement, 8% abuse-ratio suppression).
+  - `decide()` orchestrates; `draft_claim_narrative()` = LLM claim text (fail-open template).
+  - **Unit-tested (7 scenarios):** defective→WARRANTY (not resell) ✓ · buyer-damaged→SAFE-T ✓ · sealed→RESTOCK_NEW ✓ · wrong-item→SAFE-T materially_different ✓ · seller-refunded→ineligible ✓ · jewellery→excluded ✓ · refund-not-issued→withhold_pending_amazon ✓.
+- [x] **Phase 2 — `SellerGradeView` wired to `decide()`.** `POST /api/seller/grade/` now returns `gr.decision = {fault, disposition, financial, claim_narrative?}`. Accepts `functional` (pass|fail — the seller's on-camera functional test), `reason_code`, `order_value`, `sealed`, `refund_issued_by`, `days_since_delivered`, `substitution`. **Verified live over HTTP** incl. a real LLM-drafted SAFE-T narrative from OpenRouter.
+- [x] **Phase 3 — Frontend two-decision UI.** `GradingAssistant`:
+  - **Functional test control** (Works ✓ / Faulty ✕) — the seller's on-camera functional check; sent as `functional=pass|fail`. Also sends reason_code/order_value/sealed/refund_issued_by/days.
+  - New **`ArcaDecision`** panel replaces the grade-only recovery ladder: fault chip + rationale, "A · Where it goes" (disposition + condition label + why), "B · The money" (refund verdict + reimbursement route). SAFE-T block shows eligible + sub-reason + **deadline countdown** + the LLM claim narrative + "File SAFE-T claim →", or the ineligible reasons, or the "withhold — await Amazon refund" note, or the 8%-suppress warning.
+  - Confirm action now follows the **real disposition** (relist / route-to-warranty / send-to-liquidation / dispose), not the grade-only mode. Falls back to the old ladder only if the engine returns nothing.
+- [x] **Phase 4 — SAFE-T loop closed.** `SellerUI` holds `safetClaims`; "File SAFE-T claim →" persists the ARCA-drafted claim (narrative + evidence bundle + deadline) and the **SAFE-T tab renders it** under "⚡ Drafted just now by the AI Grading Assistant" with Review & submit. Frontend build clean (1912 modules).
+- [x] **Phase 5 — Evidence bundle.** `SellerGradeView` SHA-256s every captured angle → `evidence = {assets:[{slot,sha256,bytes}], bundle_hash, count, captured_at}`, returned on both the graded and wrong-item responses. The relist ledger (`LedgerEntry.GRADED`) now records `evidence_bundle_hash`. Frontend: **`EvidenceBundle`** card (hashed assets + chained bundle hash) shows in the grade result AND the mismatch view; the hash flows into the relist payload (→ Health Card ledger) and the drafted SAFE-T claim. **Verified live:** `count=2, bundle_hash=d3f2…`, per-asset SHA-256s. Refund-timing is represented in the decision (`awaiting_amazon_refund` / `withhold_pending_amazon`), surfaced in the UI.
+- [ ] **Production follow-ups (not needed for demo):** Celery-beat poll for Amazon's forced refund to flip withheld claims to fileable; barcode/FNSKU OCR at intake; SP-API returns pull + Finances reconciliation; headless/middleware SAFE-T submission (no public submit endpoint).
+
+### END-TO-END TEST (2026-07-03): 19/19 PASS
+Ran a full API e2e across the flow: queue(7 real products) · S1 buyer-damaged→GRADE_RESELL + SAFE-T eligible + LLM claim narrative + evidence bundle · S2 defective(functional fail)→DISPOSE, no SAFE-T · S3 wrong-item(face)→mismatch + evidence · S4 sealed→RESTOCK_NEW · S5 seller-refunded→SAFE-T ineligible(voluntary-refund reason) · S6 relist→live storefront listing + Health Card + evidence hash chained in ledger · S7 consumer side unchanged (87 New, grade/inspect 405). Frontend build clean (1912 modules); all seller modules transform 200 on Vite.
+Fix applied during testing: `_llm_refine_fault` now only enriches the *rationale* (and may escalate to fraud), never downgrades the deterministic fault — keeps SAFE-T eligibility rule-driven + deterministic (was flipping customer→none on clean stock photos).
+
+### ARCA is built end-to-end (Phases 1–5). Full demo path:
+Returns received → Inspect a real product → capture guided angles + set functional test (Works/Faulty) → **Grade with AI** → DINOv2 integrity gate → live grade → **fault → disposition (relist/warranty/liquidate/dispose) + refund verdict + SAFE-T eligibility** (LLM-refined via OpenRouter) → tamper-evident **evidence bundle** → confirm the correct action → drafted SAFE-T claim (with evidence + deadline) lands in the SAFE-T tab. Backend runs on `:8000 --noreload` (loads `.env` OpenRouter key); frontend `:5173`.
+
+**End-to-end now works:** Returns received → Inspect → capture angles + set functional test → Grade with AI → integrity gate → live grade + **fault → disposition + refund/SAFE-T decision** (LLM-refined via OpenRouter) → confirm the correct action (relist/warranty/liquidate/dispose) → drafted SAFE-T claim appears in the SAFE-T tab.
+
+Files: `ml/llm.py`, `ml/seller_decision.py`, `backend/core/seller_views.py` (SellerGradeView).
+
 ## IN PROGRESS / NEXT
 - **Phase A (frontend + backend relist + real ML grading with integrity gate) is DONE and verified.** The Seller Central is demoable end-to-end.
 - Remaining optional work: (a) human visual click-through of every `/seller` screen in a browser; (b) Phase B Flex doorstep grading (stretch — not started, no design yet); (c) if desired, wire "Grade with AI" to the real `/api/grade/inspect/` (seam is in `GradingAssistant.runGrade`).

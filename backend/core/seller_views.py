@@ -7,11 +7,13 @@ up on the consumer storefront under "Shop Revive". Kept intentionally small and
 severable — no new models, reuses the existing catalog + Listing pipeline.
 """
 import base64
+import hashlib
 import logging
 import os
 from decimal import Decimal
 
 from django.conf import settings
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -168,7 +170,9 @@ class SellerRelistView(APIView):
             LedgerEntry.objects.create(
                 card=hc, event=LedgerEntry.Event.GRADED, prev_hash='',
                 data={'grade': grade_val, 'tier': 1, 'inspected_by': 'ai_only',
-                      'disposition': listing.disposition},
+                      'disposition': listing.disposition,
+                      # tamper-evident evidence-bundle hash from the grading step
+                      'evidence_bundle_hash': request.data.get('evidence_hash', '')},
             )
             LedgerEntry.objects.create(
                 card=hc, event=LedgerEntry.Event.LISTED,
@@ -284,6 +288,20 @@ class SellerGradeView(APIView):
         ref = _product_ref_bytes(product)
         cover = images[0].read(); images[0].seek(0)
 
+        # ── Tamper-evident evidence bundle: SHA-256 each captured angle ────────
+        # This is the SAFE-T evidence chain (works even when no listing is created).
+        slots_list = request.data.getlist('slots') if hasattr(request.data, 'getlist') else []
+        assets = []
+        for i, f in enumerate(images):
+            b = f.read(); f.seek(0)
+            assets.append({
+                'slot': slots_list[i] if i < len(slots_list) else f'angle_{i + 1}',
+                'sha256': hashlib.sha256(b).hexdigest(), 'bytes': len(b),
+            })
+        bundle_hash = hashlib.sha256(''.join(a['sha256'] for a in assets).encode()).hexdigest()
+        evidence = {'assets': assets, 'bundle_hash': bundle_hash, 'count': len(assets),
+                    'captured_at': timezone.now().isoformat()}
+
         # Demo units the presenter physically has: the seller uploads real-world phone
         # photos, which score low against a clean stock reference under DINOv2 even when
         # they ARE the same item. Skip the gate so the real shoe passes straight to grading.
@@ -298,7 +316,7 @@ class SellerGradeView(APIView):
                 inst = instance_match(cover, ref) if ref else {'checked': False, 'match': True}
             if inst.get('checked') and not inst.get('match'):
                 return Response({
-                    'match': False, 'instance_match': inst,
+                    'match': False, 'instance_match': inst, 'evidence': evidence,
                     'message': (f"This doesn't look like the {product.title[:48]} from the order "
                                 f"(similarity {inst.get('similarity', 0):.0%}). Grading halted — "
                                 "please scan the correct returned item."),
@@ -327,6 +345,46 @@ class SellerGradeView(APIView):
 
         gr['match'] = True
         gr['product'] = {'id': product.id, 'title': product.title, 'category': product.category, 'mrp': float(product.mrp)}
+        gr['evidence'] = evidence
+
+        # ── ARCA decision engine: fault → disposition + financial (SAFE-T) ──────
+        # Functional status: prefer the seller's on-camera functional test result
+        # (request 'functional' = pass|fail), else the grader's inferred flag.
+        d = request.data
+        func_raw = str(d.get('functional', '')).lower()
+        functional = True if func_raw == 'pass' else False if func_raw == 'fail' else gr.get('functional')
+
+        def _b(k, default=False):
+            return str(d.get(k, default)).lower() in ('true', '1', 'yes')
+
+        try:
+            from ml.seller_decision import decide, draft_claim_narrative
+            ctx = {
+                'grade': gr.get('grade', 'C'), 'category': product.category,
+                'functional': functional, 'sealed': _b('sealed'),
+                'completeness': gr.get('completeness', 1.0),
+                'reason_code': d.get('reason_code', ''),
+                'substitution': _b('substitution'),
+                'identity_ok': True, 'weight_flag': _b('weight_flag'),
+                'order_value': float(d.get('order_value', product.mrp) or product.mrp),
+                'refund_issued_by': d.get('refund_issued_by', 'amazon'),
+                'days_since_delivered': int(d.get('days_since_delivered', 2) or 2),
+                'safet_ratio': float(d.get('safet_ratio', 0.03) or 0),
+                'damage_superficial': _b('damage_superficial'),
+                'has_evidence': True, 'verified_match': True,
+                'expected_title': product.title,
+            }
+            decision = decide(ctx, images=[cover], use_llm=True)
+            fin = decision['financial']
+            if fin.get('safet_eligible'):
+                decision['claim_narrative'] = draft_claim_narrative(
+                    product_title=product.title, sub_reason=fin.get('safet_sub_reason'),
+                    fault_rationale=decision['fault'].get('rationale', ''), order_id=d.get('order_id', ''),
+                )
+            gr['decision'] = decision
+        except Exception as e:
+            logger.warning(f"[seller] decision engine failed: {e}")
+
         return Response(gr, status=status.HTTP_200_OK)
 
 

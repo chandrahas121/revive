@@ -12,6 +12,7 @@ export const SellerUIProvider = ({ children }) => {
   const [relisted, setRelisted] = useState({});       // { caseId: true }
   const [reviewDecision, setReviewDecision] = useState({}); // { reviewId: 'accept'|'override' }
   const [safetSubmitted, setSafetSubmitted] = useState({}); // { safetId: true }
+  const [safetClaims, setSafetClaims] = useState([]);  // ARCA-drafted claims from grading
 
   const value = {
     menuOpen, setMenuOpen,
@@ -21,6 +22,8 @@ export const SellerUIProvider = ({ children }) => {
     relisted, confirmRelist: (id) => setRelisted((s) => ({ ...s, [id]: true })),
     reviewDecision, decideReview: (id, d) => setReviewDecision((s) => ({ ...s, [id]: d })),
     safetSubmitted, submitSafet: (id) => setSafetSubmitted((s) => ({ ...s, [id]: true })),
+    safetClaims,
+    addSafetClaim: (claim) => setSafetClaims((c) => (c.some((x) => x.id === claim.id) ? c : [claim, ...c])),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };

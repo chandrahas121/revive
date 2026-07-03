@@ -175,10 +175,45 @@ function ProductImg({ src }) {
 }
 
 function SafetTab() {
-  const { safetSubmitted, submitSafet } = useSellerUI();
+  const { safetSubmitted, submitSafet, safetClaims } = useSellerUI();
   return (
     <>
       <div style={{ fontSize: 12.5, color: '#565959', margin: '16px 0 12px' }}>AI-drafted SAFE-T reimbursement claims. Eligibility, reason code, evidence bundle and filing deadline are prepared — review and submit in one click.</div>
+
+      {/* Claims drafted live by the AI Grading Assistant this session */}
+      {safetClaims.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: .4, textTransform: 'uppercase', color: '#b06f00', marginBottom: 8 }}>⚡ Drafted just now by the AI Grading Assistant</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {safetClaims.map((c) => {
+              const done = !!safetSubmitted[c.id];
+              return (
+                <div key={c.id} style={{ border: '1px solid #ecd6a0', borderRadius: 10, overflow: 'hidden', background: 'linear-gradient(180deg,#fffdf6,#fdf6e6)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{c.reason}</div>
+                      <div style={{ fontSize: 11.5, color: '#565959' }}>Reason code: {c.code} · {c.product} · Order {c.orderId}</div>
+                    </div>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 12px', borderRadius: 12, background: done ? '#e6f4ea' : '#fbf1d9', color: done ? '#107a45' : '#b06f00' }}>{done ? 'Submitted' : 'Draft ready'}</span>
+                  </div>
+                  {c.narrative && <div style={{ margin: '0 16px', fontSize: 11.5, color: '#3b4042', background: '#fff', border: '1px solid #eaeded', borderRadius: 8, padding: '9px 11px', lineHeight: 1.5 }}>{c.narrative}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(c.evidence || []).map((e, i) => <span key={i} style={{ fontSize: 11, background: '#eff1f1', color: '#3b4042', borderRadius: 6, padding: '3px 9px' }}>{e}</span>)}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#b06f00' }}>{c.deadline}</span>
+                      {done
+                        ? <span style={{ fontSize: 12.5, fontWeight: 700, color: '#107a45' }}>Submitted · {c.reimb} claimed</span>
+                        : <button onClick={() => submitSafet(c.id)} style={{ background: '#131a22', color: '#fff', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '8px 18px', border: 'none', cursor: 'pointer' }}>Review &amp; submit</button>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {safetRows.map((c) => {
           const done = !!safetSubmitted[c.id];
