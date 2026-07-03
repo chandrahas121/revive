@@ -1068,5 +1068,112 @@
     "image_hash": "c0c7bb9704baa4e1590ebd13",
     "n_dino_detections": 0,
     "from_cache": false
+  },
+  "9b31ef74a6a505a25fdcca39_e33e5a": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "center",
+        "bbox": [
+          380.76,
+          671.94,
+          500.74,
+          719.33
+        ],
+        "bbox_area_pct": 0.0049,
+        "angle": "",
+        "angle_label": ""
+      },
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "center-left",
+        "bbox": [
+          380.76,
+          671.94,
+          500.74,
+          719.33
+        ],
+        "bbox_area_pct": 0.0049
+      },
+      {
+        "type": "area area",
+        "severity": "minor",
+        "location": "bottom-left",
+        "bbox": [
+          4.2,
+          1445.8,
+          427.62,
+          1595.03
+        ],
+        "bbox_area_pct": 0.0548,
+        "source": "dino",
+        "angle": "",
+        "angle_label": ""
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The shoes have minor scuffs on the center and center-left areas, but are otherwise in very good condition.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 7076
+  },
+  "9b31ef74a6a505a25fdcca39_ge33e5a": {
+    "listing_id": "5b0673b1-fcd2-41a1-9966-4c3fc7b51a64",
+    "grade": "B",
+    "confidence": 0.72,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "center",
+        "bbox": [
+          380.76,
+          671.94,
+          500.74,
+          719.33
+        ],
+        "bbox_area_pct": 0.0049,
+        "angle": "",
+        "angle_label": ""
+      },
+      {
+        "type": "area area",
+        "severity": "minor",
+        "location": "bottom-left",
+        "bbox": [
+          4.2,
+          1445.8,
+          427.62,
+          1595.03
+        ],
+        "bbox_area_pct": 0.0548,
+        "source": "dino",
+        "angle": "",
+        "angle_label": ""
+      }
+    ],
+    "completeness": 0.742,
+    "condition_summary": "The shoes have minor scuffs on the center and center-left areas, but are otherwise in very good condition.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "",
+    "angle_label": "",
+    "latency_ms": 27744,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "9b31ef74a6a505a25fdcca39",
+    "n_dino_detections": 3,
+    "from_cache": false
   }
 }

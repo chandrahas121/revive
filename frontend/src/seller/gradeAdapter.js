@@ -10,7 +10,10 @@ const rup = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
 function recoveryFor(grade, price, opened = true) {
   const p = Number(price) || 1000;
   const row = (label, sub, pct, chosen, disabled, reason) =>
-    ({ label, sub, pct: pct === null ? '—' : pct + '%', value: disabled ? '—' : rup(p * (pct / 100)), chosen: !!chosen, disabled: !!disabled, reason });
+    ({ label, sub, pct: pct === null ? '—' : pct + '%',
+       value: disabled ? '—' : rup(p * (pct / 100)),
+       priceNum: (disabled || pct === null) ? null : Math.round(p * (pct / 100)),
+       chosen: !!chosen, disabled: !!disabled, reason });
   switch (grade) {
     case 'A':
       return opened
@@ -55,6 +58,10 @@ export function adaptRealGrade(resp, baseCase, price) {
       ]
     : recoveryFor(grade, price);
   const sc = scaleDef.find((x) => x.g === grade) || scaleDef[1];
+  // Price the item relists at = the chosen recovery row's discounted value (e.g.
+  // grade B → 85% of MRP), NOT the full MRP. Falls back to MRP if not resolvable.
+  const chosenRow = recovery.find((r) => r.chosen);
+  const relistPrice = (chosenRow && chosenRow.priceNum) || Math.round(Number(price) || 0);
   return {
     ...baseCase,
     live: true,
@@ -72,6 +79,11 @@ export function adaptRealGrade(resp, baseCase, price) {
     mode,
     relistLabel: mode === 'relist' ? (grade === 'A' ? 'Open Box' : 'Used – ' + (LABELS[grade] || '')) : baseCase.relistLabel,
     relistSku: mode === 'relist' ? baseCase.sku + '-' + grade : null,
+    relistPrice,
     heatmaps: (resp.angle_heatmaps || []).map((h) => h.b64).filter(Boolean),
+    box_present: resp.box_present,
+    tags_present: resp.tags_present,
+    powers_on: resp.powers_on,
+    accessories_present: resp.accessories_present,
   };
 }

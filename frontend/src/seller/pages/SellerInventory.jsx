@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { products, SVG } from '../data/sellerData';
+import { products, SVG, gCol } from '../data/sellerData';
+import { useSellerUI } from '../SellerUI';
 
 const GRID = '36px 130px 1fr 150px 160px 220px 150px 30px';
 const ROW_MENU = ['Edit listing', 'Manage images', 'Copy listing', 'Add another condition', 'Change to Fulfilled by Merchant', 'Send or replenish inventory', 'Set replenishment alerts', 'Create removal order', 'Create fulfillment order', 'Print item labels', 'Close listing', 'Delete listing'];
@@ -9,6 +10,7 @@ export default function SellerInventory() {
   const nav = useNavigate();
   const [rowMenu, setRowMenu] = useState(null);
   const openProduct = (asin) => nav(`/seller/inventory/${asin}`);
+  const { openHealthCard } = useSellerUI();
 
   return (
     <div style={{ background: '#fff', minHeight: '80vh' }}>
@@ -56,7 +58,7 @@ export default function SellerInventory() {
           </div>
           <div>
             <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 4 }}>Listing status <span style={{ background: '#007185', color: '#fff', fontSize: 9, padding: '1px 5px', borderRadius: 8, verticalAlign: 1 }}>Updated</span></div>
-            <select style={sel}><option>Active (3)</option></select>
+            <select style={sel}><option>Active ({products.length})</option></select>
           </div>
           <div>
             <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 4 }}>Fulfilled by</div>
@@ -101,10 +103,28 @@ export default function SellerInventory() {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div onClick={() => openProduct(p.asin)} className="sc-teal" style={{ lineHeight: 1.34 }}>{p.title}</div>
+                {p.cond && (
+                  <span style={{ display: 'inline-block', marginTop: 5, fontSize: 10, fontWeight: 800, letterSpacing: '.4px', textTransform: 'uppercase', background: '#131a22', color: '#febd69', padding: '2px 8px', borderRadius: 5 }}>
+                    Revive &middot; {p.cond}
+                  </span>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 10px', marginTop: 6, color: '#565959' }}>
                   <span>ASIN</span><span style={{ color: '#111' }}>{p.asin}</span>
                   <span>SKU</span><span style={{ color: '#111' }}>{p.sku}</span>
                 </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, border: '1px solid #d5d9d9', borderRadius: 6, padding: '3px 8px', color: '#007185', fontSize: 11.5, cursor: 'pointer' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+                  Variation Family Details
+                </div>
+                {p.hcCase && (() => {
+                  const hg = gCol[p.hcGrade] || {};
+                  return (
+                    <div onClick={() => openHealthCard(p.hcCase)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 8, marginLeft: 6, border: `1px solid ${hg.line}`, background: hg.bg, borderRadius: 6, padding: '3px 9px', color: hg.ink, fontSize: 11.5, cursor: 'pointer', fontWeight: 700 }}>
+                      <span style={{ width: 17, height: 17, borderRadius: 4, background: '#fff', color: hg.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10 }}>{p.hcGrade}</span>
+                      AI-inspected &middot; view Health Card
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div style={{ color: '#565959' }}>
@@ -119,11 +139,18 @@ export default function SellerInventory() {
                 <span style={priceBox}><span style={priceUnit}>INR</span><input defaultValue={p.price} style={priceInput} /></span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Shipping cost</span><span>+ ₹0.00</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '5px 0' }}><span>Minimum price</span>
+                <span style={priceBox}><span style={priceUnit}>INR</span><input style={priceInput} /></span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span>Maximum price</span>
+                <span style={priceBox}><span style={priceUnit}>INR</span><input style={priceInput} /></span>
+              </div>
               <div style={{ marginTop: 8, fontSize: 11.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ color: '#007600' }}>&#10004;</span> Featured offer</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={chk}><span style={{ color: '#007600' }}>&#10004;</span>Competitive price</span><span>{p.comp}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={chk}><span style={{ color: '#007600' }}>&#10004;</span>Lowest price</span><span>{p.low}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={chk}><span style={{ color: '#007600' }}>&#10004;</span>Business price</span><span>{p.biz}</span></div>
+                <div className="sc-teal" style={{ marginTop: 3 }}>View reference prices</div>
               </div>
             </div>
             <div style={{ color: '#565959' }}>
