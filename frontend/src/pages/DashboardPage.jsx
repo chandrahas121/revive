@@ -75,7 +75,7 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#EAEDED]">
+    <div className="min-h-screen bg-white">
       <Header />
       <main className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
 

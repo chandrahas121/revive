@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import GreenCredits from '../components/stitch/GreenCredits'
 import ReturnNudge from '../components/stitch/ReturnNudge'
-import api, { redeemCredits } from '../api/client'
+import api, { redeemCredits, getRecommendations } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { ShoppingCart, ChevronLeft, ShieldCheck, RefreshCw, Leaf, Truck, Lock } from 'lucide-react'
@@ -24,8 +24,16 @@ const CheckoutPage = () => {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [risk, setRisk] = useState(null)
+  const [recs, setRecs] = useState([])
 
   const finalTotal = Math.max(0, cartTotal - redeemedCredits * 0.1)
+
+  // "Recommendations for you" sidebar panel (matches the real Amazon cart page).
+  useEffect(() => {
+    getRecommendations(6)
+      .then((res) => setRecs(res.data.results || []))
+      .catch(() => setRecs([]))
+  }, [])
 
   // Green Credits are the second-life / sustainability reward — they only apply when
   // the cart contains a Revive/Renewed item. A brand-new product (e.g. the iQOO) earns
@@ -85,7 +93,7 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="bg-[#EAEDED] min-h-screen">
+    <div className="bg-white min-h-screen">
       <Header />
       <main className="max-w-5xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
 
@@ -97,12 +105,7 @@ const CheckoutPage = () => {
         </button>
 
         {/* Page heading */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-9 h-9 rounded-full bg-[#232F3E] flex items-center justify-center flex-shrink-0">
-            <ShoppingCart className="w-5 h-5 text-[#febd69]" />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#0F1111]">Checkout</h1>
-        </div>
+        <h1 className="text-2xl sm:text-3xl font-medium text-[#0F1111] border-b border-[#eef1f4] pb-3 mb-5">Shopping Cart</h1>
 
         {/* Success banner */}
         {success && (
@@ -143,18 +146,18 @@ const CheckoutPage = () => {
                 <p className="text-gray-500 mb-5 text-sm">Your cart is empty.</p>
                 <button onClick={() => navigate('/')}
                   className="px-6 py-2.5 rounded-lg font-medium text-sm text-[#131921] shadow-sm transition-transform active:scale-95"
-                  style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #f0c040' }}>
+                  style={{ background: '#ffcf3f' }}>
                   Continue Shopping
                 </button>
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-[#D5D9D9] overflow-hidden">
                 {/* Cart header */}
-                <div className="px-4 py-3 bg-[#232F3E] flex items-center justify-between">
-                  <h2 className="font-bold text-white text-sm sm:text-base">
-                    Cart <span className="text-[#febd69]">({cartItemCount} item{cartItemCount !== 1 ? 's' : ''})</span>
+                <div className="px-4 sm:px-5 py-3 flex items-center justify-between border-b border-[#eef1f4]">
+                  <h2 className="font-semibold text-[#0F1111] text-base">
+                    Cart <span className="text-[#565959] font-normal">({cartItemCount} item{cartItemCount !== 1 ? 's' : ''})</span>
                   </h2>
-                  <Truck className="w-4 h-4 text-[#febd69]" />
+                  <span className="text-xs text-[#565959]">Price</span>
                 </div>
 
                 {/* Single return-prevention nudge (Pillar 4): bracketeering banner +
@@ -178,52 +181,48 @@ const CheckoutPage = () => {
                     const itemQty = item.qty || 1
                     const maxQty = item.maxStock || (isUnique ? 1 : 10)
                     return (
-                      <div key={item.lineKey || item.id} className="flex gap-3 sm:gap-4 p-4">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#F7F8F8] rounded-lg flex-shrink-0 overflow-hidden border border-[#D5D9D9]">
+                      <div key={item.lineKey || item.id} className="flex gap-4 p-4 sm:p-5">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 bg-[#F7F8F8] rounded-lg flex-shrink-0 overflow-hidden border border-[#D5D9D9]">
                           {item.image && (
                             <img src={item.image} alt={item.title} className="w-full h-full object-contain p-1" />
                           )}
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="font-semibold text-xs sm:text-sm text-[#0F1111] line-clamp-2 leading-snug">{item.title}</p>
-                          {item.size != null && item.size !== '' && (
-                            <span className="inline-block text-[10px] font-bold text-[#0F1111] bg-[#F0F2F2] border border-[#D5D9D9] rounded px-1.5 py-0.5 mt-0.5">Size: {item.size}</span>
-                          )}
-                          {item.grade && (
-                            <span className="inline-block mt-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-[#232F3E] text-[#febd69] ml-1">
-                              Grade {item.grade}
-                            </span>
-                          )}
-                          <p className="font-bold text-[#0F1111] mt-1.5 text-sm sm:text-base">
-                            ₹{(parseFloat(item.price) * itemQty).toLocaleString('en-IN')}
-                            {itemQty > 1 && <span className="text-xs text-gray-400 font-normal ml-1">(₹{parseFloat(item.price).toLocaleString('en-IN')} each)</span>}
-                          </p>
+                          <p className="text-sm sm:text-base font-medium text-[#0F1111] line-clamp-2 leading-snug">{item.title}</p>
+                          <p className="text-xs text-[#007600] mt-1">In stock</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {item.size != null && item.size !== '' && (
+                              <span className="inline-block text-[10px] font-bold text-[#0F1111] bg-[#F0F2F2] border border-[#D5D9D9] rounded px-1.5 py-0.5">Size: {item.size}</span>
+                            )}
+                            {item.grade && (
+                              <span className="inline-block text-[10px] font-black px-2 py-0.5 rounded-full bg-[#232F3E] text-[#febd69]">Grade {item.grade}</span>
+                            )}
+                            {isUnique && <span className="text-[10px] text-amber-600">One-of-a-kind</span>}
+                          </div>
 
-                          {/* Qty controls */}
-                          <div className="flex items-center gap-3 mt-2.5">
-                            <div className="inline-flex items-center border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
+                          {/* Qty controls (pill) */}
+                          <div className="flex items-center gap-4 mt-3">
+                            <div className="inline-flex items-center border border-[#c3cad3] rounded-full overflow-hidden">
                               <button
                                 onClick={() => itemQty <= 1 ? removeFromCart(item.lineKey) : updateQuantity(item.lineKey, itemQty - 1)}
-                                className="w-8 h-8 flex items-center justify-center text-sm font-bold text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6] transition-colors border-r border-[#D5D9D9]"
-                              >
-                                {itemQty === 1 ? (
-                                  <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                                ) : '−'}
-                              </button>
-                              <span className="w-10 text-center text-xs font-bold text-[#0F1111] bg-white py-1.5">{itemQty}</span>
+                                className="px-3.5 py-1.5 text-base text-[#0F1111] bg-[#f5f7f9] hover:bg-[#e3e6e6] transition-colors"
+                              >−</button>
+                              <span className="px-3 text-sm font-semibold text-[#0F1111]">{itemQty}</span>
                               <button
                                 onClick={() => updateQuantity(item.lineKey, itemQty + 1)}
                                 disabled={itemQty >= maxQty}
-                                className={`w-8 h-8 flex items-center justify-center text-sm font-bold transition-colors border-l border-[#D5D9D9]
-                                  ${itemQty >= maxQty ? 'text-gray-300 bg-[#F0F2F2] cursor-not-allowed' : 'text-[#0F1111] bg-[#F0F2F2] hover:bg-[#e3e6e6]'}`}
+                                className={`px-3.5 py-1.5 text-base transition-colors ${itemQty >= maxQty ? 'text-gray-300 bg-[#f5f7f9] cursor-not-allowed' : 'text-[#0F1111] bg-[#f5f7f9] hover:bg-[#e3e6e6]'}`}
                               >+</button>
                             </div>
                             <button onClick={() => removeFromCart(item.lineKey)}
-                              className="text-xs text-[#c45500] hover:underline font-medium">
-                              Remove
+                              className="text-sm text-[#007185] hover:text-[#c45500] hover:underline">
+                              Delete
                             </button>
-                            {isUnique && <span className="text-[10px] text-amber-600 ml-2">One-of-a-kind</span>}
                           </div>
+                        </div>
+                        {/* Line total (right) */}
+                        <div className="text-base sm:text-lg font-bold text-[#0F1111] whitespace-nowrap">
+                          ₹{(parseFloat(item.price) * itemQty).toLocaleString('en-IN')}
                         </div>
                       </div>
                     )
@@ -250,10 +249,8 @@ const CheckoutPage = () => {
 
               {/* Order summary */}
               <div className="bg-white rounded-xl shadow-sm border border-[#D5D9D9] overflow-hidden">
-                <div className="px-4 py-3 bg-[#232F3E]">
-                  <h2 className="font-bold text-[#febd69] text-sm sm:text-base">Order Summary</h2>
-                </div>
-                <div className="p-4 space-y-2.5">
+                <div className="p-4 sm:p-5 space-y-2.5">
+                  <h2 className="font-bold text-[#0F1111] text-base mb-1">Order Summary</h2>
                   <div className="flex justify-between text-xs sm:text-sm text-gray-600">
                     <span>Subtotal ({cartItemCount} items)</span>
                     <span className="font-semibold text-[#0F1111]">₹{cartTotal.toLocaleString('en-IN')}</span>
@@ -274,6 +271,10 @@ const CheckoutPage = () => {
                     <span>₹{finalTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
 
+                  <label className="flex items-center gap-2 text-xs text-[#2b3440] py-1 cursor-pointer">
+                    <input type="checkbox" className="accent-[#232F3E] w-3.5 h-3.5" /> This order contains a gift
+                  </label>
+
                   <button
                     onClick={handlePlaceOrder}
                     disabled={placing || success}
@@ -281,7 +282,7 @@ const CheckoutPage = () => {
                       ${placing || success
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                         : 'text-[#131921] hover:shadow-md'}`}
-                    style={placing || success ? {} : { background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #f0c040' }}
+                    style={placing || success ? {} : { background: '#ffcf3f' }}
                   >
                     {placing ? (
                       <span className="flex items-center justify-center gap-2">
@@ -297,6 +298,35 @@ const CheckoutPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Recommendations panel — matches the real Amazon cart sidebar */}
+              {recs.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-[#D5D9D9] overflow-hidden">
+                  <div className="px-4 py-3 border-b border-[#F0F2F2]">
+                    <h2 className="font-bold text-[#0F1111] text-sm">Recommendations for you</h2>
+                  </div>
+                  <ul className="divide-y divide-[#F0F2F2]">
+                    {recs.map((l) => (
+                      <li key={l.id}>
+                        <button
+                          onClick={() => navigate(`/product/${l.id}`)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#F7F8F8] transition-colors"
+                        >
+                          <div className="w-12 h-12 flex-shrink-0 bg-[#F7F8F8] rounded border border-[#D5D9D9] flex items-center justify-center overflow-hidden">
+                            <img src={l.image} alt={l.product?.title}
+                              className="max-w-full max-h-full object-contain mix-blend-multiply"
+                              onError={(e) => { e.target.src = 'https://via.placeholder.com/80?text=Item' }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-[#0F1111] line-clamp-2 leading-snug">{l.product?.title}</p>
+                            <p className="text-sm font-bold text-[#0F1111] mt-0.5">₹{parseFloat(l.price).toLocaleString('en-IN')}</p>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
             </div>
           )}

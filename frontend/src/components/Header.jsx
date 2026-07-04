@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ShoppingCart, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, ChevronRight, UserCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { getCredits } from "../api/client";
@@ -205,44 +205,91 @@ const Header = () => {
           </button>
         ))}
         <span className="text-gray-600 px-1 flex-shrink-0 hidden lg:inline select-none">|</span>
-        <button onClick={() => navigate('/?category=Electronics')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Electronics</button>
-        <button onClick={() => navigate('/?category=Fashion')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Fashion</button>
-        <button onClick={() => navigate('/?category=Home')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Home & Garden</button>
+        <button onClick={() => navigate('/?category=Phone')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Mobiles</button>
+        <button onClick={() => navigate('/?category=Laptop')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Laptops</button>
+        <button onClick={() => navigate('/?category=Apparel')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Apparel</button>
+        <button onClick={() => navigate('/?category=Footwear')} className="px-3 py-2 border border-transparent hover:border-white rounded-sm flex-shrink-0 hidden lg:inline transition-colors">Footwear</button>
       </div>
 
-      {/* ── Mobile drawer ── */}
+      {/* ── Mobile drawer (Amazon-style white slide-over) ── */}
       {menuOpen && (
-        <div className="md:hidden bg-[#232F3E] text-white text-sm shadow-lg">
-          {/* User greeting */}
-          {user && (
-            <div className="px-4 py-3 border-b border-white/10 text-xs text-gray-300">
-              Hello, <span className="font-bold text-white">{user.name}</span>
+        <div className="md:hidden fixed inset-0 z-[60]">
+          {/* Dim overlay */}
+          <div className="absolute inset-0 bg-black/50" onClick={closeMenu} />
+
+          {/* Panel */}
+          <div className="absolute left-0 top-0 bottom-0 w-[88%] max-w-sm bg-white text-[#0F1111] shadow-2xl overflow-y-auto">
+            {/* Dark header with greeting */}
+            <div className="sticky top-0 bg-[#232F3E] text-white px-4 py-4 flex items-center gap-2.5 z-10">
+              <UserCircle className="w-7 h-7 flex-shrink-0" />
+              <span className="text-lg font-bold truncate">
+                {user ? `Hello, ${user.name.split(' ')[0]}` : 'Hello, sign in'}
+              </span>
+              <button onClick={closeMenu} className="ml-auto p-1 hover:bg-white/10 rounded" aria-label="Close menu">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-          )}
 
-          {/* Nav links */}
-          <nav className="py-1">
-            {navItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={item.action}
-                className={`w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5
-                  ${item.highlight ? 'text-[#febd69] font-semibold' : 'text-white'}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+            {/* Main nav */}
+            <nav className="py-1.5">
+              {navItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.action}
+                  className={`w-full flex items-center justify-between text-left px-4 py-3 hover:bg-[#F7F8F8] transition-colors border-b border-gray-100
+                    ${item.highlight ? 'text-[#C7511F] font-bold' : 'text-[#0F1111]'}`}
+                >
+                  <span className="text-[15px]">{item.label}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+              ))}
+            </nav>
 
-          {/* Category links */}
-          <div className="border-t border-white/10 py-1">
-            <p className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Shop by Category</p>
-            {['Electronics', 'Fashion', 'Home'].map((cat) => (
-              <button key={cat} onClick={() => { navigate(`/?category=${encodeURIComponent(cat)}`); closeMenu(); }}
-                className="w-full text-left px-4 py-3 border-b border-gray-700 text-[#f1f1f1] hover:bg-gray-800 transition-colors">
-                {cat === 'Home' ? 'Home & Garden' : cat}
+            {/* Shop by Category */}
+            <div className="border-t-8 border-[#F0F2F2]">
+              <p className="px-4 pt-3 pb-1 text-lg font-bold text-[#0F1111]">Shop by Category</p>
+              {[
+                { label: 'Mobiles & Phones', cat: 'Phone' },
+                { label: 'Laptops', cat: 'Laptop' },
+                { label: 'Monitors', cat: 'Monitor' },
+                { label: 'Apparel', cat: 'Apparel' },
+                { label: 'Footwear', cat: 'Footwear' },
+                { label: 'Home & Kitchen', cat: 'Home & Kitchen' },
+                { label: 'Books', cat: 'Books' },
+              ].map((c) => (
+                <button key={c.cat} onClick={() => { navigate(`/?category=${encodeURIComponent(c.cat)}`); closeMenu(); }}
+                  className="w-full flex items-center justify-between text-left px-4 py-3 border-b border-gray-100 text-[#0F1111] hover:bg-[#F7F8F8] transition-colors">
+                  <span className="text-[15px]">{c.label}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </button>
+              ))}
+            </div>
+
+            {/* Help & Settings */}
+            <div className="border-t-8 border-[#F0F2F2] pb-6">
+              <p className="px-4 pt-3 pb-1 text-lg font-bold text-[#0F1111]">Help &amp; Settings</p>
+              {user && (
+                <button onClick={() => { navigate('/dashboard'); closeMenu(); }}
+                  className="w-full text-left px-4 py-3 border-b border-gray-100 text-[15px] text-[#0F1111] hover:bg-[#F7F8F8] transition-colors">
+                  Your Account
+                </button>
+              )}
+              <button onClick={() => { navigate('/orders'); closeMenu(); }}
+                className="w-full text-left px-4 py-3 border-b border-gray-100 text-[15px] text-[#0F1111] hover:bg-[#F7F8F8] transition-colors">
+                Customer Service
               </button>
-            ))}
+              {user ? (
+                <button onClick={() => { logout(); closeMenu(); }}
+                  className="w-full text-left px-4 py-3 border-b border-gray-100 text-[15px] text-[#0F1111] hover:bg-[#F7F8F8] transition-colors">
+                  Sign Out
+                </button>
+              ) : (
+                <button onClick={() => { navigate('/login'); closeMenu(); }}
+                  className="w-full text-left px-4 py-3 border-b border-gray-100 text-[15px] text-[#0F1111] hover:bg-[#F7F8F8] transition-colors">
+                  Sign In
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

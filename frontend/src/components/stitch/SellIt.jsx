@@ -268,7 +268,7 @@ const ListingSuccess = ({ listing, routeResult, tier, onViewListing }) => {
         <div className="flex gap-3">
           <button onClick={() => (window.location.href = '/')}
             className="flex-1 py-3 rounded-lg text-sm font-bold text-[#131921] text-center shadow-sm active:scale-95 transition-transform"
-            style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #f0c040' }}>
+            style={{ background: '#ffcf3f' }}>
             Back to Marketplace
           </button>
           <a href="/my-listings"
@@ -432,7 +432,7 @@ const ListingSuccess = ({ listing, routeResult, tier, onViewListing }) => {
       <div className="flex gap-3">
         <button onClick={onViewListing}
           className="flex-1 py-3 rounded-lg text-sm font-bold text-[#131921] text-center shadow-sm active:scale-95 transition-transform"
-          style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #f0c040' }}>
+          style={{ background: '#ffcf3f' }}>
           View Your Listing
         </button>
         <button onClick={() => (window.location.href = '/')}
@@ -660,7 +660,7 @@ const SellIt = () => {
 
   if (createdListing) {
     return (
-      <div className="min-h-screen bg-[#eaeded]">
+      <div className="min-h-screen bg-white">
         <Header />
         <main className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
           <ListingSuccess
@@ -677,7 +677,7 @@ const SellIt = () => {
   const lowBattery = electronics && batteryPct && parseInt(batteryPct, 10) < 80;
 
   return (
-    <div className="min-h-screen bg-[#eaeded] text-[#0F1111]">
+    <div className="min-h-screen bg-white text-[#0F1111]">
       <Header />
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-6">
 
@@ -1000,7 +1000,7 @@ const SellIt = () => {
               <button type="submit" disabled={submitting || grading}
                 className={`flex-1 py-3 rounded-lg text-sm font-bold text-[#131921] text-center shadow-sm active:scale-95 transition-transform
                   ${submitting || grading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #f0c040' }}>
+                style={{ background: '#ffcf3f' }}>
                 {submitting ? 'Publishing…' : tier === 3 ? 'Schedule Professional Inspection' : 'Publish Listing'}
               </button>
             </div>

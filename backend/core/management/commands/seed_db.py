@@ -9,7 +9,7 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import Product, Listing, Order, User
+from core.models import Product, Listing, Order, User, Review
 from trust.models import HealthCard, LedgerEntry
 from green.models import CreditTransaction
 
@@ -23,18 +23,118 @@ CANON = {
 GEOHASHES = ['tbxx1', 'tbxx2', 'tbxx3', 'tbxx4', 'tbxw1', 'tbxv1', 'tbxu1', 'tbxu2']
 
 PRODUCTS = [
-    {"asin": "B08N5WRWNW", "title": "boAt Rockerz 450 Bluetooth Headphones", "category": "electronics", "brand": "boAt", "mrp": "2990.00", "reference_image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop", "description": "Wireless Bluetooth headphones with 15 hours playback, 40mm drivers, and foldable design."},
-    {"asin": "B07VGRJDFY", "title": "Apple iPhone 12 - 64GB", "category": "electronics", "brand": "Apple", "mrp": "54999.00", "reference_image_url": "https://images.unsplash.com/photo-1605236453806-6ff36851218e?w=400&h=400&fit=crop", "description": "5G capable iPhone with Super Retina XDR display, A14 Bionic chip, and dual camera system."},
-    {"asin": "B09LSGVXBM", "title": "Samsung Galaxy Watch 4 Classic", "category": "electronics", "brand": "Samsung", "mrp": "26999.00", "reference_image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop", "description": "Rotating bezel, health monitoring, GPS, and 4G LTE connectivity."},
-    {"asin": "B08B7GSTV7", "title": "Sony WH-1000XM4 Wireless Headphones", "category": "electronics", "brand": "Sony", "mrp": "29990.00", "reference_image_url": "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=400&h=400&fit=crop", "description": "Industry-leading noise cancellation, 30-hour battery life, and multipoint connection."},
-    {"asin": "B07S67X9FD", "title": "Logitech MX Master 3 Mouse", "category": "electronics", "brand": "Logitech", "mrp": "9995.00", "reference_image_url": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&h=400&fit=crop", "description": "Advanced wireless mouse for professionals with ultra-fast MagSpeed scroll wheel."},
-    {"asin": "B09G9HD4BC", "title": "Mechanical Gaming Keyboard RGB", "category": "electronics", "brand": "Zebronics", "mrp": "3999.00", "reference_image_url": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=400&fit=crop", "description": "Tactile mechanical switches, per-key RGB lighting, anti-ghosting."},
-    {"asin": "B08CF3B7N1", "title": "Fjallraven Kanken Backpack", "category": "bags", "brand": "Fjallraven", "mrp": "8999.00", "reference_image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop", "description": "Durable Vinylon F backpack, 16L capacity, padded back and shoulder straps."},
-    {"asin": "B07VBGF4RP", "title": "Nike Air Max 270 Running Shoes", "category": "footwear", "brand": "Nike", "mrp": "12995.00", "reference_image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop", "description": "Max Air unit in heel, breathable mesh upper, ideal for casual and light running."},
-    {"asin": "B087LGFC7P", "title": "Allen Solly Men's Slim Fit Formal Shirt", "category": "clothing", "brand": "Allen Solly", "mrp": "1599.00", "reference_image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop", "description": "Cotton-rich slim fit formal shirt suitable for office wear."},
-    {"asin": "B08NTG2J5P", "title": "Prestige Induction Cooktop 1600W", "category": "kitchen", "brand": "Prestige", "mrp": "3295.00", "reference_image_url": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop", "description": "1600W induction cooktop with feather touch controls and auto-switch off."},
-    {"asin": "B07WDTG59D", "title": "Philips 43-inch 4K UHD Smart TV", "category": "electronics", "brand": "Philips", "mrp": "34999.00", "reference_image_url": "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&h=400&fit=crop", "description": "4K UHD, Android TV, Dolby Vision, and HDR10+ display technology."},
-    {"asin": "B07ZPKBL9V", "title": "Canon EOS M50 Mark II Camera", "category": "cameras", "brand": "Canon", "mrp": "54995.00", "reference_image_url": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop", "description": "24.1MP APS-C sensor, 4K video, DIGIC 8 processor, Dual Pixel CMOS AF."},
+    {
+        "asin": "B08N5WRWNW", "title": "boAt Rockerz 450 Bluetooth Headphones", "category": "electronics", "brand": "boAt", "mrp": "2990.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop", 
+        "description": "Wireless Bluetooth headphones with 15 hours playback, 40mm drivers, and foldable design.",
+        "images": [
+            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B07VGRJDFY", "title": "Apple iPhone 12 - 64GB", "category": "electronics", "brand": "Apple", "mrp": "54999.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1605236453806-6ff36851218e?w=400&h=400&fit=crop", 
+        "description": "5G capable iPhone with Super Retina XDR display, A14 Bionic chip, and dual camera system.",
+        "images": [
+            "https://images.unsplash.com/photo-1605236453806-6ff36851218e?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1607936854279-55e8a4c64888?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1611791485440-24e8fc39ee48?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B09LSGVXBM", "title": "Samsung Galaxy Watch 4 Classic", "category": "electronics", "brand": "Samsung", "mrp": "26999.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop", 
+        "description": "Rotating bezel, health monitoring, GPS, and 4G LTE connectivity.",
+        "images": [
+            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B08B7GSTV7", "title": "Sony WH-1000XM4 Wireless Headphones", "category": "electronics", "brand": "Sony", "mrp": "29990.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=400&h=400&fit=crop", 
+        "description": "Industry-leading noise cancellation, 30-hour battery life, and multipoint connection.",
+        "images": [
+            "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1612444530582-fc66184b156b?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B07S67X9FD", "title": "Logitech MX Master 3 Mouse", "category": "electronics", "brand": "Logitech", "mrp": "9995.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&h=400&fit=crop", 
+        "description": "Advanced wireless mouse for professionals with ultra-fast MagSpeed scroll wheel.",
+        "images": [
+            "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B09G9HD4BC", "title": "Mechanical Gaming Keyboard RGB", "category": "electronics", "brand": "Zebronics", "mrp": "3999.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=400&h=400&fit=crop", 
+        "description": "Tactile mechanical switches, per-key RGB lighting, anti-ghosting.",
+        "images": [
+            "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B08CF3B7N1", "title": "Fjallraven Kanken Backpack", "category": "bags", "brand": "Fjallraven", "mrp": "8999.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop", 
+        "description": "Durable Vinylon F backpack, 16L capacity, padded back and shoulder straps.",
+        "images": [
+            "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1491841655184-fb3b34633d2f?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B07VBGF4RP", "title": "Nike Air Max 270 Running Shoes", "category": "footwear", "brand": "Nike", "mrp": "12995.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop", 
+        "description": "Max Air unit in heel, breathable mesh upper, ideal for casual and light running.",
+        "images": [
+            "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1605340537584-f67183e9b139?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B087LGFC7P", "title": "Allen Solly Men's Slim Fit Formal Shirt", "category": "clothing", "brand": "Allen Solly", "mrp": "1599.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop", 
+        "description": "Cotton-rich slim fit formal shirt suitable for office wear.",
+        "images": [
+            "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1596755094514-f87e32f85e98?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B08NTG2J5P", "title": "Prestige Induction Cooktop 1600W", "category": "kitchen", "brand": "Prestige", "mrp": "3295.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop", 
+        "description": "1600W induction cooktop with feather touch controls and auto-switch off.",
+        "images": [
+            "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B07WDTG59D", "title": "Philips 43-inch 4K UHD Smart TV", "category": "electronics", "brand": "Philips", "mrp": "34999.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&h=400&fit=crop", 
+        "description": "4K UHD, Android TV, Dolby Vision, and HDR10+ display technology.",
+        "images": [
+            "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=800&h=800&fit=crop"
+        ]
+    },
+    {
+        "asin": "B07ZPKBL9V", "title": "Canon EOS M50 Mark II Camera", "category": "cameras", "brand": "Canon", "mrp": "54995.00", 
+        "reference_image_url": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop", 
+        "description": "24.1MP APS-C sensor, 4K video, DIGIC 8 processor, Dual Pixel CMOS AF.",
+        "images": [
+            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=800&h=800&fit=crop",
+            "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800&h=800&fit=crop"
+        ]
+    },
 ]
 
 LISTINGS = [
@@ -90,11 +190,31 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write('Seeding products...')
+        self.stdout.write('Seeding products and reviews...')
+        
+        # Wipe all existing products so we only get the new ones with multiple images
+        Product.objects.all().delete()
+        
         product_map = {}
+        Review.objects.all().delete()
         for p in PRODUCTS:
-            data = {**p, 'category': CANON.get(p['category'], p['category'])}
+            data = {k: v for k, v in p.items() if k != 'images'}
+            data['images'] = p.get('images', [])
+            data['category'] = CANON.get(p['category'], p['category'])
             product, _ = Product.objects.update_or_create(asin=p['asin'], defaults=data)
             product_map[p['asin']] = product
+            
+            # Create a couple of mock reviews per product
+            Review.objects.create(
+                product=product, author="John D.", rating=5, title="Excellent product",
+                body=f"Really happy with the {product.brand} {product.title}. Exceeded expectations!",
+                verified_purchase=True, helpful_votes=4
+            )
+            Review.objects.create(
+                product=product, author="Sarah M.", rating=4, title="Good value",
+                body="Works well for the price. Would recommend to others looking for a solid option.",
+                verified_purchase=True, helpful_votes=1
+            )
 
         self.stdout.write('Reseeding listings...')
         # Wipe dependent data first to avoid stale FKs
@@ -149,14 +269,43 @@ class Command(BaseCommand):
         self.stdout.write('Creating demo buyer, orders & credits...')
         demo, created = User.objects.get_or_create(
             email='demo@revive.in',
-            defaults={'username': 'demo@revive.in', 'first_name': 'Demo', 'last_name': 'Buyer', 'geohash5': 'tbxx1'},
+            defaults={
+                'username': 'demo@revive.in', 'first_name': 'Demo', 'last_name': 'Buyer', 
+                'geohash5': 'tbxx1', 'phone': '+91-9876543210', 
+                'address': '123 Tech Park, 4th Block Koramangala, Bengaluru, Karnataka 560034'
+            },
         )
         if created:
             demo.set_password('demo12345')
             demo.save()
         else:
             demo.geohash5 = 'tbxx1'
+            demo.phone = '+91-9876543210'
+            demo.address = '123 Tech Park, 4th Block Koramangala, Bengaluru, Karnataka 560034'
             demo.save()
+
+        self.stdout.write('Creating additional mock users for shipping options...')
+        users_data = [
+            {'email': 'home@revive.in', 'first_name': 'Demo', 'last_name': 'Buyer (Home)', 'phone': '+91-9988776655', 'address': '45 Brigade Road, Apartment 3B, Bengaluru, Karnataka 560001'},
+            {'email': 'office@revive.in', 'first_name': 'Demo', 'last_name': 'Buyer (Office)', 'phone': '+91-9988776655', 'address': 'Revive HQ, 1st Floor, Indiranagar, Bengaluru, Karnataka 560038'},
+            {'email': 'friend@revive.in', 'first_name': 'Demo', 'last_name': 'Buyer (Gift)', 'phone': '+91-9876500000', 'address': 'Whitefield Main Road, Prestige Shantiniketan, Bengaluru, Karnataka 560048'},
+        ]
+        
+        for udata in users_data:
+            u, c = User.objects.get_or_create(
+                email=udata['email'],
+                defaults={
+                    'username': udata['email'], 'first_name': udata['first_name'], 'last_name': udata['last_name'],
+                    'phone': udata['phone'], 'address': udata['address'], 'geohash5': 'tbxx1'
+                }
+            )
+            if c:
+                u.set_password('demo12345')
+                u.save()
+            else:
+                u.phone = udata['phone']
+                u.address = udata['address']
+                u.save()
 
         CreditTransaction.objects.filter(user=demo).delete()
 

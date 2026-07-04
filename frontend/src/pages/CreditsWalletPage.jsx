@@ -48,7 +48,7 @@ const CreditsWalletPage = () => {
   };
 
   if (authLoading || loading) {
-    return (<div className="min-h-screen bg-[#EAEDED]"><Header /><div className="max-w-3xl mx-auto p-8 text-center text-gray-500 text-sm">Loading your wallet…</div></div>);
+    return (<div className="min-h-screen bg-white"><Header /><div className="max-w-3xl mx-auto p-8 text-center text-gray-500 text-sm">Loading your wallet…</div></div>);
   }
 
   const w = wallet || { balance: 0, pending: 0, value_rupees: 0, history: [] };
@@ -57,7 +57,7 @@ const CreditsWalletPage = () => {
   const spendHistory = (w.history || []).filter((t) => t.kind === 'spend' || t.kind === 'donate');
 
   return (
-    <div className="min-h-screen bg-[#EAEDED]">
+    <div className="min-h-screen bg-white">
       <Header />
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-4">
 

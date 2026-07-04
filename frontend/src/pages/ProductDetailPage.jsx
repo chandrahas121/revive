@@ -6,7 +6,8 @@ import LifecycleTimeline from '../components/LifecycleTimeline'
 import HealthCard from '../components/stitch/HealthCard'
 import VirtualTryOn from '../components/stitch/VirtualTryOn'
 import FitTwin from '../components/stitch/FitTwin'
-import api, { getHealthCard, advanceListingStage } from '../api/client'
+import RufusChat from '../components/stitch/RufusChat'
+import api, { getHealthCard, advanceListingStage, getRecommendations } from '../api/client'
 import { useCart } from '../context/CartContext'
 
 const CLOTHING_KEYWORDS = ['clothing', 'fashion', 'apparel', 'garment', 'textile', 'shirt', 'dress', 'jacket', 'pants', 'jeans', 'blouse', 'skirt', 'coat']
@@ -262,6 +263,8 @@ const ProductDetailPage = () => {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [selectedSize, setSelectedSize] = useState(null)
+  const [activeImg, setActiveImg] = useState(null)
+  const [alsoViewed, setAlsoViewed] = useState([])
   const SIZES = ['S', 'M', 'L', 'XL', 'XXL']
   const [showHealthCard, setShowHealthCard] = useState(false)
   const [cardData, setCardData] = useState(null)
@@ -287,6 +290,13 @@ const ProductDetailPage = () => {
       .then((res) => setListing(res.data))
       .catch((err) => { if (err.response?.status === 404) setNotFound(true) })
       .finally(() => setLoading(false))
+  }, [id])
+
+  // "Customers who viewed this item also viewed" — real recommendation data.
+  useEffect(() => {
+    getRecommendations(12)
+      .then((res) => setAlsoViewed((res.data.results || []).filter((l) => String(l.id) !== String(id))))
+      .catch(() => setAlsoViewed([]))
   }, [id])
 
   // For sized (clothing) items the cart line is per-size, so "in cart" / qty must be
@@ -342,7 +352,7 @@ const ProductDetailPage = () => {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#EAEDED]">
+    <div className="min-h-screen bg-white">
       <Header />
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="animate-pulse space-y-4">
@@ -362,7 +372,7 @@ const ProductDetailPage = () => {
   )
 
   if (notFound || !listing) return (
-    <div className="min-h-screen bg-[#EAEDED]">
+    <div className="min-h-screen bg-white">
       <Header />
       <div className="p-8 sm:p-10 text-center">
         <p className="text-gray-500 mb-4 text-sm">Listing not found.</p>
@@ -385,10 +395,28 @@ const ProductDetailPage = () => {
   const ratingAvg = listing.ratings?.average ?? product.rating ?? 0
   const ratingTotal = listing.ratings?.total ?? product.rating_count ?? 0
 
+  // Image gallery: main image + the product's multiple images + any seller angle
+  // shots, all normalised to URLs and deduped. Drives the thumbnail rail.
+  const imgUrl = (im) => typeof im === 'string' ? im : (im?.url || im?.image_url || im?.src || im?.image || '')
+  const productImgs = (product.images || []).map(imgUrl).filter(Boolean)
+  const sellerImgs = (listing.images || []).map(imgUrl).filter(Boolean)
+  const gallery = [...new Set([listing.image, ...productImgs, ...sellerImgs].filter(Boolean))]
+  const displayImg = activeImg && gallery.includes(activeImg) ? activeImg : listing.image
+
+  // Product details table rows (real fields only; empty ones are dropped).
+  const detailRows = [
+    ['Brand', product.brand],
+    ['Category', product.category],
+    ['Condition', listing.grade_display || (listing.is_new ? 'New' : null)],
+    ['Sold by', listing.seller_name],
+    ['ASIN', product.asin],
+    ['Customer Reviews', ratingTotal ? `${ratingAvg.toFixed(1)} ★ (${ratingTotal.toLocaleString('en-IN')} ratings)` : null],
+  ].filter(([, v]) => v)
+
   return (
-    <div className="bg-[#EAEDED] min-h-screen">
+    <div className="bg-white min-h-screen">
       <Header />
-      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
 
         <button
           onClick={() => navigate(-1)}
@@ -398,37 +426,53 @@ const ProductDetailPage = () => {
           Back to results
         </button>
 
+        {/* Breadcrumb (real category path) */}
+        <nav className="text-xs text-[#565959] mb-3 flex items-center gap-1 flex-wrap">
+          <span className="text-[#007185] hover:text-[#c45500] hover:underline cursor-pointer" onClick={() => navigate('/')}>Amazon Revive</span>
+          <span className="text-[#c45500]">›</span>
+          {product.category && (
+            <>
+              <span className="text-[#007185] hover:text-[#c45500] hover:underline cursor-pointer" onClick={() => navigate(`/?category=${encodeURIComponent(product.category)}`)}>{product.category}</span>
+              <span className="text-[#c45500]">›</span>
+            </>
+          )}
+          <span className="text-[#565959] line-clamp-1 max-w-[50%] sm:max-w-none">{product.title}</span>
+        </nav>
+
         {/* Mobile: image → buy box → details | Desktop: image → details → buy box */}
         <div className="flex flex-col lg:flex-row gap-0 sm:gap-4">
 
-          {/* ── Image panel ── */}
-          <div className="lg:w-[38%] order-1 flex-shrink-0">
-            <div className="bg-white border border-[#D5D9D9] rounded-lg p-6 sm:p-8 flex flex-col">
-              <div className="flex-1 flex items-center justify-center min-h-[240px] sm:min-h-[320px] lg:min-h-[360px]">
-                <img
-                  src={listing.image}
-                  alt={product.title}
-                  className="max-w-full max-h-56 sm:max-h-72 lg:max-h-96 object-contain mix-blend-multiply"
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/300x300?text=No+Image' }}
-                />
-              </div>
-
-              {listing.images && listing.images.length > 0 && !listing.is_new && (
-                <div className="mt-6 border-t border-[#D5D9D9] pt-4">
-                  <p className="text-sm font-bold text-[#0F1111] mb-2">Seller photos</p>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {listing.images.map((im, i) => (
-                      <div key={i} className="flex-shrink-0 w-20">
-                        <div className="w-20 h-20 rounded border border-[#D5D9D9] bg-white flex items-center justify-center overflow-hidden">
-                          <img src={im.url} alt={im.label} className="max-w-full max-h-full object-contain"
-                            onError={(e) => { e.target.style.display = 'none' }} />
-                        </div>
-                        <p className="text-[10px] text-gray-500 text-center mt-0.5">{im.label}</p>
-                      </div>
+          {/* ── Image panel (sticky as a unit: image + try-on follow the scroll) ── */}
+          <div className="lg:w-[38%] order-1 flex-shrink-0 lg:sticky lg:top-4 self-start">
+            <div className="p-1 sm:p-3">
+              <div className="flex gap-3">
+                {/* Vertical thumbnail rail (Amazon-style) */}
+                {gallery.length > 1 && (
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    {gallery.map((src, i) => (
+                      <button
+                        key={i}
+                        onMouseEnter={() => setActiveImg(src)}
+                        onClick={() => setActiveImg(src)}
+                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded border bg-white flex items-center justify-center overflow-hidden transition-colors
+                          ${displayImg === src ? 'border-[#e77600] ring-1 ring-[#e77600]' : 'border-[#D5D9D9] hover:border-[#a8b2b2]'}`}
+                      >
+                        <img src={src} alt="" className="max-w-full max-h-full object-contain"
+                          onError={(e) => { e.target.style.display = 'none' }} />
+                      </button>
                     ))}
                   </div>
+                )}
+                {/* Main image */}
+                <div className="flex-1 flex items-center justify-center min-h-[240px] sm:min-h-[320px] lg:min-h-[360px]">
+                  <img
+                    src={displayImg}
+                    alt={product.title}
+                    className="max-w-full max-h-56 sm:max-h-72 lg:max-h-96 object-contain mix-blend-multiply"
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/300x300?text=No+Image' }}
+                  />
                 </div>
-              )}
+              </div>
             </div>
 
             {isClothing(product.category) && (
@@ -446,7 +490,7 @@ const ProductDetailPage = () => {
           </div>
 
           {/* ── Product details ── */}
-          <div className="lg:flex-1 order-3 lg:order-2 min-w-0 bg-white border-t border-b border-[#D5D9D9] lg:border lg:rounded-lg px-4 py-4 sm:px-5">
+          <div className="lg:flex-1 order-3 lg:order-2 min-w-0 px-1 py-4 sm:px-4 lg:px-6 lg:border-l lg:border-r lg:border-[#e7e7e7]">
 
             {/* Source label */}
             {listing.source && (
@@ -501,6 +545,29 @@ const ProductDetailPage = () => {
                 ₹{price.toLocaleString('en-IN')}
               </span>
               <p className="text-xs text-gray-500 mt-0.5">Inclusive of all taxes</p>
+              <div className="flex items-center gap-1 mt-1.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#146EB4" strokeWidth="3.5" className="w-3.5 h-3.5"><path d="M4 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span className="text-[#146EB4] font-bold text-sm tracking-tight">prime</span>
+                <span className="text-xs text-gray-500 ml-1">FREE fast delivery</span>
+              </div>
+            </div>
+
+            {/* Offers strip — indicative bank/EMI/cashback (no live offers source) */}
+            <div className="border-t border-b border-[#e7e7e7] py-3 mb-1">
+              <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+                {[
+                  { t: 'Bank Offer', d: 'Upto ₹1,500 instant discount on select Credit Cards' },
+                  { t: 'No Cost EMI', d: 'Avail No Cost EMI on select cards for orders above ₹3,000' },
+                  { t: 'Cashback', d: '5% back with Amazon Pay ICICI card for Prime members' },
+                  { t: 'Partner Offers', d: 'Get GST invoice & save up to 28% on business purchases' },
+                ].map((o) => (
+                  <div key={o.t} className="flex-shrink-0 w-40 border border-[#D5D9D9] rounded-lg p-2.5">
+                    <p className="text-[13px] font-bold text-[#0F1111] mb-1">{o.t}</p>
+                    <p className="text-[11px] text-gray-600 leading-snug line-clamp-3">{o.d}</p>
+                    <p className="text-[11px] text-[#007185] mt-1">1 offer ›</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* AI Condition Notes */}
@@ -591,8 +658,21 @@ const ProductDetailPage = () => {
               </div>
             )}
 
-            {product.category && (
-              <p className="text-xs text-gray-400 mt-2">Category: {product.category}</p>
+            {/* Product details table (Amazon-style) */}
+            {detailRows.length > 0 && (
+              <div className="mt-5 border-t border-[#D5D9D9] pt-4">
+                <p className="text-base font-bold text-[#0F1111] mb-2">Product details</p>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {detailRows.map(([k, v]) => (
+                      <tr key={k} className="align-top">
+                        <td className="py-1 pr-4 text-gray-500 font-medium w-32 sm:w-40">{k}</td>
+                        <td className="py-1 text-[#0F1111]">{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
@@ -714,8 +794,7 @@ const ProductDetailPage = () => {
               ) : (
                 <button
                   onClick={handleAddToCart}
-                  className="w-full py-2.5 rounded-full text-sm font-bold border text-[#131921] border-[#f0c040] shadow-sm active:scale-95 transition-colors"
-                  style={{ background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+                  className="w-full py-2.5 rounded-full text-sm font-semibold text-[#16181d] bg-[#ffcf3f] hover:bg-[#ffc21a] shadow-sm active:scale-95 transition-colors"
                 >
                   Add to Cart
                 </button>
@@ -724,8 +803,7 @@ const ProductDetailPage = () => {
               {!staged && (
                 <button
                   onClick={() => { handleAddToCart(); navigate('/checkout') }}
-                  className="w-full py-2.5 rounded-full text-sm font-bold text-white border border-[#e07000] shadow-sm transition-colors active:scale-95"
-                  style={{ background: 'linear-gradient(180deg, #ffac31, #FF9900)' }}
+                  className="w-full py-2.5 rounded-full text-sm font-semibold text-[#16181d] bg-[#ff9f2e] hover:bg-[#f78c12] shadow-sm active:scale-95 transition-colors"
                 >
                   Buy Now
                 </button>
@@ -826,6 +904,26 @@ const ProductDetailPage = () => {
 
         </div>
 
+        {/* ── Customers who viewed this item also viewed (real recommendations) ── */}
+        {alsoViewed.length > 0 && (
+          <section className="bg-white border border-[#D5D9D9] rounded-lg mt-4 px-4 py-5 sm:px-6">
+            <h2 className="text-lg sm:text-xl font-bold text-[#0F1111] mb-3">Customers who viewed this item also viewed</h2>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+              {alsoViewed.map((l) => (
+                <button key={l.id} onClick={() => navigate(`/product/${l.id}`)}
+                  className="flex-shrink-0 w-40 text-left group">
+                  <div className="h-40 bg-[#f7f7f7] rounded flex items-center justify-center p-3">
+                    <img src={l.image} alt={l.product?.title} className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform"
+                      onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Item' }} />
+                  </div>
+                  <p className="text-[13px] text-[#007185] group-hover:text-[#c45500] line-clamp-2 leading-snug mt-2 min-h-[2.5rem]">{l.product?.title}</p>
+                  <p className="text-base font-bold text-[#0F1111] mt-1">₹{parseFloat(l.price).toLocaleString('en-IN')}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── What buyers say (Pillar-4 review intelligence) ── */}
         <BuyersSayCard summary={listing.review_summary} fitSignal={listing.fit_signal} />
 
@@ -834,6 +932,9 @@ const ProductDetailPage = () => {
           <ReviewsSection ratings={listing.ratings} reviews={listing.reviews} />
         )}
       </main>
+
+      {/* ── Ask Rufus — floating product-page AI assistant (full product context) ── */}
+      <RufusChat listing={listing} />
     </div>
   )
 }

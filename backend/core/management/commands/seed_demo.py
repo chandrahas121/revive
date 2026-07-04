@@ -265,6 +265,11 @@ def _upsert_iqoo_hero():
             title="iQOO Neo 7 Pro 5G (12GB RAM, 256GB, Dark Storm)",
             category="Phone", brand="iQOO", mrp=Decimal("34999"),
             reference_image_url=IQOO_IMAGE,
+            images=[
+                IQOO_IMAGE,
+                "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?w=800&q=80",
+                "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&q=80"
+            ],
             description=("iQOO Neo 7 Pro 5G with Snapdragon 8+ Gen 1, 6.78\" 120Hz "
                          "AMOLED display, 50MP OIS main camera, 5000mAh battery with "
                          "120W FlashCharge, and an independent gaming chip. Brand-new, "
@@ -491,7 +496,8 @@ class Command(BaseCommand):
         # Curated phones/laptops/monitors used reused stock photos + borrowed reviews,
         # so we skip them and let the REAL Amazon electronics (real image + own 1:1
         # reviews) stand alone. Curated apparel/footwear/extras stay for brand variety.
-        curated = upsert_demo_catalog(skip_categories=RENEWED_CATS)
+        # Curated catalog is disabled to prevent duplicate images across different products.
+        curated = [] # upsert_demo_catalog(skip_categories=RENEWED_CATS)
         real = upsert_real_catalog()       # real Amazon ASINs (real image/title/price/reviews)
         iqoo = _upsert_iqoo_hero()         # one recognisable hero phone with local photo
         products = curated + real + [iqoo]

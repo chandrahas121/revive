@@ -450,6 +450,93 @@ class AsyncGradeView(APIView):
         return Response({'job_id': job_id, 'status': 'processing'}, status=status.HTTP_202_ACCEPTED)
 
 
+def _build_rufus_context(listing):
+    """Assemble the full single-product context Rufus grounds its answers in,
+    straight from the DB models (title, condition, price, description, review
+    intel and a sample of real customer reviews)."""
+    product = listing.product
+    reviews = list(product.reviews.all()[:6])
+    n = product.reviews.count()
+    avg = product.rating or 0.0
+    rating_line = (f"{round(avg, 1)}★ from {product.rating_count or n} ratings"
+                   if (avg or n) else "")
+
+    clothing_kw = ('clothing', 'fashion', 'apparel', 'shirt', 'dress', 'jacket',
+                   'pants', 'jeans', 'footwear', 'shoe', 'sneaker')
+    is_clothing = any(kw in (product.category or '').lower() for kw in clothing_kw)
+
+    return {
+        "listing_id": listing.id,
+        "title": product.title,
+        "brand": product.brand,
+        "category": product.category,
+        "source": listing.source,
+        "source_label": listing.get_source_display(),
+        "grade": listing.grade,
+        "grade_display": listing.get_grade_display() if listing.grade else "",
+        "condition_summary": listing.condition_summary,
+        "completeness": listing.completeness,
+        "price": float(listing.price),
+        "mrp": float(product.mrp) if product.mrp else None,
+        "seller_name": (listing.seller.get_full_name() or listing.seller.email)
+                       if listing.seller_id else "Amazon Revive",
+        "rating_line": rating_line,
+        "sizes": "S, M, L, XL, XXL" if is_clothing else "",
+        "description": (product.description or "")[:1200],
+        "review_summary": product.review_summary or {},
+        "reviews": [
+            {"rating": r.rating, "title": r.title, "body": r.body} for r in reviews
+        ],
+    }
+
+
+class RufusView(APIView):
+    """
+    POST /api/rufus/  — the product-page "Ask Rufus" conversational assistant.
+
+    Body (JSON):
+      question    str            — the shopper's question (required)
+      listing_id  int            — the product being viewed; server rebuilds the
+                                   full product context from the DB (preferred)
+      context     dict           — optional pre-built context, used only if no
+                                   listing_id is given (or the id isn't found)
+      history     [{role,content}] — prior chat turns for multi-turn follow-ups
+
+    Returns { answer, model_version, latency_ms, grounded }. Fails open to a
+    deterministic, context-derived answer when no LLM key is configured.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        question = (request.data.get('question') or '').strip()
+        if not question:
+            return Response({'error': 'question is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        history = request.data.get('history') or []
+        context = None
+
+        listing_id = request.data.get('listing_id')
+        if listing_id:
+            try:
+                from core.models import Listing
+                listing = (Listing.objects
+                           .select_related('product', 'seller')
+                           .get(pk=listing_id))
+                context = _build_rufus_context(listing)
+            except Exception as e:
+                logger.info(f"[rufus] could not load listing {listing_id}: {e}")
+
+        if context is None:
+            # Fall back to a client-supplied context (or empty) so the endpoint
+            # still answers even without a persisted listing.
+            context = request.data.get('context') or {}
+
+        from ml.rufus import ask_rufus
+        result = ask_rufus(context, question, history)
+        return Response(result)
+
+
 class GradeStatusView(APIView):
     """
     GET /api/grade/status/<job_id>/

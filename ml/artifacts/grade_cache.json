@@ -1068,5 +1068,413 @@
     "image_hash": "c0c7bb9704baa4e1590ebd13",
     "n_dino_detections": 0,
     "from_cache": false
+  },
+  "0941facd4689ea11f535a0f1_8e12e5": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "minor",
+        "location": "heel",
+        "angle": "insole",
+        "angle_label": "Insole"
+      }
+    ],
+    "completeness": 0.95,
+    "condition_summary": "The insole shows minor wear on the heel, but the overall condition is very good with no significant defects.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4938
+  },
+  "e057b6a7f03a01de249e27f8_2d5012": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scuffs",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "top",
+        "angle_label": "Top"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The sneaker appears to be in very good condition with only minor scuffing on the front center of the upper.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 5125
+  },
+  "bed58d57930f2a0e01c7180a_5ae6ca": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "minor",
+        "location": "sole",
+        "angle": "sole",
+        "angle_label": "Soles"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The soles show minor wear, but are otherwise in very good condition.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 11891
+  },
+  "bed58d57930f2a0e01c7180a_g5ae6ca": {
+    "listing_id": "da207eeb-4acd-4c46-ac9c-1d2e36f53b85",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "minor",
+        "location": "sole",
+        "angle": "sole",
+        "angle_label": "Soles"
+      }
+    ],
+    "completeness": 0.646,
+    "condition_summary": "The soles show minor wear, but are otherwise in very good condition.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "sole",
+    "angle_label": "Soles",
+    "latency_ms": 39797,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "bed58d57930f2a0e01c7180a",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "e057b6a7f03a01de249e27f8_g2d5012": {
+    "listing_id": "fd66f388-d1c1-4322-87b7-e328eb3723de",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scuffs",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "top",
+        "angle_label": "Top"
+      }
+    ],
+    "completeness": 0.705,
+    "condition_summary": "The sneaker appears to be in very good condition with only minor scuffing on the front center of the upper.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "top",
+    "angle_label": "Top",
+    "latency_ms": 39984,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "e057b6a7f03a01de249e27f8",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "0941facd4689ea11f535a0f1_g8e12e5": {
+    "listing_id": "3a959593-4a2c-4f8e-a862-493347e26cae",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "wear",
+        "severity": "minor",
+        "location": "heel",
+        "angle": "insole",
+        "angle_label": "Insole"
+      }
+    ],
+    "completeness": 0.673,
+    "condition_summary": "The insole shows minor wear on the heel, but the overall condition is very good with no significant defects.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "insole",
+    "angle_label": "Insole",
+    "latency_ms": 43031,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "0941facd4689ea11f535a0f1",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "6cd19c2970b685354934ebf3_112949": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "center",
+        "bbox": [
+          660.44,
+          331.38,
+          741.25,
+          508.27
+        ],
+        "bbox_area_pct": 0.0074,
+        "angle": "side",
+        "angle_label": "Side"
+      }
+    ],
+    "completeness": 0.9,
+    "condition_summary": "The shoe appears to be in very good condition with only a minor scuff mark visible on the side.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4812
+  },
+  "6cd19c2970b685354934ebf3_g112949": {
+    "listing_id": "4c643dcd-586b-4c9d-a01e-8b078c12e7e2",
+    "grade": "B",
+    "confidence": 0.72,
+    "defects": [
+      {
+        "type": "scuff",
+        "severity": "minor",
+        "location": "center",
+        "bbox": [
+          660.44,
+          331.38,
+          741.25,
+          508.27
+        ],
+        "bbox_area_pct": 0.0074,
+        "angle": "side",
+        "angle_label": "Side"
+      }
+    ],
+    "completeness": 0.693,
+    "condition_summary": "The shoe appears to be in very good condition with only a minor scuff mark visible on the side.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "side",
+    "angle_label": "Side",
+    "latency_ms": 49906,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "6cd19c2970b685354934ebf3",
+    "n_dino_detections": 1,
+    "from_cache": false
+  },
+  "b96d8c4e591789a7d0c99537_d11b92": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "front",
+        "angle_label": "Front"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The product has a minor scratch on the front-center of the bottle, but is otherwise in very good condition.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4938
+  },
+  "b96d8c4e591789a7d0c99537_gd11b92": {
+    "listing_id": "cabd8fbd-0091-453b-b0e2-8a83114e334c",
+    "grade": "C",
+    "confidence": 0.65,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "front",
+        "angle_label": "Front"
+      }
+    ],
+    "completeness": 0.351,
+    "condition_summary": "The product has a minor scratch on the front-center of the bottle, but is otherwise in very good condition.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "front",
+    "angle_label": "Front",
+    "latency_ms": 31046,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "b96d8c4e591789a7d0c99537",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "2deddc0bd676869acdff2bc0_3ea829": {
+    "grade": "B",
+    "confidence": 0.8,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "bottom-left",
+        "bbox": [
+          113.2,
+          1274.8,
+          221.99,
+          1590.61
+        ],
+        "bbox_area_pct": 0.0239,
+        "angle": "back",
+        "angle_label": "Back"
+      },
+      {
+        "type": "other",
+        "severity": "uncertain",
+        "location": "center",
+        "angle": "back",
+        "angle_label": "Back"
+      },
+      {
+        "type": "broken piece",
+        "severity": "minor",
+        "location": "center",
+        "bbox": [
+          267.52,
+          811.54,
+          470.88,
+          919.95
+        ],
+        "bbox_area_pct": 0.0153,
+        "source": "dino",
+        "angle": "back",
+        "angle_label": "Back"
+      },
+      {
+        "type": "metal",
+        "severity": "severe",
+        "location": "center",
+        "bbox": [
+          159.32,
+          654.56,
+          641.71,
+          1359.93
+        ],
+        "bbox_area_pct": 0.2367,
+        "source": "dino",
+        "angle": "back",
+        "angle_label": "Back"
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The product has a minor scratch at the bottom-left and an uncertain defect at the center.",
+    "box_present": null,
+    "functional": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4938
+  },
+  "2deddc0bd676869acdff2bc0_g3ea829": {
+    "listing_id": "17c4323f-570d-4ac7-b75a-31361bf63603",
+    "grade": "C",
+    "confidence": 0.55,
+    "defects": [
+      {
+        "type": "scratch",
+        "severity": "minor",
+        "location": "bottom-left",
+        "bbox": [
+          113.2,
+          1274.8,
+          221.99,
+          1590.61
+        ],
+        "bbox_area_pct": 0.0239,
+        "angle": "back",
+        "angle_label": "Back"
+      },
+      {
+        "type": "other",
+        "severity": "uncertain",
+        "location": "center",
+        "angle": "back",
+        "angle_label": "Back"
+      },
+      {
+        "type": "broken piece",
+        "severity": "minor",
+        "location": "center",
+        "bbox": [
+          267.52,
+          811.54,
+          470.88,
+          919.95
+        ],
+        "bbox_area_pct": 0.0153,
+        "source": "dino",
+        "angle": "back",
+        "angle_label": "Back"
+      },
+      {
+        "type": "metal",
+        "severity": "severe",
+        "location": "center",
+        "bbox": [
+          159.32,
+          654.56,
+          641.71,
+          1359.93
+        ],
+        "bbox_area_pct": 0.2367,
+        "source": "dino",
+        "angle": "back",
+        "angle_label": "Back"
+      }
+    ],
+    "completeness": 0.493,
+    "condition_summary": "The product has a minor scratch at the bottom-left and an uncertain defect at the center.",
+    "functional": null,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "back",
+    "angle_label": "Back",
+    "latency_ms": 31406,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "2deddc0bd676869acdff2bc0",
+    "n_dino_detections": 3,
+    "from_cache": false
   }
 }

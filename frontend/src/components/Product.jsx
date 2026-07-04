@@ -26,6 +26,16 @@ const FIT_PILL = {
   runs_large: 'Runs large',
 };
 
+// Amazon Prime badge (blue checkmark + wordmark).
+const Prime = () => (
+  <span className="inline-flex items-center gap-0.5 leading-none align-middle">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#146EB4" strokeWidth="3.5" className="w-3 h-3">
+      <path d="M4 12l5 5L20 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+    <span className="text-[#146EB4] font-bold text-xs tracking-tight">prime</span>
+  </span>
+);
+
 const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLife, rating, ratingCount, lifecycle, fitSignal, reviewSummary }) => {
   const navigate = useNavigate();
   const { addToCart, removeFromCart, updateQuantity, cart, getItemQty } = useCart();
@@ -126,15 +136,18 @@ const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLif
         </div>
       )}
 
-      <div className="mb-0.5 font-bold text-sm sm:text-base flex items-baseline gap-1.5">
-        {inr(price)}
+      <div className="mb-0.5">
+        <div className="flex items-baseline gap-1.5">
+          {showMrp && <span className="text-[#CC0C39] text-sm sm:text-base leading-none">-{offPct}%</span>}
+          <span className="font-bold text-base sm:text-lg text-[#0F1111] leading-none">{inr(price)}</span>
+        </div>
         {showMrp && (
-          <>
-            <span className="text-[11px] text-gray-400 font-normal line-through">{inr(mrp)}</span>
-            <span className="text-[11px] text-[#007600] font-semibold">({offPct}% off)</span>
-          </>
+          <p className="text-[11px] text-gray-500 leading-tight mt-0.5">
+            M.R.P.: <span className="line-through">{inr(mrp)}</span>
+          </p>
         )}
       </div>
+      <div className="mb-1"><Prime /></div>
 
       {!isNew && grade && (
         <div className="flex items-center gap-1.5 mb-1">
@@ -191,7 +204,7 @@ const Product = ({ id, title, price, image, grade, source, isNew, mrp, secondLif
         <button
           onClick={handleAdd}
           className="mt-auto py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded border transition-colors text-[#131921] border-[#f0c040] shadow-sm active:scale-95"
-          style={{ background: 'linear-gradient(180deg, #ffd99e, #febd69)' }}
+          style={{ background: '#ffcf3f' }}
         >
           Add to Cart
         </button>

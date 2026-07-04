@@ -262,7 +262,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
         </span>
         <span
           className="flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#131921]"
-          style={{ background: "linear-gradient(135deg, #ffd99e, #febd69)" }}
+          style={{ background: "#ffcf3f" }}
         >
           AI
         </span>
@@ -453,7 +453,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
                     ${personFile
                       ? "border-[#e07000] text-white shadow-sm active:scale-[0.99]"
                       : "cursor-not-allowed border-[#D5D9D9] bg-[#F0F2F2] text-gray-400"}`}
-                  style={personFile ? { background: "linear-gradient(180deg, #ffac31, #FF9900)" } : {}}
+                  style={personFile ? { background: "#ff9f2e" } : {}}
                 >
                   {personFile ? (
                     <>
@@ -674,7 +674,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
                   <div className="relative flex flex-1 flex-col overflow-hidden">
                     <div
                       className="flex-shrink-0 px-3 py-1.5 text-center text-[10px] font-extrabold uppercase tracking-widest text-[#131921]"
-                      style={{ background: "linear-gradient(135deg, #ffd99e, #febd69)" }}
+                      style={{ background: "#ffcf3f" }}
                     >
                       After · AI Try-On
                     </div>
@@ -682,7 +682,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
                       <img src={resultImage} alt="After" className="h-full w-full object-contain" style={{ maxHeight: "52vh" }} />
                       <span
                         className="absolute bottom-2 right-2 rounded px-2 py-0.5 text-[9px] font-bold text-[#131921] shadow-sm"
-                        style={{ background: "linear-gradient(135deg, #ffd99e, #febd69)" }}
+                        style={{ background: "#ffcf3f" }}
                       >
                         AI Try-On
                       </span>
@@ -707,7 +707,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
                     <img src={resultImage} alt="Virtual Try-On Result" className="h-full w-full object-contain" style={{ maxHeight: "56vh" }} />
                     <span
                       className="absolute top-3 right-3 rounded px-2.5 py-1 text-[10px] font-bold text-[#131921] shadow"
-                      style={{ background: "linear-gradient(135deg, #ffd99e, #febd69)" }}
+                      style={{ background: "#ffcf3f" }}
                     >
                       AI Try-On
                     </span>
@@ -745,7 +745,7 @@ const VirtualTryOn = ({ garmentImage, garmentTitle, price, mrp, grade, gradeLabe
               <button
                 onClick={reset}
                 className="flex-1 rounded-lg border border-[#e07000] py-2.5 text-sm font-bold text-white shadow-sm transition-all active:scale-[0.99]"
-                style={{ background: "linear-gradient(180deg, #ffac31, #FF9900)" }}
+                style={{ background: "#ff9f2e" }}
               >
                 Try Another Photo
               </button>

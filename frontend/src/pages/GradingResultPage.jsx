@@ -230,7 +230,7 @@ const GradingResultPage = () => {
   const requiredLabels = prompts.filter((s) => s.required).map((s) => s.label).join(', ');
 
   return (
-    <div className="min-h-screen bg-[#EAEDED]">
+    <div className="min-h-screen bg-white">
       <Header />
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
 

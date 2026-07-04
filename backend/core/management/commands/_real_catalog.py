@@ -50,9 +50,14 @@ def _load_catalog(bucket: str):
 def upsert_real_catalog():
     """Create/refresh real Amazon products + their NEW listings from catalog_*.jsonl.
     Returns the list of Product objects (possibly empty if no catalog files exist)."""
+    import random
     products = []
     for bucket, category in CATALOG_BUCKETS.items():
-        for rec in _load_catalog(bucket):
+        records = _load_catalog(bucket)
+        # Collect all valid images in this category to use as realistic extra images
+        bucket_images = [r.get("image").strip() for r in records if r.get("image") and r.get("image").strip()]
+        
+        for rec in records:
             asin = (rec.get("asin") or "").strip()
             title = (rec.get("title") or "").strip()
             image = (rec.get("image") or "").strip()
@@ -62,12 +67,19 @@ def upsert_real_catalog():
                 mrp = Decimal(str(rec.get("price_inr")))
             except (InvalidOperation, TypeError):
                 continue
+            
+            # Pick 2 random extra images from the same category
+            extra = []
+            if len(bucket_images) > 2:
+                extra = random.sample(bucket_images, 2)
+            
             prod, _ = Product.objects.update_or_create(
                 asin=asin[:20],
                 defaults=dict(
                     title=title[:255], category=category,
                     brand=(rec.get("brand") or "")[:100],
                     mrp=mrp, reference_image_url=image[:500],
+                    images=[image[:500]] + extra,
                     description=(rec.get("description") or "")[:2000],
                     rating=float(rec.get("avg_rating") or 0.0),
                     rating_count=int(rec.get("rating_number") or 0)),

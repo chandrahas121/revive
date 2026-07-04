@@ -61,7 +61,7 @@ const ReturnWizardPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#EAEDED]">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="max-w-3xl mx-auto p-8 text-center text-gray-500 text-sm">
           Loading order details…
@@ -72,12 +72,12 @@ const ReturnWizardPage = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-[#EAEDED]">
+      <div className="min-h-screen bg-white">
         <Header />
         <div className="max-w-3xl mx-auto p-8 text-center">
           <p className="text-gray-600 mb-4 text-sm">Order not found.</p>
           <button onClick={() => navigate('/orders')}
-            className="px-5 py-2 bg-[#FF9900] hover:bg-[#e88b00] text-white font-bold rounded-lg text-sm">
+            className="px-5 py-2 bg-[#ffcf3f] hover:bg-[#ffc21a] text-[#16181d] font-semibold rounded-full text-sm">
             Back to Orders
           </button>
         </div>
@@ -87,7 +87,7 @@ const ReturnWizardPage = () => {
 
   if (kept) {
     return (
-      <div className="min-h-screen bg-[#EAEDED]">
+      <div className="min-h-screen bg-white">
         <Header />
         <main className="max-w-3xl mx-auto px-4 py-10">
           <div className="bg-white border border-[#D5D9D9] rounded-lg p-8 text-center shadow-sm">
@@ -102,93 +102,88 @@ const ReturnWizardPage = () => {
     );
   }
 
+  const eligibleDate = order.return_window_closes
+    ? new Date(order.return_window_closes)
+    : new Date(new Date(order.created_at).getTime() + 7 * 86400000);
+
   return (
-    <div className="min-h-screen bg-[#EAEDED]">
+    <div className="min-h-screen bg-white">
       <Header />
-      <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
+      <main className="max-w-5xl mx-auto px-3 sm:px-4 py-5 sm:py-6">
 
         <button
           onClick={() => navigate('/orders')}
-          className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm mb-4 inline-flex items-center gap-2 transition-colors"
+          className="bg-white border border-[#d5dbe1] hover:bg-[#f5f7f9] rounded-lg px-4 py-2 text-sm font-medium text-[#0F1111] mb-4 inline-flex items-center gap-2 transition-colors"
         >
           <ChevronLeft className="w-4 h-4 text-gray-600" />
           Back to Your Orders
         </button>
 
-        <h1 className="text-2xl font-bold text-[#0F1111] mb-5">Return or Replace Items</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
+          {/* ── Left: choose items to return ── */}
+          <div className="bg-white border border-[#e3e7eb] rounded-2xl p-6 sm:p-8">
+            <h1 className="text-2xl sm:text-3xl font-medium text-[#0F1111] mb-6">Choose items to return</h1>
 
-        {/* ── Order banner ─────────────────────────────────────────────────────── */}
-        <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 mb-4 flex gap-4 items-center shadow-sm">
-          <div className="w-16 h-16 bg-gray-100 rounded flex-shrink-0 overflow-hidden">
-            {order.listing_image
-              ? <img src={order.listing_image} alt={order.listing_title} className="w-full h-full object-contain" />
-              : <div className="w-full h-full flex items-center justify-center text-3xl">📦</div>}
-          </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-[#0F1111] text-sm leading-snug line-clamp-2">
-              {order.listing_title || 'Order Item'}
-            </p>
-            {order.listing_price && (
-              <p className="text-sm text-gray-600 mt-0.5">₹{orderValue.toLocaleString('en-IN')}</p>
-            )}
-            <p className="text-xs text-gray-400 mt-0.5">
-              Ordered {new Date(order.created_at).toLocaleDateString('en-IN', {
-                day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          </div>
-        </div>
+            <div className="flex gap-5 items-start border-t border-[#eef1f4] pt-6 flex-wrap">
+              <input type="checkbox" checked readOnly className="mt-1.5 accent-[#232F3E] w-4 h-4 flex-shrink-0" />
+              <div className="w-24 h-28 flex-shrink-0 rounded-lg bg-[#F7F8F8] border border-[#eef1f4] overflow-hidden flex items-center justify-center">
+                {order.listing_image
+                  ? <img src={order.listing_image} alt={order.listing_title} className="w-full h-full object-contain p-1" />
+                  : <span className="text-3xl">📦</span>}
+              </div>
+              <div className="w-52 flex-shrink-0">
+                <p className="text-[15px] font-bold text-[#16181d] leading-snug line-clamp-3">{order.listing_title || 'Order item'}</p>
+                {order.listing_grade && (
+                  <span className="inline-block mt-1.5 text-[10px] font-black px-2 py-0.5 rounded bg-[#e6f4ea] text-[#107a45]">Grade {order.listing_grade}</span>
+                )}
+                <p className="text-sm font-semibold text-[#16181d] mt-1.5">₹{orderValue.toLocaleString('en-IN')}</p>
+              </div>
+              <div className="flex-1 min-w-[220px]">
+                <p className="text-[15px] font-semibold text-[#16181d] mb-2.5">What is the issue with the item? <span className="text-[#565f6b] font-normal">(required)</span></p>
+                <select
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="w-full border border-[#c3cad3] rounded-lg px-3 py-3 text-sm bg-[#f5f7f9] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#232F3E]"
+                >
+                  <option value="">Choose a response.</option>
+                  {RETURN_REASONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </select>
+              </div>
+            </div>
 
-        {/* ── STEP · REASON ────────────────────────────────────────────────────── */}
-        <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm mb-4">
-          <div className="px-4 py-3 border-b border-[#D5D9D9] bg-gray-50">
-            <p className="font-bold text-[#0F1111] text-sm">Why are you returning this item?</p>
-          </div>
-          <div>
-            {RETURN_REASONS.map((r, i) => (
-              <label key={r.id}
-                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors
-                  ${i < RETURN_REASONS.length - 1 ? 'border-b border-[#f0f0f0]' : ''}
-                  ${reason === r.id ? 'bg-[#FFF8EE]' : 'hover:bg-gray-50'}`}>
-                <input type="radio" name="reason" value={r.id} checked={reason === r.id}
-                  onChange={() => setReason(r.id)}
-                  className="w-4 h-4 accent-[#FF9900] flex-shrink-0" />
-                <span className="text-sm text-[#0F1111]">{r.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Keep-it nudge */}
-        <div className="bg-gradient-to-r from-[#f0fdf4] to-white border border-green-200 rounded-lg p-4 mb-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl flex-shrink-0">🌿</span>
-            <div className="flex-grow min-w-0">
-              <p className="font-bold text-[#0F1111] text-sm">
-                Changed your mind? Keep it and earn {nudgeCredits} Green Credits
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5 leading-snug">
-                Credits vest when your return window closes with nothing sent back —
-                redeemable on Amazon Revive second-life items.
-              </p>
-              <button onClick={handleKeepIt}
-                className="mt-2.5 px-4 py-1.5 text-xs font-bold text-green-800 bg-green-100 hover:bg-green-200 rounded-lg transition-colors">
-                Keep it — I changed my mind
-              </button>
+            {/* Keep-it nudge */}
+            <div className="bg-gradient-to-r from-[#f0fdf4] to-white border border-green-200 rounded-xl p-4 mt-6">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl flex-shrink-0">🌿</span>
+                <div className="flex-grow min-w-0">
+                  <p className="font-bold text-[#0F1111] text-sm">Changed your mind? Keep it and earn {nudgeCredits} Green Credits</p>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">Credits vest when your return window closes with nothing sent back — redeemable on Amazon Revive second-life items.</p>
+                  <button onClick={handleKeepIt} className="mt-2.5 px-4 py-1.5 text-xs font-bold text-green-800 bg-green-100 hover:bg-green-200 rounded-full transition-colors">Keep it — I changed my mind</button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* ── Right: summary ── */}
+          <div className="bg-white border border-[#e3e7eb] rounded-2xl p-5 sm:p-6">
+            <button
+              onClick={handleContinue}
+              disabled={!reason}
+              className={`w-full rounded-full py-3 font-semibold text-[15px] transition-colors ${!reason ? 'bg-[#fbe9b0] text-[#a98a3c] cursor-not-allowed' : 'bg-[#ffcf3f] hover:bg-[#ffc21a] text-[#16181d]'}`}
+            >
+              Continue
+            </button>
+            <p className="text-center text-[13px] text-[#565f6b] mt-2.5">Return eligible till <b className="text-[#16181d]">{eligibleDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</b></p>
+            <div className="border-t border-[#eef1f4] my-4" />
+            <p className="text-[15px] font-semibold text-[#16181d] mb-3">Items you are returning</p>
+            <div className="w-20 h-24 rounded-lg bg-[#F7F8F8] border border-[#eef1f4] overflow-hidden flex items-center justify-center">
+              {order.listing_image
+                ? <img src={order.listing_image} alt="" className="w-full h-full object-contain p-1" />
+                : <span className="text-2xl">📦</span>}
+            </div>
+            <p className="text-[11px] text-[#9aa6b2] mt-3">Next: our AI inspects the item's condition and arranges the greenest handover.</p>
+          </div>
         </div>
-
-        <button onClick={handleContinue} disabled={!reason}
-          className={`w-full py-3 rounded-lg font-bold text-sm transition-colors
-            ${!reason ? 'bg-[#F7CA76] text-[#8a6d00] cursor-not-allowed opacity-70'
-                      : 'bg-[#FF9900] hover:bg-[#e88b00] text-white shadow-sm'}`}>
-          {!reason ? 'Select a return reason to continue' : 'Continue to item inspection'}
-        </button>
-
-        <p className="text-center text-xs text-gray-400 mt-3">
-          Next: our AI inspects the item's condition and arranges the greenest handover ·
-          Secure Amazon-verified return
-        </p>
       </main>
     </div>
   );

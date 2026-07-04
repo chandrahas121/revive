@@ -10,6 +10,10 @@ class User(AbstractUser):
     # v2: live location capture (browser geolocation) → feeds local demand / "Near me"
     lat = models.FloatField(null=True, blank=True)
     lng = models.FloatField(null=True, blank=True)
+    
+    # Shipping info
+    phone = models.CharField(max_length=20, blank=True, default='')
+    address = models.TextField(blank=True, default='')
 
     # Pillar 4 — Fit-Twin body measurements + learned size profile
     height_in = models.FloatField(blank=True, null=True)
@@ -35,6 +39,8 @@ class Product(models.Model):
     mrp = models.DecimalField(max_digits=10, decimal_places=2)
     reference_image_url = models.URLField(max_length=500)
     description = models.TextField(blank=True)
+    # Support for multiple images
+    images = models.JSONField(default=list, blank=True)
     # v2: real catalog signals (from Amazon Reviews 2023 import)
     rating = models.FloatField(default=0.0)
     rating_count = models.IntegerField(default=0)

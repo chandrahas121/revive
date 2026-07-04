@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/', include('core.urls.listings')),
     path('api/', include('core.urls.orders')),
     path('api/grade/', include('grade.urls')),
+    path('api/rufus/', include('grade.rufus_urls')),
     path('api/tryon/', include('grade.tryon_urls')),
     path('api/card/', include('trust.urls')),
     path('api/prevent/', include('prevent.urls')),

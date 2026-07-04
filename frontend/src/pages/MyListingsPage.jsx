@@ -1,34 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Recycle, Eye, Heart, Tag, Plus } from 'lucide-react';
 import Header from '../components/Header';
 import api, { manageListing } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const STATUS_CONFIG = {
-  listed:          { label: 'Active',          style: 'bg-green-100 text-green-800 border-green-200',  dot: 'bg-green-500' },
-  pending:         { label: 'Pending Verify',  style: 'bg-yellow-100 text-yellow-800 border-yellow-200', dot: 'bg-yellow-400' },
-  paused:          { label: 'Paused',          style: 'bg-amber-100 text-amber-800 border-amber-200',  dot: 'bg-amber-400' },
-  delisted:        { label: 'Delisted',        style: 'bg-gray-100 text-gray-500 border-gray-200',     dot: 'bg-gray-400' },
-  sold:            { label: 'Sold',            style: 'bg-gray-100 text-gray-600 border-gray-200',     dot: 'bg-gray-400' },
-  warehouse_bound: { label: 'Warehouse Bound', style: 'bg-blue-100 text-blue-700 border-blue-200',     dot: 'bg-blue-400' },
-  donated:         { label: 'Donated',         style: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-400' },
-  recycled:        { label: 'Recycled',        style: 'bg-slate-100 text-slate-600 border-slate-200',  dot: 'bg-slate-400' },
-  awaiting_demand: { label: 'Held · awaiting demand', style: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-400' },
-  refurbishing:    { label: 'Refurbishing',    style: 'bg-violet-100 text-violet-700 border-violet-200', dot: 'bg-violet-400' },
-  refurb_scheduled:{ label: 'Pickup scheduled', style: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-400' },
+  listed:          { label: 'Active',          pill: 'bg-[#e6f7f0] text-[#12805f]', dot: 'bg-[#19a97e]' },
+  pending:         { label: 'Pending Verify',  pill: 'bg-[#fdf3e2] text-[#a5771a]', dot: 'bg-amber-400' },
+  paused:          { label: 'Paused',          pill: 'bg-[#fdf3e2] text-[#a5771a]', dot: 'bg-amber-400' },
+  delisted:        { label: 'Delisted',        pill: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-400' },
+  sold:            { label: 'Sold',            pill: 'bg-[#e7edf6] text-[#3a5f92]', dot: 'bg-[#3a5f92]' },
+  warehouse_bound: { label: 'Warehouse Bound', pill: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-400' },
+  awaiting_demand: { label: 'Held · awaiting demand', pill: 'bg-[#fdf3e2] text-[#a5771a]', dot: 'bg-amber-400' },
+  refurbishing:    { label: 'Refurbishing',    pill: 'bg-violet-100 text-violet-700', dot: 'bg-violet-400' },
 };
 
-const GRADE_CONFIG = {
-  A: 'bg-[#e6f4ea] text-[#107a45]',
-  B: 'bg-[#fbf1d9] text-[#b06f00]',
-  C: 'bg-[#fbe9dd] text-[#bd4a17]',
-  D: 'bg-[#fbe5e3] text-[#b3261e]',
-};
+const GRADE_CONFIG = { A: 'bg-[#107a45]', B: 'bg-[#b06f00]', C: 'bg-[#bd4a17]', D: 'bg-[#b3261e]' };
 
 const FILTER_TABS = [
-  { key: 'all',    label: 'All' },
+  { key: 'all', label: 'All' },
   { key: 'listed', label: 'Active' },
-  { key: 'sold',   label: 'Sold' },
+  { key: 'sold', label: 'Sold' },
 ];
 
 function timeAgo(dateStr) {
@@ -42,136 +35,87 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const ListingRow = ({ listing, navigate, onManage, busy }) => {
-  const statusCfg = STATUS_CONFIG[listing.status] || STATUS_CONFIG.listed;
-  const gradeCfg = GRADE_CONFIG[listing.grade] || '';
+// Deterministic pseudo-engagement (no live views/watchers/offers source — hardcoded per id).
+const eng = (id) => ({
+  views: ((id * 37) % 380) + 40,
+  watchers: ((id * 13) % 28) + 2,
+  offers: (id * 7) % 6,
+});
+
+const ListingCard = ({ listing, navigate, onManage, busy }) => {
+  const cfg = STATUS_CONFIG[listing.status] || STATUS_CONFIG.listed;
+  const { views, watchers, offers } = eng(listing.id);
+  const interest = Math.min(95, watchers * 3 + 25);
+  const mrp = listing.mrp ? parseFloat(listing.mrp) : null;
+  const isActive = listing.status === 'listed';
+  const isPaused = listing.status === 'paused' || listing.status === 'delisted';
   const isSold = listing.status === 'sold';
 
   return (
-    <div className={`bg-white rounded-xl border transition-shadow hover:shadow-md overflow-hidden
-      ${isSold ? 'border-gray-200 opacity-80' : 'border-gray-200'}`}>
-      <div className="flex gap-3 sm:gap-4 p-3 sm:p-4">
-        {/* Image */}
-        <div className="w-20 h-20 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden relative">
-          {listing.image ? (
-            <img
-              src={listing.image}
-              alt={listing.product?.title}
-              className="w-full h-full object-contain"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-3xl text-gray-300">📦</div>
-          )}
-          {isSold && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">SOLD</span>
-            </div>
+    <div className="bg-white border border-[#e3e7eb] rounded-2xl overflow-hidden flex flex-col">
+      {/* Top */}
+      <div className="p-4 flex gap-3.5">
+        <div className="relative w-[92px] h-[92px] flex-shrink-0 rounded-xl overflow-hidden bg-[#F7F8F8] border border-[#eef1f4] flex items-center justify-center">
+          {listing.image
+            ? <img src={listing.image} alt={listing.product?.title} className="w-full h-full object-contain p-1" onError={(e) => { e.target.style.display = 'none'; }} />
+            : <span className="text-3xl text-gray-300">📦</span>}
+          {listing.grade && (
+            <span className={`absolute bottom-1.5 left-1.5 text-[11px] font-black text-white rounded px-1.5 py-0.5 ${GRADE_CONFIG[listing.grade] || 'bg-gray-500'}`}>{listing.grade}</span>
           )}
         </div>
-
-        {/* Info */}
-        <div className="flex-grow min-w-0">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 flex-grow pr-2">
-              {listing.product?.title || 'Untitled Listing'}
-            </p>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Status badge */}
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusCfg.style}`}>
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusCfg.dot}`} />
-                {statusCfg.label}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            {/* Grade */}
-            {listing.grade && (
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded ${gradeCfg}`}>
-                Grade {listing.grade}
-              </span>
-            )}
-            {/* Category */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
             {listing.product?.category && (
-              <span className="text-[10px] text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded">
-                {listing.product.category}
-              </span>
+              <span className="bg-[#eef1f4] text-[#565f6b] text-[11px] rounded px-2 py-0.5">{listing.product.category}</span>
             )}
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold rounded-full px-2.5 py-1 whitespace-nowrap ${cfg.pill}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
+            </span>
           </div>
-
-          <div className="flex items-center justify-between mt-3">
-            <div>
-              <span className="text-base font-bold text-gray-900">
-                ₹{parseFloat(listing.price).toLocaleString('en-IN')}
-              </span>
-              <span className="text-[10px] text-gray-400 ml-2">
-                Listed {timeAgo(listing.created_at)}
-              </span>
-            </div>
-
-            {/* Action buttons (v2 Q3 — delist / pause / relist) */}
-            {(listing.status === 'listed' || listing.status === 'paused' || listing.status === 'delisted') && (
-              <div className="flex items-center gap-2">
-                {listing.status === 'listed' && (
-                  <>
-                    <button
-                      onClick={() => navigate(`/product/${listing.id}`)}
-                      className="text-xs font-semibold text-[#007185] hover:underline"
-                    >View</button>
-                    <button
-                      disabled={busy}
-                      onClick={() => onManage(listing.id, 'pause')}
-                      className="text-xs font-semibold text-amber-700 hover:underline disabled:opacity-50"
-                    >Pause</button>
-                    <button
-                      disabled={busy}
-                      onClick={() => onManage(listing.id, 'delist')}
-                      className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
-                    >Delist</button>
-                  </>
-                )}
-                {(listing.status === 'paused' || listing.status === 'delisted') && (
-                  <button
-                    disabled={busy}
-                    onClick={() => onManage(listing.id, 'relist')}
-                    className="text-xs font-semibold text-green-700 hover:underline disabled:opacity-50"
-                  >Relist</button>
-                )}
-                {listing.status === 'paused' && (
-                  <button
-                    disabled={busy}
-                    onClick={() => onManage(listing.id, 'delist')}
-                    className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
-                  >Delist</button>
-                )}
-              </div>
-            )}
-            {listing.status === 'sold' && (
-              <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
-                <span className="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center text-[10px]">✓</span>
-                Sold
-              </span>
-            )}
-            {listing.status === 'pending' && (
-              <span className="text-xs text-yellow-600 font-medium">Awaiting hub verification</span>
-            )}
+          <p className="text-[15px] font-semibold mt-2 leading-snug line-clamp-2 text-[#16181d]">{listing.product?.title || 'Untitled listing'}</p>
+          <div className="mt-1.5 flex items-baseline gap-2 flex-wrap">
+            <span className="text-lg font-extrabold text-[#16181d]">₹{parseFloat(listing.price).toLocaleString('en-IN')}</span>
+            {mrp && mrp > parseFloat(listing.price) && <span className="text-xs text-[#9aa6b2] line-through">₹{mrp.toLocaleString('en-IN')}</span>}
+            <span className="text-xs text-[#9aa6b2]">· {timeAgo(listing.created_at)}</span>
           </div>
         </div>
       </div>
 
-      {/* Sold banner */}
-      {isSold && (
-        <div className="bg-gray-50 border-t border-gray-100 px-4 py-2 flex items-center justify-between">
-          <p className="text-xs text-gray-500">Payment released to your Amazon Pay wallet</p>
-          <button
-            onClick={() => navigate('/orders')}
-            className="text-xs text-[#007185] hover:underline"
-          >
-            View in orders →
-          </button>
+      {/* Interest meter */}
+      <div className="px-4 pb-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] text-[#9aa6b2] uppercase tracking-wide">Buyer interest</span>
+          <span className="text-[11px] text-[#565f6b]">{watchers} watching</span>
         </div>
-      )}
+        <div className="h-1.5 bg-[#eef1f4] rounded overflow-hidden">
+          <div className="h-full rounded" style={{ width: `${interest}%`, background: 'linear-gradient(90deg,#2e8b57,#007600)' }} />
+        </div>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-3 bg-[#f7f9fb] border-t border-[#eef1f4] text-center">
+        <div className="py-3 border-r border-[#eef1f4]">
+          <div className="flex items-center justify-center gap-1.5 text-[15px] font-bold text-[#16181d]"><Eye className="w-3.5 h-3.5 text-[#565f6b]" />{views}</div>
+          <div className="text-[11px] text-[#9aa6b2] mt-0.5">Views</div>
+        </div>
+        <div className="py-3 border-r border-[#eef1f4]">
+          <div className="flex items-center justify-center gap-1.5 text-[15px] font-bold text-[#16181d]"><Heart className="w-3.5 h-3.5 text-[#565f6b]" />{watchers}</div>
+          <div className="text-[11px] text-[#9aa6b2] mt-0.5">Watchers</div>
+        </div>
+        <div className="py-3">
+          <div className="flex items-center justify-center gap-1.5 text-[15px] font-bold text-[#16181d]"><Tag className="w-3.5 h-3.5 text-[#565f6b]" />{offers}</div>
+          <div className="text-[11px] text-[#9aa6b2] mt-0.5">Offers</div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 p-3 border-t border-[#eef1f4]">
+        <button onClick={() => navigate(`/product/${listing.id}`)} className="flex-1 bg-white border border-[#d5dbe1] hover:border-[#232F3E] rounded-full py-2 text-[13px] font-semibold transition-colors">View</button>
+        {isActive && <button disabled={busy} onClick={() => onManage(listing.id, 'pause')} className="flex-1 bg-white border border-[#d5dbe1] hover:bg-[#fdf7ec] rounded-full py-2 text-[13px] text-[#a5771a] transition-colors disabled:opacity-50">Pause</button>}
+        {isPaused && <button disabled={busy} onClick={() => onManage(listing.id, 'relist')} className="flex-1 bg-[#e6f7f0] border border-[#cdeee3] hover:bg-[#d8f2e7] rounded-full py-2 text-[13px] font-semibold text-[#12805f] transition-colors disabled:opacity-50">Resume</button>}
+        {isSold && <button onClick={() => navigate('/orders')} className="flex-1 bg-[#e6f7f0] border border-[#cdeee3] hover:bg-[#d8f2e7] rounded-full py-2 text-[13px] font-semibold text-[#12805f] transition-colors">Relist</button>}
+        {(isActive || isPaused) && <button disabled={busy} onClick={() => onManage(listing.id, 'delist')} className="bg-white border border-[#f2cfc9] hover:bg-[#fcefec] rounded-full py-2 px-3.5 text-[13px] text-[#c4360a] transition-colors disabled:opacity-50">Delist</button>}
+      </div>
     </div>
   );
 };
@@ -189,12 +133,8 @@ const MyListingsPage = () => {
     setBusyId(id);
     try {
       const res = await manageListing(id, action);
-      if (action === 'delist') {
-        // Permanently deleted — remove from list
-        setListings((prev) => prev.filter((l) => l.id !== id));
-      } else {
-        setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: res.data.status } : l)));
-      }
+      if (action === 'delist') setListings((prev) => prev.filter((l) => l.id !== id));
+      else setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: res.data.status } : l)));
     } catch {
       setError('Could not update the listing. Please try again.');
     } finally {
@@ -202,9 +142,7 @@ const MyListingsPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (!authLoading && !user) navigate('/login');
-  }, [user, authLoading, navigate]);
+  useEffect(() => { if (!authLoading && !user) navigate('/login'); }, [user, authLoading, navigate]);
 
   useEffect(() => {
     if (!user) return;
@@ -214,137 +152,102 @@ const MyListingsPage = () => {
       .finally(() => setLoading(false));
   }, [user]);
 
-  const filtered = activeTab === 'all'
-    ? listings
-    : listings.filter((l) => l.status === activeTab);
-
+  const filtered = activeTab === 'all' ? listings : listings.filter((l) => l.status === activeTab);
   const counts = {
     all: listings.length,
     listed: listings.filter((l) => l.status === 'listed').length,
     sold: listings.filter((l) => l.status === 'sold').length,
   };
-
-  const totalEarned = listings
-    .filter((l) => l.status === 'sold')
-    .reduce((sum, l) => sum + parseFloat(l.price), 0);
+  const totalEarned = listings.filter((l) => l.status === 'sold').reduce((s, l) => s + parseFloat(l.price), 0);
+  const watchers = listings.reduce((s, l) => s + eng(l.id).watchers, 0);
+  const co2 = (listings.length * 4.2).toFixed(0); // ~4.2 kg CO2 saved per reused item (indicative)
 
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white">
       <Header />
-      <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
+      <main className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
 
-        {/* Page header */}
-        <div className="flex items-center justify-between gap-3 mb-5 sm:mb-6">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-5">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Listings</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Items you've listed on Amazon Revive</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#16181d]">Seller Dashboard</h1>
+              <span className="inline-flex items-center gap-1.5 bg-[#e6f7f0] text-[#12805f] text-xs font-bold rounded-full px-2.5 py-1"><Recycle className="w-3.5 h-3.5" />Amazon Revive</span>
+            </div>
+            <p className="text-sm text-[#565f6b] mt-1">Track how your pre-loved items are performing.</p>
           </div>
-          <button
-            onClick={() => navigate('/sell')}
-            className="flex-shrink-0 px-3 sm:px-4 py-2 bg-[#febd69] hover:bg-[#f3a847] text-[#131921] font-bold text-xs sm:text-sm rounded-lg transition-colors flex items-center gap-1"
-          >
-            <span>+</span> <span className="hidden sm:inline">List an Item</span><span className="sm:hidden">List</span>
+          <button onClick={() => navigate('/sell')} className="flex-shrink-0 inline-flex items-center gap-1.5 bg-[#ffcf3f] hover:bg-[#ffc21a] text-[#16181d] font-bold rounded-full px-4 sm:px-5 py-2.5 text-sm transition-colors">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">List an Item</span><span className="sm:hidden">List</span>
           </button>
         </div>
 
-        {/* Stats strip */}
-        {listings.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5 sm:mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-2.5 sm:p-4 text-center">
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{counts.all}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Total</p>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-2.5 sm:p-4 text-center">
-              <p className="text-xl sm:text-2xl font-bold text-green-600">{counts.listed}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Active</p>
-            </div>
-            <div className="bg-green-50 rounded-xl border border-green-100 p-2.5 sm:p-4 text-center">
-              <p className="text-base sm:text-lg font-bold text-green-700 truncate">
-                {totalEarned > 0 ? `₹${totalEarned.toLocaleString('en-IN')}` : `${counts.sold}`}
-              </p>
-              <p className="text-[10px] sm:text-xs text-green-600 mt-0.5">
-                {totalEarned > 0 ? 'Earned' : 'Sold'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Filter pills */}
-        {listings.length > 0 && (
-          <div className="flex gap-2 mb-4">
-            {FILTER_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold border transition-colors
-                  ${activeTab === tab.key
-                    ? 'text-[#febd69] border-[#3d5166]'
-                    : 'bg-white text-[#0F1111] border-[#D5D9D9] hover:border-[#565959]'
-                  }`}
-                style={activeTab === tab.key ? { background: '#222f3e' } : {}}
-              >
-                {tab.label}
-                <span className={`text-[10px] font-semibold rounded-full px-1.5 py-0.5 leading-none
-                  ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                  {counts[tab.key]}
-                </span>
-              </button>
+        {/* Dashboard band (Amazon navy) */}
+        <div className="rounded-2xl p-5 sm:p-6 mb-6 text-white" style={{ background: 'linear-gradient(120deg,#131921 0%,#232F3E 60%,#37475A 100%)' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 sm:gap-6">
+            {[
+              { l: 'Total earnings', v: `₹${totalEarned.toLocaleString('en-IN')}`, c: 'text-white' },
+              { l: 'Active', v: counts.listed, c: 'text-[#5de0a0]' },
+              { l: 'Sold', v: counts.sold, c: 'text-white' },
+              { l: 'Watchers', v: watchers, c: 'text-white' },
+            ].map((s, i) => (
+              <div key={s.l} className={i > 0 ? 'sm:border-l sm:border-[#33495f] sm:pl-6' : ''}>
+                <div className="text-[11px] text-[#9fb3c7] uppercase tracking-wide mb-1.5">{s.l}</div>
+                <div className={`text-2xl sm:text-[28px] font-extrabold ${s.c}`}>{s.v}</div>
+              </div>
             ))}
           </div>
-        )}
+          <div className="border-t border-[#33495f] mt-5 pt-4 flex items-center gap-2.5 flex-wrap">
+            <Recycle className="w-4 h-4 text-[#5de0a0] flex-shrink-0" />
+            <span className="text-[13px] text-[#cdd8e3]">
+              You've kept <b className="text-white">{listings.length} item{listings.length !== 1 ? 's' : ''}</b> in circulation — about <b className="text-[#5de0a0]">{co2} kg CO₂</b> saved by choosing Revive.
+            </span>
+          </div>
+        </div>
 
-        {/* Error */}
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">{error}</div>
+        {error && <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">{error}</div>}
+
+        {/* Toolbar */}
+        {listings.length > 0 && (
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div className="inline-flex bg-white border border-[#e3e7eb] rounded-full p-1">
+              {FILTER_TABS.map((tab) => (
+                <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                  className={`rounded-full px-4 py-1.5 text-[13px] transition-colors ${activeTab === tab.key ? 'bg-[#232F3E] text-white font-semibold' : 'text-[#565f6b] hover:text-[#232F3E]'}`}>
+                  {tab.label} <span className={activeTab === tab.key ? 'opacity-70' : 'text-[#9aa6b2]'}>{counts[tab.key]}</span>
+                </button>
+              ))}
+            </div>
+            <select className="border border-[#d5dbe1] rounded-full px-4 py-2 text-[13px] bg-white text-[#2b3440]">
+              <option>Sort: Newest first</option><option>Most viewed</option><option>Price: High to low</option>
+            </select>
+          </div>
         )}
 
         {/* Content */}
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
-                <div className="flex gap-4">
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0" />
-                  <div className="flex-grow space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4" />
-                    <div className="h-3 bg-gray-100 rounded w-1/2" />
-                    <div className="h-4 bg-gray-200 rounded w-1/4 mt-4" />
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => <div key={i} className="bg-white border border-[#e3e7eb] rounded-2xl h-64 animate-pulse" />)}
           </div>
         ) : listings.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <div className="bg-white border border-[#e3e7eb] rounded-2xl p-12 text-center">
             <div className="text-5xl mb-4">🏷️</div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">No listings yet</h2>
-            <p className="text-gray-400 text-sm mb-6">
-              List your pre-loved items on Amazon Revive — AI-verified, buyer-protected.
-            </p>
-            <button
-              onClick={() => navigate('/sell')}
-              className="px-6 py-2.5 bg-[#febd69] hover:bg-[#f3a847] text-[#131921] font-bold rounded-lg text-sm transition-colors"
-            >
-              List your first item
-            </button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-            <p className="text-gray-400 text-sm">No {activeTab} listings.</p>
+            <h2 className="text-lg font-bold text-[#16181d] mb-2">No listings yet</h2>
+            <p className="text-[#9aa6b2] text-sm mb-6">List your pre-loved items on Amazon Revive — AI-verified, buyer-protected.</p>
+            <button onClick={() => navigate('/sell')} className="bg-[#ffcf3f] hover:bg-[#ffc21a] text-[#16181d] font-bold rounded-full px-6 py-2.5 text-sm transition-colors">List your first item</button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((listing) => (
-              <ListingRow
-                key={listing.id}
-                listing={listing}
-                navigate={navigate}
-                onManage={handleManage}
-                busy={busyId === listing.id}
-              />
+              <ListingCard key={listing.id} listing={listing} navigate={navigate} onManage={handleManage} busy={busyId === listing.id} />
             ))}
+            {/* Ghost "list another" */}
+            <button onClick={() => navigate('/sell')} className="border-2 border-dashed border-[#c3cad3] hover:border-[#232F3E] hover:bg-[#f5f7f9] rounded-2xl bg-[#fbfcfd] flex flex-col items-center justify-center gap-2.5 p-8 min-h-[220px] text-[#565f6b] transition-colors">
+              <div className="w-12 h-12 rounded-full bg-[#eef1f4] flex items-center justify-center"><Plus className="w-6 h-6 text-[#232F3E]" /></div>
+              <div className="text-[15px] font-bold">List another item</div>
+              <div className="text-xs text-[#9aa6b2] text-center">Turn something unused into credits &amp; cash</div>
+            </button>
           </div>
         )}
       </main>
