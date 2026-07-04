@@ -169,6 +169,18 @@ Repo was restructured into npm workspaces. **Paths changed** — the seller fron
 
 **Post-merge verification (all green):** Django check ✓ · no unapplied migrations ✓ · seller-auth views present ✓ · backend smoke (defective→DISPOSE, evidence bundle present, auth/me 401=wired) ✓ · seller build (113 modules) ✓ · consumer build (1928 modules) ✓ · all three services serve 200 (seller :5174, consumer :5173, backend :8000) · GradingAssistant module transforms (shared-package import resolves at runtime).
 
+## ⚠ BACKEND DB GOTCHA (2026-07-04)
+`.env` now sets `DATABASE_URL=postgresql://revive:revive@localhost:5432/revive`, but ALL demo data
+(users, is_seller fix, seeded catalog, migration 0011) lives in **`backend/db.sqlite3`** and there is
+NO local Postgres. So starting the backend plainly will try Postgres and fail. **Start the backend with
+`DATABASE_URL` overridden to sqlite** (settings uses `load_dotenv(..., override=False)`, so a process
+env var wins over `.env`):
+```
+$env:DATABASE_URL = "sqlite:///C:/Users/dell/Desktop/amazon-hackon/backend/db.sqlite3"
+.venv\Scripts\python.exe manage.py runserver 8000 --noreload
+```
+(Or comment out the `DATABASE_URL` line in `.env` — but it was marked intentional, so it's left as-is.)
+
 ## DEMO CREDENTIALS + a post-merge fix (2026-07-04)
 - **Seller login** (http://localhost:5174/): `aarav.seller@revive.in` / `seller12345` (store AARAV RETAIL). Also ananya/diya/kabir/vivaan `.seller@revive.in`, same password.
 - **Consumer login** (http://localhost:5173/): `demo@revive.in` / `demo12345`.
