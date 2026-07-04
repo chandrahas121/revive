@@ -183,7 +183,7 @@ def _fraud_gates(images: list[bytes], category: str, expected_title: str,
 
 def _grade_heatmap_route(*, images: list[bytes], slots: list[str], category: str,
                          expected_title: str, product_id: str, operator: str,
-                         geohash5: str, mrp: float,
+                         geohash5: str, mrp: float, cover_only: bool = False,
                          video_bytes: bytes | None = None,
                          video_suffix: str = '.mp4') -> dict:
     """Shared core: grade (video → multi → single) → per-angle heatmaps → route."""
@@ -207,6 +207,14 @@ def _grade_heatmap_route(*, images: list[bytes], slots: list[str], category: str
                     os.unlink(tmp_path)
                 except OSError:
                     pass
+        elif cover_only and images:
+            # RETURN flow: the grade is hidden from the customer, so grade only the
+            # cover image (one LLM call, not one per angle) to keep the inspection
+            # fast. Still report the full view count for the "N views inspected" UI.
+            from ml.grade import grade_image
+            grade_result = grade_image(image_bytes=images[0], product_id=product_id,
+                                       operator=operator, category=category, use_cache=True)
+            frames_sampled = len(images)
         elif len(images) > 1:
             from ml.grade import grade_multi_image
             grade_result = grade_multi_image(
@@ -338,5 +346,6 @@ def run_return_inspect(*, images: list[bytes], slots: list[str], category: str,
     return _grade_heatmap_route(
         images=images, slots=slots, category=category, expected_title=expected_title,
         product_id=product_id, operator=operator, geohash5=geohash5, mrp=mrp,
+        cover_only=True,   # return grade is hidden from the customer → grade cover only (fast)
         video_bytes=video_bytes, video_suffix=video_suffix,
     )

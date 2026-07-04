@@ -383,33 +383,6 @@ const GradingResultPage = () => {
 
             </div>
 
-            {/* Routing outcome */}
-            <div className={`transition-all duration-500 ${showRoute ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
-              <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
-                <div className="bg-[#131921] px-4 py-2.5 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#febd69]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  <span className="text-[#febd69] font-bold text-sm">Second-Life Route</span>
-                </div>
-                <div className="p-4 flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#febd69]/15 border border-[#febd69]/30 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#131921]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  </div>
-                  <div>
-                    <p className="font-bold text-[#0F1111] text-sm">{routeMessage}</p>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      {route?.disposition === 'RESTOCK_NEW'
-                        ? 'Verified unopened — it goes back to the normal catalogue as New.'
-                        : route?.disposition === 'RENEWED_SPN'
-                          ? 'It heads to an authorized center for refurbishment, then lists as Amazon Renewed.'
-                          : route?.disposition === 'RECYCLE_DONATE'
-                            ? 'It exits the marketplace responsibly via a verified partner.'
-                            : 'It stays in your city instead of travelling to a warehouse — activated when a nearby buyer appears.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Refund */}
             <div className={`transition-all duration-500 delay-100 ${showRefund ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
               <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
@@ -500,34 +473,22 @@ const GradingResultPage = () => {
               </div>
             </div>
 
-            {/* ── Second-life lifecycle — the item is STAGED, not instantly live ── */}
-            {processed?.lifecycle && (
-              <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 sm:p-5 shadow-sm space-y-3">
-                <div>
-                  <p className="font-bold text-[#0F1111] text-base">What happens to your item next</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {processed.disposition === 'RESTOCK_NEW'
-                      ? 'Verified unopened — it rejoins the normal Amazon catalogue as New.'
-                      : processed.lifecycle.track === 'renewed'
-                        ? "It's scheduled for professional refurbishment before it's listed as Amazon Renewed — it doesn't go live yet."
-                        : processed.lifecycle.track === 'exit'
-                          ? "It exits the marketplace responsibly."
-                          : "It stays local and is held until a nearby buyer is found — it isn't warehoused, and goes live in Revive only when local demand appears."}
-                  </p>
+            {/* Simple confirmation after handover — no routing / lifecycle shown */}
+            {processed && (
+              <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 sm:p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#0F1111] text-base">Return confirmed</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Your item has been inspected and scheduled for pickup — your refund is on the way.</p>
+                  </div>
                 </div>
-                <LifecycleTimeline lifecycle={processed.lifecycle} />
-                <div className="flex gap-3">
-                  {processed.id && processed.source !== 'new' && (
-                    <button onClick={() => navigate(`/product/${processed.id}`)}
-                      className="flex-1 py-2.5 rounded-lg bg-[#232F3E] hover:bg-[#131921] text-[#febd69] font-bold text-sm">
-                      Track it in {processed.lifecycle.track_label}
-                    </button>
-                  )}
-                  <button onClick={() => navigate('/orders')}
-                    className="flex-1 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50">
-                    Back to Your Orders
-                  </button>
-                </div>
+                <button onClick={() => navigate('/orders')}
+                  className="w-full py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50">
+                  Back to Your Orders
+                </button>
               </div>
             )}
           </div>
