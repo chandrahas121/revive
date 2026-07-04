@@ -358,110 +358,29 @@ const GradingResultPage = () => {
           <div className="space-y-4">
             {scanError && <div className="px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs">{scanError}</div>}
 
-            {/* Grade card */}
+            {/* Inspection card — grade hidden from the customer on a return */}
             <div className="bg-white border border-[#D5D9D9] rounded-lg overflow-hidden shadow-sm">
               <div className="bg-[#232F3E] px-4 py-2.5 flex items-center justify-between">
-                <span className="text-[#febd69] font-bold text-sm">AI Grade Result</span>
-                <span className="text-xs text-gray-400">✓ Product verified · {framesSampled} view{framesSampled !== 1 ? 's' : ''}</span>
+                <span className="text-[#febd69] font-bold text-sm">AI Inspection</span>
+                <span className="text-xs text-gray-400">✓ Verified genuine · {framesSampled} view{framesSampled !== 1 ? 's' : ''}</span>
               </div>
 
-              {(result?.heatmap_b64 || coverPreview) && (
+              {coverPreview && (
                 <div className="bg-[#0F1111] flex items-center justify-center">
-                  <img src={result?.heatmap_b64 ? `data:image/jpeg;base64,${result.heatmap_b64}` : coverPreview}
-                    alt="Inspected item" className="max-h-60 object-contain" />
+                  <img src={coverPreview} alt="Inspected item" className="max-h-60 object-contain" />
                 </div>
               )}
 
-              <div className="p-5 flex items-center gap-6">
-                <div className="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 80 80">
-                    <circle cx="40" cy="40" r="36" fill="none" stroke="#e5e7eb" strokeWidth="6" />
-                    <circle cx="40" cy="40" r="36" fill="none" stroke={cfg.ring} strokeWidth="6" strokeLinecap="round"
-                      strokeDasharray={`${filled} ${CIRCUMFERENCE}`} style={{ transition: 'stroke-dasharray 0.8s ease' }} />
-                  </svg>
-                  <div className="relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center font-black text-3xl shadow"
-                    style={{ background: cfg.gradeBg, color: cfg.ring }}>{grade}</div>
+              <div className="p-5 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: cfg.ring }}>{cfg.label}</p>
-                  <p className="text-[#0F1111] font-semibold text-base leading-snug">{conditionSummary}</p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Confidence: <strong className="text-[#0F1111]">{confidence}%</strong>
-                    {confidence < 70 ? ' · flagged for human spot-check' : ' · cleared the review threshold'}
-                  </p>
+                  <p className="text-[#0F1111] font-semibold text-base leading-snug">Inspection complete</p>
+                  <p className="text-xs text-gray-500 mt-1">Inspected across {framesSampled} angle{framesSampled !== 1 ? 's' : ''} and verified as the genuine item — cleared and scheduled for pickup.</p>
                 </div>
               </div>
 
-              {defects.length > 0 && (
-                <div className="border-t border-[#f0f0f0] px-4 py-3">
-                  <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">What the AI noticed</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {defects.slice(0, 6).map((d, i) => (
-                      <span key={i} className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200 capitalize">
-                        {d.type}{d.angle_label ? ` · ${d.angle_label}` : (d.location ? ` · ${d.location}` : '')}{d.severity ? ` · ${d.severity}` : ''}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Category condition checks confirmed across angles */}
-              {[['tags_present', 'Original tags'], ['box_present', 'Original box'],
-                ['powers_on', 'Powers on'], ['accessories_present', 'Accessories']]
-                .some(([k]) => result?.[k] === true || result?.[k] === false) && (
-                <div className="border-t border-[#f0f0f0] px-4 py-3">
-                  <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Condition checks</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[['tags_present', 'Original tags'], ['box_present', 'Original box'],
-                      ['powers_on', 'Powers on'], ['accessories_present', 'Accessories']]
-                      .filter(([k]) => result?.[k] === true || result?.[k] === false)
-                      .map(([k, label]) => (
-                        <span key={k} className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border
-                          ${result[k] ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                          {result[k] ? '✓' : '✕'} {label}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Per-angle defect maps — proves every angle was inspected */}
-              {result?.angle_heatmaps?.length > 1 && (
-                <div className="border-t border-[#f0f0f0] px-4 py-3">
-                  <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">
-                    Defect map · {result.angle_heatmaps.length} angles inspected
-                  </p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {result.angle_heatmaps.map((m, i) => (
-                      <div key={i}>
-                        <div className="aspect-square rounded border border-gray-200 bg-[#f7f7f7] overflow-hidden flex items-center justify-center">
-                          <img src={`data:image/jpeg;base64,${m.b64}`} alt={m.angle_label}
-                            className="w-full h-full object-cover" />
-                        </div>
-                        <p className="text-[10px] text-center text-gray-500 mt-1 truncate">
-                          {m.angle_label}{m.n_defects ? ` · ${m.n_defects}` : ''}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-[#f0f0f0] px-4 py-3 bg-gray-50">
-                <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wider">Grade Scale</p>
-                <div className="flex gap-1.5">
-                  {['A', 'B', 'C', 'D'].map((g) => (
-                    <div key={g}
-                      className={`flex-1 rounded py-1.5 text-center text-xs font-bold border transition-all
-                        ${g === grade ? 'border-current shadow-sm scale-105' : 'border-transparent opacity-40'}`}
-                      style={g === grade
-                        ? { background: GRADE_CFG[g].gradeBg, color: GRADE_CFG[g].ring, borderColor: GRADE_CFG[g].ring }
-                        : { background: GRADE_CFG[g].gradeBg, color: GRADE_CFG[g].ring }}>
-                      {g} — {GRADE_CFG[g].label}
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Routing outcome */}
