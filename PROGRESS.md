@@ -153,6 +153,27 @@ Files: `ml/llm.py`, `ml/seller_decision.py`, `backend/core/seller_views.py` (Sel
 - **Phase A (frontend + backend relist + real ML grading with integrity gate) is DONE and verified.** The Seller Central is demoable end-to-end.
 - Remaining optional work: (a) human visual click-through of every `/seller` screen in a browser; (b) Phase B Flex doorstep grading (stretch — not started, no design yet); (c) if desired, wire "Grade with AI" to the real `/api/grade/inspect/` (seam is in `GradingAssistant.runGrade`).
 
+## MONOREPO STRUCTURE (2026-07-04 — verified working end-to-end)
+Repo was restructured into npm workspaces. **Paths changed** — the seller frontend moved from
+`frontend/src/seller/` to its own app:
+- `apps/consumer` — consumer storefront (Vite, port **5173**) — was `frontend/`.
+- `apps/seller`   — Seller Central app (Vite, port **5174**) — has all my ARCA work.
+- `packages/shared` — shared API client (`src/api/client.js`, baseURL `:8000`) + `categoryProfiles.js` (`capturePrompts`), imported as `@amazon-hackon/shared`.
+- `backend/` — unchanged location; merge added seller auth (`SellerRegisterView/SellerLoginView/SellerMeView/LogoutView` in `core/views.py`, routes in `core/urls/seller.py`).
+- `ml/seller_decision.py` + `ml/llm.py` — ARCA engine, unchanged.
+- **`frontend/` and `Seller frontend replication-handoff/` were DELETED** (2026-07-04) — `frontend/` was a superseded untracked leftover; the handoff was a tracked design bundle (its deletion needs a commit). Active frontend is `apps/consumer` + `apps/seller` only.
+
+**Run (monorepo):** `npm install` at root once, then:
+- `npm run dev:consumer` (:5173) · `npm run dev:seller` (:5174) · backend `cd backend && .venv\Scripts\python.exe manage.py runserver 8000 --noreload`
+- Build all: `npm run build` (or `build:seller` / `build:consumer`).
+
+**Post-merge verification (all green):** Django check ✓ · no unapplied migrations ✓ · seller-auth views present ✓ · backend smoke (defective→DISPOSE, evidence bundle present, auth/me 401=wired) ✓ · seller build (113 modules) ✓ · consumer build (1928 modules) ✓ · all three services serve 200 (seller :5174, consumer :5173, backend :8000) · GradingAssistant module transforms (shared-package import resolves at runtime).
+
+## DEMO CREDENTIALS + a post-merge fix (2026-07-04)
+- **Seller login** (http://localhost:5174/): `aarav.seller@revive.in` / `seller12345` (store AARAV RETAIL). Also ananya/diya/kabir/vivaan `.seller@revive.in`, same password.
+- **Consumer login** (http://localhost:5173/): `demo@revive.in` / `demo12345`.
+- **Fix required after the merge:** migration `core/0011_user_is_seller_user_store_name` was **unapplied** (User queries crashed with "no such column is_seller") — ran `manage.py migrate`. Also the seeded sellers had `is_seller=False` (seed predates the column) so seller-login (requires `is_seller=True`) rejected them — enabled `is_seller=True` + `store_name` on all `*.seller@revive.in`. Both logins verified → 200. If the DB is re-seeded, re-run these two steps (or add `is_seller=True` to the seed).
+
 ## HOW TO RUN (for the next agent / demo)
 Backend (Python 3.12 venv already created at `backend/.venv`):
 ```
