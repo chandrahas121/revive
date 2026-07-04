@@ -497,8 +497,16 @@ class Command(BaseCommand):
         # so we skip them and let the REAL Amazon electronics (real image + own 1:1
         # reviews) stand alone. Curated apparel/footwear/extras stay for brand variety.
         # Curated catalog is disabled to prevent duplicate images across different products.
-        curated = [] # upsert_demo_catalog(skip_categories=RENEWED_CATS)
-        real = upsert_real_catalog()       # real Amazon ASINs (real image/title/price/reviews)
+        # Real-Amazon catalog needs the multi-GB dataset download; when it's absent
+        # (offline demo) fall back to the full curated branded catalog so the
+        # storefront has phones/laptops/monitors/footwear/apparel — not just the hero.
+        real_preview = upsert_real_catalog()
+        if real_preview:
+            curated = upsert_demo_catalog(skip_categories=RENEWED_CATS)
+            real = real_preview
+        else:
+            curated = upsert_demo_catalog()   # all categories from curated (offline)
+            real = []
         iqoo = _upsert_iqoo_hero()         # one recognisable hero phone with local photo
         products = curated + real + [iqoo]
         self.stdout.write(f"  catalog: {len(curated)} curated + {len(real)} real + 1 hero "
