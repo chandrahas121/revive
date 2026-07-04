@@ -397,14 +397,19 @@ export default function GradingAssistant() {
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 22, border: '1px solid #d5d9d9', borderRadius: 10, padding: '18px 20px', marginBottom: 14, flexWrap: 'wrap' }}>
+            <div style={{ border: `1px solid ${gc.col}40`, borderRadius: 12, marginBottom: 16, overflow: 'hidden', boxShadow: '0 1px 3px rgba(15,17,17,.06)' }}>
+              <div style={{ background: `linear-gradient(110deg, ${gc.col}, ${gc.col}cc)`, padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#fff' }}>AI Grade Result</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.9)' }}>Confidence {gc.confidence}%</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 22, padding: '18px 20px', flexWrap: 'wrap' }}>
               <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
                 <svg viewBox="0 0 76 76" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}><circle cx="38" cy="38" r="32" fill="none" stroke={gc.line} strokeWidth="6" /><circle cx="38" cy="38" r="32" fill="none" stroke={gc.col} strokeWidth="6" strokeLinecap="round" strokeDasharray={((CIRC * gc.score) / 100).toFixed(1) + ' ' + CIRC} /></svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, fontWeight: 900, color: gc.col }}>{gc.grade}</div>
               </div>
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase', color: gc.col }}>Amazon condition · {gc.gradeLabel}</div>
-                <div style={{ fontSize: 12.5, color: '#565959', margin: '6px 0' }}>AI confidence <b style={{ color: '#111' }}>{gc.confidence}%</b> · Score <b style={{ color: '#111' }}>{gc.score}/100</b> · Functional <b style={{ color: '#111' }}>{gc.functional}</b></div>
+                <div style={{ fontSize: 12.5, color: '#565959', margin: '6px 0' }}>Score <b style={{ color: '#111' }}>{gc.score}/100</b> · Functional <b style={{ color: '#111' }}>{gc.functional}</b></div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {(gc.defects || []).map((d, i) => <span key={i} style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 12, background: '#fbf1d9', color: '#b06f00' }}>{d.t}</span>)}
                 </div>
@@ -421,6 +426,7 @@ export default function GradingAssistant() {
                       ))}
                   </div>
                 )}
+              </div>
               </div>
             </div>
 
