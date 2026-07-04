@@ -246,8 +246,15 @@ def _grade_heatmap_route(*, images: list[bytes], slots: list[str], category: str
                     'angle_label': label, 'b64': b64, 'n_defects': len(frame_defects),
                 })
             grade_result['angle_heatmaps'] = angle_heatmaps
-            cover = max(angle_heatmaps, key=lambda e: e['n_defects']) if angle_heatmaps else None
-            grade_result['heatmap_b64'] = (cover or angle_heatmaps[0])['b64'] if angle_heatmaps else None
+            # Cover image = the first ITEM angle (front/top), NOT the most-damaged one —
+            # otherwise an old box (most defects) becomes the headline photo and it
+            # looks like only the box was inspected.
+            def _is_pkg(e):
+                a = (e.get('angle', '') + ' ' + e.get('angle_label', '')).lower()
+                return any(w in a for w in ('box', 'tag', 'packaging', 'label'))
+            item_maps = [e for e in angle_heatmaps if not _is_pkg(e)]
+            cover = (item_maps or angle_heatmaps)[0] if angle_heatmaps else None
+            grade_result['heatmap_b64'] = cover['b64'] if cover else None
         except Exception as e:
             logger.warning("heatmap generation failed: %s", e)
 
