@@ -444,6 +444,24 @@ const ListingSuccess = ({ listing, routeResult, tier, onViewListing }) => {
   );
 };
 
+// A single tappable checklist row with an animated tick — used by the
+// Condition & Safety checklist.
+const CheckRow = ({ label, checked, onToggle }) => (
+  <button type="button" onClick={onToggle}
+    className={`w-full flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors
+      ${checked ? 'border-[#107a45] bg-[#e6f4ea]' : 'border-[#D5D9D9] bg-white hover:border-[#565959]'}`}>
+    <span className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors
+      ${checked ? 'bg-[#107a45] border-[#107a45]' : 'border-[#c9cccc] bg-white'}`}>
+      {checked && (
+        <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clipRule="evenodd"/>
+        </svg>
+      )}
+    </span>
+    <span className={checked ? 'text-[#0f5132] font-medium' : 'text-[#0F1111]'}>{label}</span>
+  </button>
+);
+
 const SellIt = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -467,6 +485,27 @@ const SellIt = () => {
   const [photoSlots, setPhotoSlots] = useState({});   // { slotKey: File }
   const [previews, setPreviews] = useState({});       // { slotKey: objectURL }
   const slotInputs = useRef({});
+
+  // Optional walkthrough video (buyer-trust extra).
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState('');
+  const videoInput = useRef(null);
+
+  // Condition & safety checklist — seller self-declaration shown on the listing.
+  const CONDITION_CHECKS = [
+    { key: 'cleaned',    label: 'Cleaned & sanitized' },
+    { key: 'allparts',   label: 'All original parts present' },
+    { key: 'tested',     label: 'Tested & working' },
+    { key: 'packaging',  label: 'Original packaging retained' },
+  ];
+  const SAFETY_CHECKS = [
+    { key: 'genuine',    label: 'Genuine product — not counterfeit' },
+    { key: 'noliquid',   label: 'No water or liquid damage' },
+    { key: 'nohazard',   label: 'No damage / sharp edges / hazards' },
+    { key: 'shippable',  label: 'Safe to ship — no restricted items' },
+  ];
+  const [checks, setChecks] = useState({});
+  const toggleCheck = (k) => setChecks((c) => ({ ...c, [k]: !c[k] }));
 
   const [grading, setGrading] = useState(false);
   const [gradeResult, setGradeResult] = useState(null);
@@ -569,6 +608,15 @@ const SellIt = () => {
     setGradeResult(null);
   };
 
+  const handleVideoUpload = (file) => {
+    if (!file) return;
+    setVideoFile(file);
+    setVideoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Surface validation failures where the user is looking (next to the button),
@@ -602,15 +650,18 @@ const SellIt = () => {
       formData.append('condition_summary', conditionSummary.trim());
 
       // Upload EVERY captured angle (cover first) so the Health Card shows all the
-      // angles the AI actually graded — not just one photo. Cloud path returns a
-      // presigned URL (→ image_url / photos[]); local dev returns null, so we send
-      // the raw file instead (→ image / images[]). Backend persists all of them.
+      // angles the AI graded — not just one photo. Cloud path returns a presigned URL
+      // (→ image_url / photos[]); local dev returns null, so we send the raw file
+      // (→ image / images[]). Upload all angles IN PARALLEL so publish stays fast —
+      // sequential uploads were the main source of the slow "Publishing…" step.
       const orderedPhotos = Object.entries(photoSlots).sort(([a], [b]) =>
         (a === 'front' ? -1 : b === 'front' ? 1 : 0));
+      const uploaded = await Promise.all(orderedPhotos.map(async ([, file]) => {
+        try { return { file, url: await uploadImageToStorage(file) }; }
+        catch { return { file, url: null }; }
+      }));
       let coverSent = false;
-      for (const [, file] of orderedPhotos) {
-        let url = null;
-        try { url = await uploadImageToStorage(file); } catch { url = null; }
+      for (const { file, url } of uploaded) {
         if (url) {
           if (!coverSent) { formData.append('image_url', url); coverSent = true; }
           else formData.append('photos', url);
@@ -830,6 +881,35 @@ const SellIt = () => {
                 })}
               </div>
 
+              {/* Optional walkthrough video — extra buyer trust */}
+              <div className="mb-4">
+                <input ref={videoInput} type="file" accept="video/*" className="hidden"
+                  onChange={(e) => handleVideoUpload(e.target.files[0])} />
+                {!videoPreview ? (
+                  <button type="button" onClick={() => videoInput.current?.click()}
+                    className="w-full flex items-center gap-3 rounded-lg border-2 border-dashed border-[#D5D9D9] hover:border-[#FF9900] bg-[#f7f8f8] px-4 py-3 text-left transition-colors">
+                    <span className="w-9 h-9 rounded-lg bg-[#131921] text-[#febd69] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-[#0F1111]">Add a walkthrough video <span className="text-gray-400 font-normal">(optional)</span></span>
+                      <span className="block text-[11px] text-gray-500">A short 360° clip builds buyer trust and sells faster.</span>
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-lg border border-[#FF9900] bg-white px-3 py-2.5">
+                    <video src={videoPreview} className="w-16 h-16 rounded object-cover bg-black flex-shrink-0" muted />
+                    <span className="flex-grow min-w-0">
+                      <span className="block text-sm font-semibold text-[#0F1111] truncate">{videoFile?.name || 'Video attached'}</span>
+                      <span className="block text-[11px] text-[#107a45]">✓ Video added</span>
+                    </span>
+                    <button type="button"
+                      onClick={() => { if (videoPreview) URL.revokeObjectURL(videoPreview); setVideoFile(null); setVideoPreview(''); }}
+                      className="text-xs font-semibold text-gray-500 hover:text-[#b3261e] px-2">Remove</button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-3 mb-4">
                 {!gradeResult && (
                   <button type="button" onClick={runGradingMulti} disabled={!canGrade || grading}
@@ -859,6 +939,39 @@ const SellIt = () => {
               )}
               {gradeError && <p className="mb-4 text-xs text-amber-600">{gradeError}</p>}
               {gradeResult && !grading && <GradePreview result={gradeResult} onDismiss={() => setGradeResult(null)} />}
+            </div>
+          )}
+
+          {/* ── Condition & Safety checklist ── */}
+          {mrp && (
+            <div className="bg-white border border-[#D5D9D9] rounded-lg p-5 fade-up">
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[#D5D9D9]">
+                <span className="w-7 h-7 rounded-full bg-[#131921] text-[#febd69] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                </span>
+                <div>
+                  <h2 className="text-base font-bold">Condition &amp; Safety checklist</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Confirm what applies — shown to buyers on your listing.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Item condition</p>
+                  <div className="space-y-2">
+                    {CONDITION_CHECKS.map((c) => (
+                      <CheckRow key={c.key} label={c.label} checked={!!checks[c.key]} onToggle={() => toggleCheck(c.key)} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Safety check</p>
+                  <div className="space-y-2">
+                    {SAFETY_CHECKS.map((c) => (
+                      <CheckRow key={c.key} label={c.label} checked={!!checks[c.key]} onToggle={() => toggleCheck(c.key)} />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
