@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import api from '../api/client';
+import api from '@amazon-hackon/shared';
 import { useAuth } from '../context/AuthContext';
 
 const GRADE_STYLE = {

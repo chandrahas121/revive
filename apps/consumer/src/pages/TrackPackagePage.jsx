@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Truck, Info, Pencil, ChevronRight } from 'lucide-react';
 import Header from '../components/Header';
-import api from '../api/client';
+import api from '@amazon-hackon/shared';
 import { useAuth } from '../context/AuthContext';
 
 const STEPS = ['Ordered', 'Shipped', 'Out for delivery', 'Delivered'];

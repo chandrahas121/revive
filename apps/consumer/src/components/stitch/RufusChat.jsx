@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { askRufus } from '../../api/client'
+import { askRufus } from '@amazon-hackon/shared'
 
 // "Ask Rufus" — the product-page conversational shopping assistant.
 //
