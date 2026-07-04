@@ -298,9 +298,22 @@ class SellerGradeView(APIView):
                 'slot': slots_list[i] if i < len(slots_list) else f'angle_{i + 1}',
                 'sha256': hashlib.sha256(b).hexdigest(), 'bytes': len(b),
             })
+        # Full inspection video (all angles) — hashed into the same tamper-evident
+        # bundle so the SAFE-T claim carries the seller's continuous evidence clip.
+        video = request.FILES.get('video')
+        if video:
+            vb = video.read(); video.seek(0)
+            assets.append({'slot': 'inspection_video',
+                           'sha256': hashlib.sha256(vb).hexdigest(), 'bytes': len(vb)})
         bundle_hash = hashlib.sha256(''.join(a['sha256'] for a in assets).encode()).hexdigest()
+        # Seller-declared package contents + item label travel with the evidence so
+        # both a relist Health Card and a wrong-item SAFE-T claim can cite them.
+        accessories = request.data.get('accessories', '')
+        barcode = request.data.get('barcode', '')
+        asin = request.data.get('asin', '')
         evidence = {'assets': assets, 'bundle_hash': bundle_hash, 'count': len(assets),
-                    'captured_at': timezone.now().isoformat()}
+                    'captured_at': timezone.now().isoformat(), 'has_video': bool(video),
+                    'accessories': accessories, 'barcode': barcode, 'asin': asin}
 
         # Demo units the presenter physically has: the seller uploads real-world phone
         # photos, which score low against a clean stock reference under DINOv2 even when
@@ -353,6 +366,8 @@ class SellerGradeView(APIView):
         d = request.data
         func_raw = str(d.get('functional', '')).lower()
         functional = True if func_raw == 'pass' else False if func_raw == 'fail' else gr.get('functional')
+        # Reflect the seller's on-camera functional test in the grade card + adapter.
+        gr['functional'] = functional
 
         def _b(k, default=False):
             return str(d.get(k, default)).lower() in ('true', '1', 'yes')

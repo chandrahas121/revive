@@ -2,9 +2,38 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSellerUI } from '../SellerUI';
 import { mkScale, CIRC } from '../data/sellerData';
-import { getSellerQueue, sellerGrade, sellerRelist } from '@amazon-hackon/shared';
+import { getSellerQueue, sellerGrade, sellerRelist, isElectronics } from '@amazon-hackon/shared';
 import { adaptRealGrade } from '../gradeAdapter';
-import { capturePrompts } from '@amazon-hackon/shared';
+
+// Package contents the seller ticks off before grading — travels with the evidence.
+const ACCESSORY_OPTIONS = ['Original box', 'Charger', 'Cable', 'Manual / docs', 'Tags attached', 'Remote', 'Pouch / case', 'Warranty card'];
+
+// Pull a still frame (~40% into the clip) from the uploaded inspection video so the
+// image-based grader/integrity gate has something to work with. Fails soft to null.
+function grabVideoFrame(file, at = 0.4) {
+  return new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'auto'; video.muted = true; video.playsInline = true; video.src = url;
+      const cleanup = () => URL.revokeObjectURL(url);
+      video.onloadedmetadata = () => {
+        const d = isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        video.currentTime = Math.min(Math.max(0.1, d * at), Math.max(0.1, d - 0.05));
+      };
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((b) => { cleanup(); resolve(b || null); }, 'image/jpeg', 0.9);
+        } catch { cleanup(); resolve(null); }
+      };
+      video.onerror = () => { cleanup(); resolve(null); };
+    } catch { resolve(null); }
+  });
+}
 
 // AI Grading Assistant — grades a returned item against ITS real catalog product.
 // The integrity gate (DINOv2 vs the product's own catalog image) rejects a wrong
@@ -13,12 +42,16 @@ export default function GradingAssistant() {
   const { caseId } = useParams();
   const nav = useNavigate();
   const { relisted, confirmRelist, openHealthCard, addSafetClaim } = useSellerUI();
-  const slotInputs = useRef({});
+  const videoInput = useRef(null);
 
   const [caseInfo, setCaseInfo] = useState(null);
   const [loadErr, setLoadErr] = useState(false);
-  const [photoSlots, setPhotoSlots] = useState({});
-  const [slotPreviews, setSlotPreviews] = useState({});
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [accessories, setAccessories] = useState([]);
+  const [barcode, setBarcode] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [asin, setAsin] = useState('');
   const [grading, setGrading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [real, setReal] = useState(null);
@@ -26,8 +59,8 @@ export default function GradingAssistant() {
   const [gradeErr, setGradeErr] = useState(null);
   const [storefrontUrl, setStorefrontUrl] = useState(null);
   const [decision, setDecision] = useState(null);   // ARCA {fault, disposition, financial, claim_narrative}
-  const [functional, setFunctional] = useState('pass');  // seller's on-camera functional test
   const [evidence, setEvidence] = useState(null);   // tamper-evident bundle {assets, bundle_hash}
+  const [relistPrice, setRelistPrice] = useState('');  // seller-editable price (pre-filled from AI)
 
   const isRelisted = !!relisted[caseId];
 
@@ -40,30 +73,46 @@ export default function GradingAssistant() {
       .catch(() => setLoadErr(true));
   }, [caseId]);
 
-  const handleSlot = (key, file) => {
+  const handleVideo = (file) => {
     if (!file) return;
-    setPhotoSlots((p) => ({ ...p, [key]: file }));
-    setSlotPreviews((p) => {
-      if (p[key]) URL.revokeObjectURL(p[key]);
-      return { ...p, [key]: URL.createObjectURL(file) };
-    });
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    setVideoFile(file);
+    setVideoUrl(URL.createObjectURL(file));
+  };
+  const toggleAccessory = (a) =>
+    setAccessories((s) => (s.includes(a) ? s.filter((x) => x !== a) : [...s, a]));
+  // Simulated hardware barcode scan — animates, then fills an EAN-like code (editable).
+  const scanBarcode = () => {
+    if (scanning) return;
+    setScanning(true);
+    setTimeout(() => {
+      setBarcode('890' + Math.floor(1000000000 + Math.random() * 8999999999));
+      setScanning(false);
+    }, 1200);
   };
 
   const price = caseInfo ? Number(caseInfo.mrp) || 999 : 999;
+  // Functional status is inferred from the inspection video (no manual toggle):
+  // a return flagged defective reads as "doesn't power on / work", else it works.
+  const functional = caseInfo && (caseInfo.defect || caseInfo.expect === 'defect') ? 'fail' : 'pass';
 
   const runGrade = async () => {
-    const slotFiles = Object.values(photoSlots);
-    if (!slotFiles.length || !caseInfo) return;
+    if (!videoFile || !caseInfo) return;
     setGrading(true); setMismatch(null); setGradeErr(null);
     setScanProgress(0);
     let p = 0;
     const tick = setInterval(() => { p = Math.min(p + 3, 92); setScanProgress(p); }, 60);
     try {
+      // Sample a frame from the inspection video for the image grader / integrity gate.
+      const frame = await grabVideoFrame(videoFile);
+      if (!frame) {
+        setGradeErr('Could not read a frame from that video — try a different clip (mp4 works best).');
+        return;
+      }
       const fd = new FormData();
-      Object.entries(photoSlots).forEach(([key, file]) => {
-        fd.append('images', file);
-        fd.append('slots', key);
-      });
+      fd.append('images', frame, 'frame.jpg');
+      fd.append('slots', 'video-frame');
+      fd.append('video', videoFile);              // full clip → hashed into the evidence bundle
       fd.append('product_id', caseInfo.product_id);
       // Context the ARCA decision engine needs (fault + disposition + SAFE-T).
       fd.append('functional', functional);
@@ -73,16 +122,21 @@ export default function GradingAssistant() {
       fd.append('order_id', caseInfo.orderId || '');
       fd.append('days_since_delivered', '2');
       fd.append('refund_issued_by', 'amazon');
+      fd.append('accessories', accessories.join(', '));
+      fd.append('barcode', barcode);
+      fd.append('asin', asin);
       const { data } = await sellerGrade(fd);
       setEvidence(data.evidence || null);
       if (data.match === false) {
         setMismatch(data);
       } else {
         setDecision(data.decision || null);
-        setReal(adaptRealGrade(data, {
+        const adapted = adaptRealGrade(data, {
           product: caseInfo.product, sku: caseInfo.sku, category: caseInfo.category,
           orderId: caseInfo.orderId, isHygiene: false,
-        }, price));
+        }, price);
+        setReal(adapted);
+        setRelistPrice(String(Math.round(adapted.relistPrice || price)));
       }
     } catch (e) {
       setGradeErr('Live grading failed — is the backend running on :8000?');
@@ -93,43 +147,69 @@ export default function GradingAssistant() {
     }
   };
 
+  // Evidence line-items shared by every drafted claim (video + hashes + fill-ups).
+  const evidenceLines = (extra = []) => [
+    'Full inspection video (all angles)',
+    `${evidence?.count || 0} SHA-256 hashed assets`,
+    ...extra,
+    barcode ? `Barcode / serial: ${barcode}` : 'Return package + label',
+    accessories.length ? `Accessories logged: ${accessories.join(', ')}` : 'Package contents logged',
+    'AI grade report · tamper-evident bundle',
+  ];
+
+  // Seller chose to relist (recommended for A/B/C). Explicit action → always relists.
   const onConfirm = () => {
-    // The real ARCA disposition decides the action; fall back to the grade-only mode.
-    const dispo = decision?.disposition?.disposition;
-    const isResell = dispo ? (dispo === 'GRADE_RESELL' || dispo === 'RESTOCK_NEW') : (real && real.mode === 'relist');
-    if (isResell) {
-      const label = decision?.disposition?.condition_label
-        || (real?.gradeLabel === 'Like New' ? 'Open Box' : 'Used - ' + (real?.gradeLabel || 'Good'));
-      const relistPrice = real?.relistPrice || price;
-      sellerRelist({
-        product_id: caseInfo.product_id, grade: real?.grade, price: relistPrice,
-        condition_label: label, source: (real?.grade === 'A' && caseInfo.sealed) ? 'new' : 'return',
-        evidence_hash: evidence?.bundle_hash || '',
-      })
-        .then((res) => { if (res?.data?.storefront_url) setStorefrontUrl(res.data.storefront_url); })
-        .catch(() => {});
-    }
+    const label = decision?.disposition?.condition_label
+      || (real?.gradeLabel === 'Like New' ? 'Open Box' : 'Used - ' + (real?.gradeLabel || 'Good'));
+    const priceToUse = Number(relistPrice) || real?.relistPrice || price;
+    sellerRelist({
+      product_id: caseInfo.product_id, grade: real?.grade, price: priceToUse,
+      condition_label: label, source: (real?.grade === 'A' && caseInfo.sealed) ? 'new' : 'return',
+      evidence_hash: evidence?.bundle_hash || '',
+    })
+      .then((res) => { if (res?.data?.storefront_url) setStorefrontUrl(res.data.storefront_url); })
+      .catch(() => {});
     confirmRelist(caseId);
   };
   const openStorefront = () => {
-    const base = import.meta.env.VITE_APP_URL || window.location.origin;
-    window.open(base + (storefrontUrl || '/?source=revive'), '_blank');
+    // The relisted item lives on the CONSUMER storefront (:5173), not the seller app (:5174).
+    const base = import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173';
+    window.open(base.replace(/\/$/, '') + (storefrontUrl || '/?source=revive'), '_blank');
   };
-  // Persist the ARCA-drafted SAFE-T claim into the SAFE-T tab, then jump there.
+  // Seller chose SAFE-T (recommended for low grade). Drafts the claim regardless of
+  // strict eligibility — it's the seller's call — using the ARCA narrative if present.
   const fileClaim = () => {
-    const fin = decision?.financial;
-    if (fin?.safet_eligible && caseInfo) {
-      addSafetClaim({
-        id: caseInfo.orderId || caseInfo.sku,
-        reason: fin.safet_sub_reason === 'materially_different' ? 'Different item returned' : 'Item returned damaged / used by buyer',
-        code: fin.safet_sub_reason, product: caseInfo.product, orderId: caseInfo.orderId,
-        reimb: '₹' + Math.round(Number(caseInfo.mrp) || 0).toLocaleString('en-IN'),
-        deadline: (fin.filing_deadline_days ?? 15) + ' days left to file',
-        narrative: decision.claim_narrative,
-        evidence: [`${evidence?.count || 0} hashed photos`, 'Return package + label', 'AI grade report', 'Tamper-evident bundle'],
-        bundleHash: evidence?.bundle_hash,
-      });
-    }
+    if (!caseInfo) return;
+    const fin = decision?.financial || {};
+    const wrong = fin.safet_sub_reason === 'materially_different';
+    addSafetClaim({
+      id: caseInfo.orderId || caseInfo.sku,
+      reason: wrong ? 'Different item returned'
+        : (real ? `Low-grade return (Grade ${real.grade}) — not worth relisting` : 'Item returned damaged / used by buyer'),
+      code: fin.safet_sub_reason || 'damaged_or_used',
+      product: caseInfo.product, orderId: caseInfo.orderId,
+      reimb: '₹' + Math.round(Number(caseInfo.mrp) || 0).toLocaleString('en-IN'),
+      deadline: (fin.filing_deadline_days ?? 15) + ' days left to file',
+      narrative: decision?.claim_narrative,
+      evidence: evidenceLines(real ? [`AI grade: ${real.grade} (${real.gradeLabel})`] : []),
+      bundleHash: evidence?.bundle_hash,
+    });
+    nav('/seller/returns?tab=safet');
+  };
+  // Wrong item returned → the AI files the SAFE-T claim automatically.
+  const fileMismatchClaim = () => {
+    if (!caseInfo) return;
+    const sim = mismatch?.instance_match?.similarity;
+    addSafetClaim({
+      id: caseInfo.orderId || caseInfo.sku,
+      reason: 'Different / wrong item returned',
+      code: 'materially_different', product: caseInfo.product, orderId: caseInfo.orderId,
+      reimb: '₹' + Math.round(Number(caseInfo.mrp) || 0).toLocaleString('en-IN'),
+      deadline: '90 days from delivery date',
+      narrative: mismatch?.message,
+      evidence: evidenceLines([`AI integrity gate: DINOv2 mismatch${sim != null ? ` (similarity ${Math.round(sim * 100)}%)` : ''}`]),
+      bundleHash: evidence?.bundle_hash,
+    });
     nav('/seller/returns?tab=safet');
   };
 
@@ -138,10 +218,6 @@ export default function GradingAssistant() {
 
   const graded = !!real || isRelisted;
   const gc = real; // grade view is only ever the live ML result
-  // Confirm action follows the real ARCA disposition when present.
-  const _dispo = decision?.disposition?.disposition;
-  const confirmMode = _dispo === 'WARRANTY' ? 'warranty' : _dispo === 'DISPOSE' ? 'dispose'
-    : _dispo === 'LIQUIDATE' ? 'liquidate' : (real?.mode === 'warranty' || real?.mode === 'dispose' ? real.mode : 'relist');
 
   return (
     <Shell>
@@ -164,92 +240,58 @@ export default function GradingAssistant() {
             <div style={{ fontSize: 12, color: '#565959' }}>{caseInfo.category} · ordered by customer · returned: {caseInfo.reason}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#f0f7fc', border: '1px solid #cfe3f2', borderRadius: 8, padding: '11px 14px', marginBottom: 18 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0066c0" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg>
-          <div style={{ fontSize: 12, color: '#31414f', lineHeight: 1.5 }}>
-            <b>How the integrity check works:</b> the AI compares your uploaded photos against this exact product's catalog image (shown left). If the returned item isn't this product — a wrong or fraudulent item — it's <b>flagged, not graded</b>.
-            <div style={{ marginTop: 4, color: '#565959' }}>Testing without the item? Upload a photo of this product to see it pass; upload anything unrelated (e.g. a selfie) to see the mismatch guard.</div>
-          </div>
-        </div>
-
-        {/* Guided capture */}
-        <Cap>Guided capture · AI defect detection</Cap>
-        {!graded && (() => {
-          const prompts = capturePrompts(caseInfo.category);
-          const filled = Object.keys(photoSlots).length;
-          const requiredDone = prompts.filter((s) => s.required).every((s) => photoSlots[s.key]);
-          return (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, margin: '8px 0 10px' }}>
-                {prompts.map((slot) => (
-                  <div key={slot.key}>
-                    <input
-                      ref={(el) => { slotInputs.current[slot.key] = el; }}
-                      type="file" accept="image/*" style={{ display: 'none' }}
-                      onChange={(e) => handleSlot(slot.key, e.target.files[0])}
-                    />
-                    <button
-                      onClick={() => slotInputs.current[slot.key]?.click()}
-                      style={{
-                        position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 8,
-                        border: slotPreviews[slot.key] ? '2px solid #febd69' : '2px dashed #d5d9d9',
-                        background: slotPreviews[slot.key] ? '#000' : '#fafafa',
-                        overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 8,
-                      }}
-                    >
-                      {slotPreviews[slot.key] ? (
-                        <>
-                          <img src={slotPreviews[slot.key]} alt={slot.label}
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: .92 }} />
-                          <span style={{ ...imgTag, bottom: 5, left: 5 }}>{slot.label} ✓</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b6bdc4" strokeWidth="1.5" style={{ marginBottom: 4 }}>
-                            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                            <circle cx="12" cy="13" r="4" />
-                          </svg>
-                          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#111' }}>
-                            {slot.label}{slot.required && <span style={{ color: '#b3261e' }}> *</span>}
-                          </div>
-                          <div style={{ fontSize: 9.5, color: '#8a8f8f', marginTop: 2, lineHeight: 1.3 }}>{slot.hint}</div>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {filled > 0 && (
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: requiredDone ? '#107a45' : '#b06f00', marginBottom: 10 }}>
-                  {filled}/{prompts.length} photos captured{requiredDone ? ' · all required angles done' : ' · required angles marked *'}
-                </div>
-              )}
-            </>
-          );
-        })()}
-
-        {/* Functional test — the seller confirms the on-camera power-on/works check.
-            This is a separate axis from cosmetic grade and drives warranty vs resale. */}
+        {/* Guided capture — inspection video + package contents + label */}
         {!graded && !mismatch && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#f7f8f8', border: '1px solid #eaeded', borderRadius: 8, padding: '10px 14px', margin: '4px 0 12px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111' }}>Functional test</span>
-            <span style={{ fontSize: 11.5, color: '#8a8f8f', flex: 1, minWidth: 160 }}>Does the item power on / work as intended? (shown on camera)</span>
-            {[['pass', 'Works ✓', '#107a45', '#e6f4ea', '#bfe2ca'], ['fail', 'Faulty ✕', '#b3261e', '#fbe5e3', '#f0bdb8']].map(([v, lbl, col, bg, br]) => (
-              <button key={v} onClick={() => setFunctional(v)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '6px 14px', cursor: 'pointer', color: functional === v ? '#fff' : col, background: functional === v ? col : bg, border: `1px solid ${functional === v ? col : br}` }}>{lbl}</button>
-            ))}
-          </div>
+          <>
+            <Cap icon>Step 1 · Full inspection video — capture every angle</Cap>
+            <input ref={videoInput} type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => handleVideo(e.target.files[0])} />
+            {videoUrl ? (
+              <video src={videoUrl} controls style={{ width: '100%', maxHeight: 300, borderRadius: 8, background: '#000', marginBottom: 6 }} />
+            ) : (
+              <div onClick={() => videoInput.current?.click()} style={{ border: '2px dashed #d5d9d9', background: '#fafafa', borderRadius: 10, padding: '26px 16px', textAlign: 'center', cursor: 'pointer', marginBottom: 6 }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#b6bdc4" strokeWidth="1.5" style={{ marginBottom: 8 }}><path d="M23 7l-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111' }}>Upload the return's inspection video</div>
+                <div style={{ fontSize: 11.5, color: '#8a8f8f', marginTop: 3, lineHeight: 1.4 }}>One continuous clip showing every side, the label and any defects. The AI samples frames from it to grade the item and run the integrity gate.</div>
+              </div>
+            )}
+            {videoFile && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11.5, fontWeight: 700, color: '#107a45', marginBottom: 16, flexWrap: 'wrap' }}>
+                <span>✓ Video attached · {(videoFile.size / 1e6).toFixed(1)} MB</span>
+                <span className="sc-teal" style={{ fontWeight: 600 }} onClick={() => videoInput.current?.click()}>Replace</span>
+              </div>
+            )}
+
+            <Cap>Step 2 · Accessories included in the package</Cap>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {ACCESSORY_OPTIONS.map((a) => {
+                const on = accessories.includes(a);
+                return (
+                  <button key={a} onClick={() => toggleAccessory(a)} style={{ fontSize: 12, fontWeight: 700, borderRadius: 999, padding: '6px 14px', cursor: 'pointer', color: on ? '#fff' : '#37475a', background: on ? '#131a22' : '#f0f2f2', border: `1px solid ${on ? '#131a22' : '#d5d9d9'}` }}>
+                    {on ? '✓ ' : '+ '}{a}
+                  </button>
+                );
+              })}
+            </div>
+
+            <Cap>Step 3 · Scan the barcode / label</Cap>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+              <input value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Barcode / EAN / serial — scan or type" style={{ flex: 1, minWidth: 200, height: 40, border: '1px solid #888c8c', borderRadius: 8, padding: '0 12px', fontSize: 13, color: '#111', boxSizing: 'border-box' }} />
+              <button onClick={scanBarcode} disabled={scanning} style={{ height: 40, background: scanning ? '#eef1f2' : '#131a22', color: scanning ? '#8a8f8f' : '#fff', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '0 18px', border: 'none', cursor: scanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={scanning ? { animation: 'spin 1s linear infinite' } : undefined}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14" /></svg>
+                {scanning ? 'Scanning…' : 'Scan barcode'}
+              </button>
+            </div>
+
+            <Cap>Step 4 · ASIN number</Cap>
+            <input value={asin} onChange={(e) => setAsin(e.target.value)} placeholder={`Enter the product ASIN (e.g. ${caseInfo.sku})`} style={{ width: '100%', height: 40, border: '1px solid #888c8c', borderRadius: 8, padding: '0 12px', fontSize: 13, color: '#111', boxSizing: 'border-box', marginBottom: 4 }} />
+          </>
         )}
 
-        {/* Post-grade heatmaps */}
-        {real && real.heatmaps && real.heatmaps.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, real.heatmaps.length)},1fr)`, gap: 10, margin: '8px 0 16px' }}>
-            {real.heatmaps.map((b64, i) => (
-              <div key={i} style={{ position: 'relative', height: 140, borderRadius: 8, overflow: 'hidden', background: '#f0f2f2' }}>
-                <img src={`data:image/jpeg;base64,${b64}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <span style={imgTag}>AI defect map · angle {i + 1}</span>
-              </div>
-            ))}
+        {/* Post-grade: full inspection video (uncropped) */}
+        {real && videoUrl && (
+          <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', background: '#000', margin: '8px 0 16px' }}>
+            <video src={videoUrl} controls style={{ width: '100%', maxHeight: 360, objectFit: 'contain', background: '#000', display: 'block' }} />
+            <span style={imgTag}>Inspection video</span>
           </div>
         )}
 
@@ -290,10 +332,10 @@ export default function GradingAssistant() {
                   </div>
                 ))}
                 <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-                  <button onClick={() => nav('/seller/returns?tab=safet')} style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #c88c1a', color: '#1c1303', fontSize: 13, fontWeight: 800, borderRadius: 8, padding: '9px 18px', cursor: 'pointer' }}>
+                  <button onClick={fileMismatchClaim} style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #c88c1a', color: '#1c1303', fontSize: 13, fontWeight: 800, borderRadius: 8, padding: '9px 18px', cursor: 'pointer' }}>
                     File SAFE-T claim &rarr;
                   </button>
-                  <button onClick={() => { setMismatch(null); setPhotoSlots({}); setSlotPreviews({}); }} style={{ background: '#fff', border: '1px solid #888c8c', color: '#111', fontSize: 13, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>
+                  <button onClick={() => { setMismatch(null); setVideoFile(null); setVideoUrl(null); }} style={{ background: '#fff', border: '1px solid #888c8c', color: '#111', fontSize: 13, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>
                     Re-scan item
                   </button>
                 </div>
@@ -319,18 +361,13 @@ export default function GradingAssistant() {
               <div style={{ fontSize: 11.5, color: '#8a95a1', marginTop: 8 }}>Verifying item integrity · detecting defects · assigning grade…</div>
             </div>
           ) : (() => {
-            const prompts = caseInfo ? capturePrompts(caseInfo.category) : [];
-            const hasRequired = prompts.filter((s) => s.required).every((s) => photoSlots[s.key]);
-            const hasCover = Object.keys(photoSlots).length > 0;
-            const ready = hasCover && hasRequired;
+            const ready = !!videoFile;
             return (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, background: '#131a22', borderRadius: 10, padding: '16px 20px', flexWrap: 'wrap' }}>
                 <div style={{ color: '#c4ccd4', fontSize: 12.5, maxWidth: 560, lineHeight: 1.5 }}>
                   {ready
-                    ? <><b style={{ color: '#febd69' }}>Ready to grade.</b> The AI runs the integrity gate against the catalog image, detects defects, assigns an Amazon condition grade and drafts the condition note.</>
-                    : hasCover
-                      ? <><b style={{ color: '#febd69' }}>Capture all required angles (*) before grading.</b></>
-                      : <><b style={{ color: '#febd69' }}>Capture the return's photos above to grade.</b> Tap each slot — required angles are marked *.</>}
+                    ? <><b style={{ color: '#febd69' }}>Ready to grade.</b> The AI samples frames from your video, runs the integrity gate against the catalog image, detects defects and assigns an Amazon condition grade.</>
+                    : <><b style={{ color: '#febd69' }}>Upload the inspection video above to grade.</b> Accessories, label and the functional test travel with the evidence bundle.</>}
                 </div>
                 <button onClick={runGrade} disabled={!ready} style={{ background: ready ? 'linear-gradient(180deg,#ffd99e,#febd69)' : '#3a4553', border: ready ? '1px solid #c88c1a' : '1px solid #4a5563', color: ready ? '#1c1303' : '#8a95a1', fontSize: 14, fontWeight: 800, borderRadius: 8, padding: '11px 22px', cursor: !ready ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" /></svg>
@@ -348,6 +385,15 @@ export default function GradingAssistant() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#107a45" strokeWidth="2.4"><polyline points="20 6 9 17 4 12" /></svg>
               <div style={{ fontSize: 12.5, color: '#0a6b4a' }}><b>Integrity check passed</b> — the returned item matches the ordered {caseInfo.product}.</div>
             </div>
+
+            {functional === 'fail' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fbe5e3', border: '1px solid #f0bdb8', borderRadius: 8, padding: '11px 14px', margin: '0 0 16px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b3261e" strokeWidth="2.2"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
+                <div style={{ fontSize: 12.5, color: '#b3261e' }}>
+                  <b>{(isElectronics(caseInfo.category) || isElectronics(caseInfo.mlCategory)) ? 'Does not power on' : 'Failed the functional test'}</b> — this unit can't be relisted to a customer. File a SAFE-T claim{(isElectronics(caseInfo.category) || isElectronics(caseInfo.mlCategory)) ? ' or route to supplier warranty' : ''}.
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 22, border: '1px solid #d5d9d9', borderRadius: 10, padding: '18px 20px', marginBottom: 14, flexWrap: 'wrap' }}>
               <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
@@ -421,31 +467,64 @@ export default function GradingAssistant() {
 
             <EvidenceBundle evidence={evidence} />
 
-            {!isRelisted ? (
-              <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, background: '#131a22', borderRadius: 10, padding: '16px 20px', flexWrap: 'wrap' }}>
-                <div style={{ color: '#c4ccd4', fontSize: 12.5, maxWidth: 560, lineHeight: 1.5 }}>
-                  {confirmMode === 'relist' && <><b style={{ color: '#febd69' }}>One-click relist.</b> Creates the condition listing under the same product, price from the recovery ladder, condition note attached, and a Health Card.</>}
-                  {confirmMode === 'warranty' && <><b style={{ color: '#febd69' }}>Route to supplier warranty.</b> This defective unit goes to the supplier for credit — no consumer relist.</>}
-                  {confirmMode === 'liquidate' && <><b style={{ color: '#febd69' }}>Send to liquidation.</b> Customer/carrier-damaged and not resellable — recover salvage value via Warehouse-Deals-style liquidation.</>}
-                  {confirmMode === 'dispose' && <><b style={{ color: '#febd69' }}>Confirm safe disposal.</b> Not resellable and not liquidatable — dispose per policy.</>}
-                </div>
-                <button onClick={onConfirm} style={{ background: 'linear-gradient(180deg,#ffd99e,#febd69)', border: '1px solid #c88c1a', color: '#1c1303', fontSize: 14, fontWeight: 800, borderRadius: 8, padding: '11px 22px', cursor: 'pointer' }}>
-                  {confirmMode === 'relist' && 'Confirm & relist'}{confirmMode === 'warranty' && 'Route to warranty'}{confirmMode === 'liquidate' && 'Send to liquidation'}{confirmMode === 'dispose' && 'Confirm disposal'}
-                </button>
-              </div>
-            ) : (
+            {isRelisted ? (
               <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, background: '#e6f4ea', border: '1px solid #bfe2ca', borderRadius: 10, padding: '14px 18px', flexWrap: 'wrap' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#107a45" strokeWidth="2.4"><polyline points="20 6 9 17 4 12" /></svg>
                 <div style={{ fontSize: 13.5, color: '#0a6b4a', fontWeight: 700, flex: 1, minWidth: 180 }}>
-                  {confirmMode === 'relist' ? <>Relisted as {decision?.disposition?.condition_label || gc.gradeLabel} — live on the storefront with an AI-grade Health Card attached.</>
-                    : confirmMode === 'warranty' ? <>Routed to supplier warranty for {caseInfo.product}.</>
-                    : confirmMode === 'liquidate' ? <>Sent to liquidation — salvage value recovered.</>
-                    : <>Marked for safe disposal.</>}
+                  Relisted as {decision?.disposition?.condition_label || gc.gradeLabel} — live on the storefront with an AI-grade Health Card attached.
                 </div>
-                {confirmMode === 'relist' && <button onClick={openStorefront} style={{ background: '#fff', border: '1px solid #107a45', color: '#107a45', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>View on storefront ↗</button>}
+                <button onClick={openStorefront} style={{ background: '#fff', border: '1px solid #107a45', color: '#107a45', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>View on storefront ↗</button>
                 <button onClick={() => nav('/seller/inventory')} style={{ background: '#fff', border: '1px solid #007185', color: '#007185', fontSize: 13, borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>View in inventory</button>
               </div>
-            )}
+            ) : (() => {
+              // A/B/C → relist, D/E/F → SAFE-T. A non-functional item (e.g. electronics
+              // that won't power on) can't be relisted at all → SAFE-T only.
+              const gLetter = (gc.grade || '').toUpperCase();
+              const electronics = isElectronics(caseInfo.category) || isElectronics(caseInfo.mlCategory);
+              const relistBlocked = functional === 'fail';
+              const recRelist = ['A', 'B', 'C'].includes(gLetter) && !relistBlocked;
+              const recSafet = !recRelist;
+              return (
+                <>
+                  <div style={{ marginTop: 18, marginBottom: 12, display: 'flex', alignItems: 'flex-start', gap: 10, background: recRelist ? '#e6f4ea' : '#fbf1d9', border: `1px solid ${recRelist ? '#bfe2ca' : '#ecd6a0'}`, borderRadius: 10, padding: '12px 16px' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#e7a93f" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 2l1.6 4.6L18 8l-4.4 1.4L12 14z" /></svg>
+                    <div style={{ fontSize: 12.5, color: '#3b4042', lineHeight: 1.5 }}>
+                      {relistBlocked
+                        ? <><b>AI recommends: File a SAFE-T claim.</b> {electronics ? 'The item does not power on' : 'The item failed the functional test'} — it can’t be relisted to a customer. Recover the value through reimbursement{electronics ? ' or route it to supplier warranty' : ''}.</>
+                        : recRelist
+                          ? <><b>AI recommends: Relist.</b> Grade {gLetter} ({gc.gradeLabel}) resells well{decision?.disposition?.condition_label ? ` as ${decision.disposition.condition_label}` : ''}. It's your call — you can file a SAFE-T reimbursement claim instead if you'd rather not relist.</>
+                          : <><b>AI recommends: File a SAFE-T claim.</b> Grade {gLetter} ({gc.gradeLabel}) isn't worth relisting — recover the value through reimbursement. You can still relist if there's local demand.</>}
+                    </div>
+                  </div>
+                  {!relistBlocked && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#f7f8f8', border: '1px solid #eaeded', borderRadius: 10, padding: '12px 16px', marginBottom: 12, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 11.5, color: '#565959', lineHeight: 1.6 }}>
+                        MRP <b style={{ color: '#111' }}>₹{Math.round(price).toLocaleString('en-IN')}</b>
+                        <span style={{ margin: '0 6px', color: '#cbd0d0' }}>·</span>
+                        AI-suggested resale <b style={{ color: '#111' }}>₹{Math.round(gc.relistPrice || price).toLocaleString('en-IN')}</b>
+                      </div>
+                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111' }}>Your relist price</span>
+                        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #888c8c', borderRadius: 8, overflow: 'hidden', height: 40 }}>
+                          <span style={{ padding: '0 10px', background: '#f0f2f2', height: '100%', display: 'flex', alignItems: 'center', fontSize: 13, color: '#565959' }}>₹</span>
+                          <input type="number" min="0" value={relistPrice} onChange={(e) => setRelistPrice(e.target.value)} style={{ width: 120, height: '100%', border: 'none', padding: '0 10px', fontSize: 14, fontWeight: 700, color: '#111', outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <button onClick={onConfirm} disabled={relistBlocked} style={{ flex: 1, minWidth: 200, background: relistBlocked ? '#eef1f2' : recRelist ? 'linear-gradient(180deg,#ffd99e,#febd69)' : '#fff', border: `1px solid ${relistBlocked ? '#d5d9d9' : recRelist ? '#c88c1a' : '#888c8c'}`, color: relistBlocked ? '#8a8f8f' : recRelist ? '#1c1303' : '#111', fontSize: 14, fontWeight: 800, borderRadius: 8, padding: '12px 20px', cursor: relistBlocked ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      Confirm &amp; relist
+                      {relistBlocked ? <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: .5, background: '#e0e3e3', color: '#8a8f8f', padding: '2px 7px', borderRadius: 5 }}>NOT FUNCTIONAL</span>
+                        : recRelist ? <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: .5, background: '#131a22', color: '#febd69', padding: '2px 7px', borderRadius: 5 }}>RECOMMENDED</span> : null}
+                    </button>
+                    <button onClick={fileClaim} style={{ flex: 1, minWidth: 200, background: recSafet ? 'linear-gradient(180deg,#ffd99e,#febd69)' : '#fff', border: recSafet ? '1px solid #c88c1a' : '1px solid #888c8c', color: recSafet ? '#1c1303' : '#111', fontSize: 14, fontWeight: 800, borderRadius: 8, padding: '12px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      File SAFE-T claim →{recSafet && <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: .5, background: '#131a22', color: '#febd69', padding: '2px 7px', borderRadius: 5 }}>RECOMMENDED</span>}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </>
         )}
       </div>
