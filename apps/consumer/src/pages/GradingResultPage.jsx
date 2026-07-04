@@ -322,8 +322,7 @@ const GradingResultPage = () => {
                 <circle cx="12" cy="12" r="10" strokeOpacity="0.25" /><path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
               </svg>
             </div>
-            <p className="font-bold text-[#0F1111] text-lg mb-1">AI inspecting {framesSampled} view{framesSampled !== 1 ? 's' : ''}…</p>
-            <p className="text-sm text-gray-500 mb-5">Verifying the item · Grounding DINO + CLIP + Vision LLM</p>
+            <p className="font-bold text-[#0F1111] text-lg mb-1 mb-5">AI inspecting {framesSampled} view{framesSampled !== 1 ? 's' : ''}…</p>
             <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden mb-2">
               <div className="h-full bg-[#FF9900] rounded-full transition-all duration-100" style={{ width: `${scanProgress}%` }} />
             </div>

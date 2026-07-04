@@ -70,25 +70,31 @@ def _image_url_to_bytes(url: str) -> bytes | None:
     return None
 
 
-def _reference_bytes_for(product_id: str, category: str) -> bytes | None:
+def _reference_bytes_for(product_id: str, category: str, expected_title: str = "") -> bytes | None:
     """Image of the SPECIFIC product being returned — what the instance-match gate
-    compares the uploaded photo against. Uses the product's own catalog image so a
-    genuine return of that exact product matches; only falls back to a generic
-    category reference when the product image can't be resolved."""
-    key = str(product_id)
+    compares the uploaded photo against. Resolves the product by listing/product id
+    first, then by its title (the frontend always sends expected_title, but may send
+    product_id='return'); only falls back to a generic category reference when the
+    product image genuinely can't be found."""
+    key = f"{product_id}|{expected_title}"
     if key in _REF_CACHE:
         return _REF_CACHE[key]
     data = None
     try:
         from core.models import Listing, Product
         prod = None
-        if key.isdigit():
-            lst = Listing.objects.select_related('product').filter(pk=int(key)).first()
-            prod = lst.product if lst else Product.objects.filter(pk=int(key)).first()
+        pid = str(product_id)
+        if pid.isdigit():
+            lst = Listing.objects.select_related('product').filter(pk=int(pid)).first()
+            prod = lst.product if lst else Product.objects.filter(pk=int(pid)).first()
+        # Fallback: identify the product by the title the customer is returning.
+        if prod is None and expected_title.strip():
+            prod = (Product.objects.filter(title__iexact=expected_title.strip()).first()
+                    or Product.objects.filter(title__icontains=expected_title.strip()[:40]).first())
         if prod:
             data = _image_url_to_bytes(prod.reference_image_url or '')
     except Exception as e:
-        logger.warning("reference product lookup failed for %s: %s", key, e)
+        logger.warning("reference product lookup failed for %s: %s", product_id, e)
     if not data:
         try:
             from ml.catalog import get_reference_bytes
@@ -317,7 +323,7 @@ def run_return_inspect(*, images: list[bytes], slots: list[str], category: str,
         raise ValueError("run_return_inspect requires at least one image or a video")
 
     if not skip_match:
-        ref_bytes = _reference_bytes_for(product_id, category)
+        ref_bytes = _reference_bytes_for(product_id, category, expected_title)
         gate = _fraud_gates(images, category, expected_title, ref_bytes=ref_bytes)
         if gate is not None:
             return gate
