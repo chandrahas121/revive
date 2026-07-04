@@ -1,14 +1,13 @@
 """
 green/credits.py
 ----------------
-Live Green-Credits earn/cancel helpers (Pillar 5, final_idea §5).
+Live Green-Credits earn/cancel helpers (Pillar 5).
 
-Credits are BUYER-ONLY and earned for KEEPING an order: a PENDING earn is created
-at purchase, vesting when the return window closes. Initiating a return CANCELS the
-pending earn. Spending is handled by CreditsRedeemView. Sellers never earn.
-
-The award amount mirrors the frontend estimator (utils/tier.js → estimateGreenCredits)
-so the "+N credits" the buyer is promised at checkout is exactly what's granted.
+Credits reward genuinely sustainable behaviour, scaled by the customer's GREEN
+PROFILE (green/profile.py) rather than a hard-coded per-category rule. Keeping an
+order creates a PENDING earn at purchase that vests when the return window closes;
+the amount is a value band × the profile's earn multiplier, so a more sustainable
+customer earns more. Initiating a return cancels the pending earn.
 """
 from __future__ import annotations
 import logging
@@ -17,48 +16,34 @@ from .models import CreditTransaction
 
 logger = logging.getLogger(__name__)
 
-# category → return-rate multiplier (mirrors utils/tier.js + green.views.CATEGORY_MULTIPLIER),
-# extended so the demo's real categories (Phone/Laptop/Monitor/Apparel) resolve correctly.
-_MULT = {
-    'footwear': 2.0, 'shoes': 2.0, 'clothing': 2.0, 'apparel': 2.0, 'fashion': 2.0,
-    'electronics': 0.8, 'phone': 0.8, 'laptop': 0.8, 'monitor': 0.8, 'tablet': 0.8,
-    'camera': 0.8, 'beauty': 0.8, 'jewelry': 0.8,
-    'books': 0.5, 'toys': 0.5, 'stationery': 0.5,
-    'home & kitchen': 1.0, 'sports': 1.0, 'other': 1.0,
-}
 
-
-def _multiplier(category: str) -> float:
-    return _MULT.get((category or '').strip().lower(), 1.0)
-
-
-def credit_amount(category: str, value) -> int:
-    """Value band × category multiplier; flat 5 below ₹500 (matches the frontend)."""
+def credit_amount(value, profile_mult: float = 1.0) -> int:
+    """Value band × the customer's Green-Profile earn multiplier."""
     try:
         v = float(value or 0)
     except (TypeError, ValueError):
         v = 0.0
-    if v < 500:
-        return 5
-    band = 10 if v < 2000 else (20 if v <= 10000 else 30)
-    return int(round(band * _multiplier(category)))
+    base = 5 if v < 500 else (10 if v < 2000 else (20 if v <= 10000 else 30))
+    return int(round(base * (profile_mult or 1.0)))
 
 
 def award_keep_credits(order):
     """Create a PENDING earn for keeping `order`; vests at its return-window close.
-    Idempotent (one award per order). Returns the txn or None."""
+    Amount scales with the buyer's Green Profile. Idempotent (one award per order)."""
     if not order or not getattr(order, 'listing', None) or not order.listing.product:
         return None
     if CreditTransaction.objects.filter(order=order, kind='earn').exists():
         return None
-    category = order.listing.product.category
-    amount = credit_amount(category, order.listing.price)
+    from .profile import green_profile
+    mult = green_profile(order.user).get('multiplier', 1.0)
+    amount = credit_amount(order.listing.price, mult)
     if amount <= 0:
         return None
     return CreditTransaction.objects.create(
         user=order.user, kind='earn', status='pending', amount=amount,
-        reason='Keep your order — vests when the return window closes',
-        category=category, order=order, vests_at=order.return_window_closes,
+        reason='Kept your order — a greener choice than returning it',
+        category=order.listing.product.category, order=order,
+        vests_at=order.return_window_closes,
     )
 
 

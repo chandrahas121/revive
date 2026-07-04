@@ -40,6 +40,7 @@ def _wallet(user) -> dict:
         'vests_at': t.vests_at.isoformat() if t.vests_at else None,
     } for t in txns[:40]]
 
+    from .profile import green_profile
     return {
         'balance': balance,
         'pending': pending,
@@ -48,7 +49,7 @@ def _wallet(user) -> dict:
         'redeem_cap_fraction': REDEEM_CAP_FRACTION,
         'credit_value_rupees': CREDIT_VALUE_RUPEES,
         'history': history,
-        'multipliers': CATEGORY_MULTIPLIER,
+        'profile': green_profile(user),
     }
 
 

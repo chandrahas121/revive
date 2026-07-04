@@ -5,11 +5,11 @@ import Header from '../components/Header';
 import { getCredits, donateCredits, vestCredits } from '@amazon-hackon/shared';
 import { useAuth } from '../context/AuthContext';
 
-const MULTIPLIER_ROWS = [
-  { cat: 'Fashion / Footwear', mult: '2.0×', note: 'high return rate (30–35%)' },
-  { cat: 'Home & Kitchen',     mult: '1.0×', note: 'baseline (10–15%)' },
-  { cat: 'Electronics',        mult: '0.8×', note: 'low return rate (8–12%)' },
-  { cat: 'Books / Toys',       mult: '0.5×', note: 'very low return rate (3–5%)' },
+// Behaviour-based ways to earn (no kirana / no per-category return-rate table).
+const EARN_WAYS = [
+  { icon: '📦', title: 'Keep what you order', sub: "Don't return it — credits vest when the return window closes." },
+  { icon: '♻️', title: 'Buy renewed or second-life', sub: 'Choose a pre-owned Revive item over buying new.' },
+  { icon: '🏷️', title: 'Resell an unused item', sub: 'List it on Revive instead of letting it sit idle.' },
 ];
 
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
@@ -24,7 +24,6 @@ const CreditsWalletPage = () => {
   const { user, loading: authLoading } = useAuth();
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showRates, setShowRates] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (!authLoading && !user) navigate('/login'); }, [user, authLoading, navigate]);
@@ -51,45 +50,92 @@ const CreditsWalletPage = () => {
     return (<div className="min-h-screen bg-white"><Header /><div className="max-w-3xl mx-auto p-8 text-center text-gray-500 text-sm">Loading your wallet…</div></div>);
   }
 
-  const w = wallet || { balance: 0, pending: 0, value_rupees: 0, history: [] };
-  const earnHistory = (w.history || []).filter((t) => t.kind === 'earn' && t.status === 'vested');
+  const w = wallet || { balance: 0, pending: 0, value_rupees: 0, history: [], profile: null };
+  const profile = w.profile;
   const pendingHistory = (w.history || []).filter((t) => t.kind === 'earn' && t.status === 'pending');
-  const spendHistory = (w.history || []).filter((t) => t.kind === 'spend' || t.kind === 'donate');
+  const activity = (w.history || []).filter((t) => !(t.kind === 'earn' && t.status === 'pending'));
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#f6f7f8]">
       <Header />
       <main className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-4">
 
-        <button onClick={() => navigate('/')} className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm mb-2 inline-flex items-center gap-2 transition-colors">
+        <button onClick={() => navigate('/')} className="bg-white border border-[#D5D9D9] hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-bold text-[#0F1111] shadow-sm inline-flex items-center gap-2 transition-colors">
           <ChevronLeft className="w-4 h-4 text-gray-600" />
           Back
         </button>
 
         <h1 className="text-2xl font-bold text-[#0F1111]">Green Credits</h1>
 
-        {/* Balance */}
-        <div className="bg-gradient-to-br from-[#0a4d2e] to-[#15803d] rounded-lg p-5 text-white shadow-sm">
-          <p className="text-green-100 text-xs uppercase tracking-wider font-semibold mb-1">Available Balance</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-black">{w.balance}</span>
-            <span className="text-green-100 text-sm">credits = ₹{w.value_rupees} off second-life items</span>
+        {/* ── Green Profile hero ── */}
+        {profile && (
+          <div className="rounded-xl overflow-hidden border border-[#D5D9D9] shadow-sm">
+            <div className="bg-gradient-to-br from-[#0a4d2e] to-[#15803d] p-5 text-white">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-green-100 text-[11px] uppercase tracking-wider font-semibold">Your Green Profile</p>
+                  <div className="flex items-center gap-2.5 mt-1.5">
+                    <span className="text-3xl leading-none">{profile.tier_emoji}</span>
+                    <div>
+                      <p className="text-2xl font-black leading-none">{profile.tier}</p>
+                      <span className="inline-block mt-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/15 border border-white/25">
+                        {profile.multiplier}× earn rate
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-4xl font-black leading-none">{profile.score}</p>
+                  <p className="text-green-100/70 text-[11px] mt-1">green score</p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#febd69] rounded-full transition-all" style={{ width: `${profile.score}%` }} />
+                </div>
+                <p className="text-green-100/85 text-[11px] mt-1.5">
+                  {profile.next_tier
+                    ? `${profile.points_to_next} points to ${profile.next_tier} — and a higher earn multiplier`
+                    : 'Top tier — you earn the highest reward rate 🎉'}
+                </p>
+              </div>
+
+              <p className="text-green-100/90 text-xs mt-3 leading-snug">{profile.blurb}</p>
+            </div>
+
+            {/* behaviour dimensions */}
+            <div className="grid grid-cols-3 divide-x divide-[#eef0f0] bg-white">
+              {profile.dimensions.map((d) => (
+                <div key={d.key} className="p-3 text-center">
+                  <p className="text-xl font-black text-[#15803d]">{d.value}</p>
+                  <p className="text-[11px] font-semibold text-[#0F1111] mt-0.5">{d.label}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{d.sub}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Balance ── */}
+        <div className="bg-white border border-[#D5D9D9] rounded-lg p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Available balance</p>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            <span className="text-3xl font-black text-[#15803d]">{w.balance}</span>
+            <span className="text-sm text-gray-500">credits · ₹{w.value_rupees} off second-life items</span>
           </div>
           {w.pending > 0 && (
-            <p className="text-green-100/90 text-xs mt-2">🌱 {w.pending} credits pending — vest when your return windows close</p>
-          )}
-          <p className="text-green-100/80 text-[11px] mt-3 leading-snug">
-            Earn credits by keeping orders and dropping returns at a kirana yourself. Spend them on REVIVE second-life items.
-          </p>
-        </div>
-
-        {/* Pending */}
-        {pendingHistory.length > 0 && (
-          <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-[#D5D9D9] flex items-center justify-between">
-              <p className="font-bold text-[#0F1111] text-sm">Pending — vesting soon</p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-amber-600">🌱 {w.pending} pending — vest when your return windows close</p>
               <button onClick={handleVest} disabled={busy} className="text-xs font-semibold text-[#007185] hover:underline disabled:opacity-50">Check vesting</button>
             </div>
+          )}
+        </div>
+
+        {/* pending detail */}
+        {pendingHistory.length > 0 && (
+          <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-[#D5D9D9]"><p className="font-bold text-[#0F1111] text-sm">Pending — vesting soon</p></div>
             {pendingHistory.map((t) => {
               const dl = daysLeft(t.vests_at);
               return (
@@ -105,11 +151,30 @@ const CreditsWalletPage = () => {
           </div>
         )}
 
-        {/* Redeem + Donate actions */}
+        {/* ── Ways to earn ── */}
+        <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 border-b border-[#D5D9D9]"><p className="font-bold text-[#0F1111] text-sm">Ways to earn</p></div>
+          {EARN_WAYS.map((e) => (
+            <div key={e.title} className="px-4 py-3 flex items-start gap-3 border-b border-[#f0f0f0] last:border-0">
+              <span className="text-xl leading-none mt-0.5">{e.icon}</span>
+              <div>
+                <p className="text-sm font-semibold text-[#0F1111]">{e.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5 leading-snug">{e.sub}</p>
+              </div>
+            </div>
+          ))}
+          {profile && (
+            <div className="px-4 py-2.5 bg-[#f0fdf4] text-[11px] text-[#15803d] font-medium">
+              Your <strong>{profile.tier}</strong> profile multiplies every earn by <strong>{profile.multiplier}×</strong> — the more sustainable your behaviour, the faster credits add up.
+            </div>
+          )}
+        </div>
+
+        {/* ── Redeem + Donate ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button onClick={() => navigate('/?source=p2p')}
+          <button onClick={() => navigate('/?source=revive')}
             className="bg-white border border-[#D5D9D9] rounded-lg p-4 text-left hover:border-[#febd69] transition-colors shadow-sm">
-            <p className="font-bold text-[#0F1111] text-sm">Spend on REVIVE items →</p>
+            <p className="font-bold text-[#0F1111] text-sm">Spend on Revive items →</p>
             <p className="text-xs text-gray-500 mt-0.5">Up to 20% off any second-life purchase</p>
           </button>
           <button onClick={handleDonate} disabled={busy || w.balance < 50}
@@ -119,68 +184,28 @@ const CreditsWalletPage = () => {
           </button>
         </div>
 
-        {/* Earning history */}
+        {/* ── Activity ── */}
         <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-[#D5D9D9]"><p className="font-bold text-[#0F1111] text-sm">Earning history</p></div>
-          {earnHistory.length === 0 ? (
-            <p className="px-4 py-4 text-sm text-gray-400">No earnings yet — keep an order to start earning.</p>
-          ) : earnHistory.map((t) => (
-            <div key={t.id} className="px-4 py-3 flex items-center justify-between border-b border-[#f0f0f0] last:border-0">
-              <div className="min-w-0">
-                <p className="text-sm text-[#0F1111]">{t.reason}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t.category} · {fmtDate(t.created_at)}</p>
-              </div>
-              <span className="text-sm font-bold text-green-700 flex-shrink-0">+{t.amount}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Spending history */}
-        {spendHistory.length > 0 && (
-          <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-[#D5D9D9]"><p className="font-bold text-[#0F1111] text-sm">Spending history</p></div>
-            {spendHistory.map((t) => (
+          <div className="px-4 py-3 bg-gray-50 border-b border-[#D5D9D9]"><p className="font-bold text-[#0F1111] text-sm">Activity</p></div>
+          {activity.length === 0 ? (
+            <p className="px-4 py-4 text-sm text-gray-400">No activity yet — keep an order or buy a Revive item to start earning.</p>
+          ) : activity.map((t) => {
+            const isEarn = t.kind === 'earn';
+            return (
               <div key={t.id} className="px-4 py-3 flex items-center justify-between border-b border-[#f0f0f0] last:border-0">
                 <div className="min-w-0">
                   <p className="text-sm text-[#0F1111]">{t.reason}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{fmtDate(t.created_at)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{[t.category, fmtDate(t.created_at)].filter(Boolean).join(' · ')}</p>
                 </div>
-                <span className="text-sm font-bold text-gray-500 flex-shrink-0">−{t.amount}</span>
+                <span className={`text-sm font-bold flex-shrink-0 ${isEarn ? 'text-green-700' : 'text-gray-500'}`}>
+                  {isEarn ? '+' : '−'}{t.amount}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Earn-rate explainer */}
-        <div className="bg-white border border-[#D5D9D9] rounded-lg shadow-sm overflow-hidden">
-          <button onClick={() => setShowRates(!showRates)} className="w-full px-4 py-3 flex items-center justify-between">
-            <p className="font-bold text-[#0F1111] text-sm">How earn rates work</p>
-            <span className="text-gray-400 text-sm">{showRates ? '−' : '+'}</span>
-          </button>
-          {showRates && (
-            <div className="px-4 pb-4">
-              <p className="text-xs text-gray-500 mb-3">Credits scale with a category's return rate — Amazon saves more from a prevented return in high-return categories.</p>
-              <div className="divide-y divide-[#f0f0f0] border border-[#f0f0f0] rounded-lg">
-                {MULTIPLIER_ROWS.map((r) => (
-                  <div key={r.cat} className="flex items-center justify-between px-3 py-2">
-                    <div><p className="text-sm text-[#0F1111]">{r.cat}</p><p className="text-[11px] text-gray-400">{r.note}</p></div>
-                    <span className="text-sm font-bold text-green-700">{r.mult}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-3">1 credit = ₹0.10 · redeemable up to 20% of an item's price · expire 12 months after earning.</p>
-            </div>
-          )}
+            );
+          })}
         </div>
 
-        {/* What does NOT earn */}
-        <div className="bg-[#F7F8F8] border border-[#D5D9D9] rounded-lg p-4">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">What does not earn credits</p>
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Agent-pickup returns, donations, recycling, and selling items earn no credits. Credits are a buyer-side
-            reward for keeping orders and using kirana self-drop. Sellers receive money (UPI), not credits.
-          </p>
-        </div>
+        <p className="text-[11px] text-gray-400 text-center pt-1">1 credit = ₹0.10 · redeemable up to 20% of an item's price · valid 12 months.</p>
       </main>
     </div>
   );
