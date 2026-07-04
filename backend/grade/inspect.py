@@ -42,7 +42,65 @@ def _slot_labels(slots: list[str], category: str) -> list[str]:
         return list(slots)
 
 
-def _fraud_gates(images: list[bytes], category: str, expected_title: str) -> dict | None:
+_REF_CACHE: dict = {}
+
+
+def _image_url_to_bytes(url: str) -> bytes | None:
+    """Resolve a product image URL to bytes: an http(s) URL, a local media/ file, or
+    a frontend public/ asset (e.g. /nike_downshifter_13.jpg served by Vite)."""
+    if not url:
+        return None
+    try:
+        if url.startswith('http'):
+            import requests
+            r = requests.get(url, timeout=8)
+            return r.content if (r.ok and len(r.content) > 2000) else None
+        from django.conf import settings
+        name = url.lstrip('/')
+        candidates = [
+            os.path.join(str(settings.BASE_DIR.parent), 'apps', 'consumer', 'public', os.path.basename(name)),
+            os.path.join(str(settings.MEDIA_ROOT), name.split('media/')[-1].lstrip('/')),
+        ]
+        for fp in candidates:
+            if os.path.exists(fp):
+                with open(fp, 'rb') as f:
+                    return f.read()
+    except Exception as e:
+        logger.warning("image fetch failed for %s: %s", url, e)
+    return None
+
+
+def _reference_bytes_for(product_id: str, category: str) -> bytes | None:
+    """Image of the SPECIFIC product being returned — what the instance-match gate
+    compares the uploaded photo against. Uses the product's own catalog image so a
+    genuine return of that exact product matches; only falls back to a generic
+    category reference when the product image can't be resolved."""
+    key = str(product_id)
+    if key in _REF_CACHE:
+        return _REF_CACHE[key]
+    data = None
+    try:
+        from core.models import Listing, Product
+        prod = None
+        if key.isdigit():
+            lst = Listing.objects.select_related('product').filter(pk=int(key)).first()
+            prod = lst.product if lst else Product.objects.filter(pk=int(key)).first()
+        if prod:
+            data = _image_url_to_bytes(prod.reference_image_url or '')
+    except Exception as e:
+        logger.warning("reference product lookup failed for %s: %s", key, e)
+    if not data:
+        try:
+            from ml.catalog import get_reference_bytes
+            data = get_reference_bytes(category)
+        except Exception:
+            data = None
+    _REF_CACHE[key] = data
+    return data
+
+
+def _fraud_gates(images: list[bytes], category: str, expected_title: str,
+                 ref_bytes: bytes | None = None) -> dict | None:
     """
     Run the RETURN fraud gates on the cover image (+ set). Returns a gate-failure
     response dict (to hand straight back to the client) if any gate trips, else
@@ -75,10 +133,14 @@ def _fraud_gates(images: list[bytes], category: str, expected_title: str) -> dic
         }
 
     # 2) Instance gate — same model/variant, not just same category?
+    #    Match against the SPECIFIC product being returned (ref_bytes), not a generic
+    #    category image — otherwise a genuine return of e.g. a formal shoe fails
+    #    against a generic "footwear" reference.
     try:
-        from ml.catalog import get_reference_bytes
         from ml.instance_match import instance_match
-        ref_bytes = get_reference_bytes(category)
+        if ref_bytes is None:
+            from ml.catalog import get_reference_bytes
+            ref_bytes = get_reference_bytes(category)
         inst = instance_match(cover_bytes, ref_bytes)
         if inst.get('checked') and not inst.get('match'):
             return {
@@ -255,7 +317,8 @@ def run_return_inspect(*, images: list[bytes], slots: list[str], category: str,
         raise ValueError("run_return_inspect requires at least one image or a video")
 
     if not skip_match:
-        gate = _fraud_gates(images, category, expected_title)
+        ref_bytes = _reference_bytes_for(product_id, category)
+        gate = _fraud_gates(images, category, expected_title, ref_bytes=ref_bytes)
         if gate is not None:
             return gate
 
