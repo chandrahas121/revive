@@ -97,37 +97,6 @@ def _severity_from_bbox(
         return "minor"
 
 
-# Structural damage that genuinely lowers a grade even at modest size.
-_STRUCTURAL_KEYWORDS = (
-    "torn", "tear", "hole", "crack", "broken", "split",
-    "separation", "erosion", "worn out", "missing",
-)
-
-
-def _is_major_defect(detection: dict, severity: str) -> bool:
-    """Keep only a GENUINE major defect — reject zero-shot detector noise.
-
-    Zero-shot detection is noisy: it boxes the background, shadows, textures and
-    tiny specks. A detection only counts (for a downgrade OR a drawn box) if it is:
-      • not a tiny speck        (area ≥ 3% of the image)
-      • not the whole frame /
-        a background object     (area ≤ 35%)
-      • confident               (not a weak half-match)
-    Structural damage (tear/hole/sole erosion) counts at a lower bar; a plain
-    surface scuff/scratch must be BOTH large and high-confidence to matter — so
-    the light cosmetic wear expected on used/apparel is ignored.
-    """
-    area = detection.get("bbox_area_pct", 0.0) or 0.0
-    conf = detection.get("confidence", 0.0) or 0.0
-    label = (detection.get("label") or "").lower()
-    if area < 0.03 or area > 0.35:
-        return False
-    if any(k in label for k in _STRUCTURAL_KEYWORDS):
-        return conf >= 0.35 and severity in ("moderate", "severe")
-    # Plain surface wear: only a large, clearly-visible one is "major".
-    return conf >= 0.50 and area >= 0.12 and severity == "severe"
-
-
 def _compute_grading_head(
     llm_result: dict,
     dino_detections: List[dict],
@@ -150,16 +119,12 @@ def _compute_grading_head(
     confidence = float(llm_result.get("confidence", 0.6))
     defects = llm_result.get("defects", [])
 
-    # Build enriched DINO detections with area-based severity — but keep ONLY
-    # genuine MAJOR defects. Minor cosmetic wear and detector noise (background,
-    # shadows, tiny specks) are dropped: they neither downgrade the grade nor draw
-    # a box, so a like-new item stays A/B with a clean, box-free card.
+    # Build enriched DINO detections with area-based severity
     enriched_dino = []
     for d in dino_detections:
         area_pct = d.get("bbox_area_pct", 0.0)
         sev = _severity_from_bbox(area_pct, d.get("confidence", 0), d.get("label", ""), category)
-        if _is_major_defect(d, sev):
-            enriched_dino.append({**d, "severity": sev})
+        enriched_dino.append({**d, "severity": sev})
 
     # Count by severity
     n_severe   = sum(1 for d in enriched_dino if d["severity"] == "severe")
@@ -211,21 +176,13 @@ def _compute_grading_head(
         grade = "D"
         confidence = min(confidence, 0.60)
 
-    # Rule 4: Low completeness (relaxed). CLIP completeness swings with the angle,
-    # crop and background, so only a very low score nudges the grade — otherwise a
-    # perfectly good item shot on a busy background gets unfairly marked down.
-    if completeness < 0.35 and grade_order.get(grade, 0) > grade_order["C"]:
+    # Rule 4: Low completeness
+    if completeness < 0.50 and grade_order.get(grade, 0) > grade_order["C"]:
         grade = "C"
         confidence = min(confidence, 0.65)
-    elif completeness < 0.55 and grade == "A":
+    elif completeness < 0.70 and grade == "A":
         grade = "B"
         confidence = min(confidence, 0.80)
-
-    # Leniency floor: with NO major defect and reasonable completeness, a like-new
-    # item must not sit below B. Minor scuffs/marks are expected wear, not a C — only
-    # a genuine major/structural defect (handled by the rules above) drops it lower.
-    if len(enriched_dino) == 0 and completeness >= 0.40 and grade_order.get(grade, 0) < grade_order["B"]:
-        grade = "B"
 
     # Rule 5: Multi-defect confidence penalty
     total_defects = len(defects) + len(enriched_dino)
@@ -302,11 +259,6 @@ def _compute_grading_head(
             seen_bboxes[key] = defect
         deduped.append(defect)
     defects = deduped
-
-    # Only surface MAJOR defects on the card + heatmap. Minor cosmetic wear is
-    # expected and would just clutter a like-new item with tiny/false boxes, so it
-    # is dropped here — a clean item ends up with an empty list (no boxes drawn).
-    defects = [d for d in defects if d.get("severity") in ("moderate", "severe")]
 
     return {
         "grade": grade,

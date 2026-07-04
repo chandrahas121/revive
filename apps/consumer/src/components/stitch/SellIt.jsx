@@ -463,12 +463,6 @@ const SellIt = () => {
   const [purchaseYear, setPurchaseYear] = useState('');
   const [declared, setDeclared] = useState(false);
 
-  // Seller condition declarations — folded into the FINAL grade + price + Health Card
-  // alongside the AI's multi-angle photo assessment and the condition note.
-  const [functional, setFunctional] = useState(true);              // no use-affecting defect
-  const [boxPresent, setBoxPresent] = useState(false);             // original box included
-  const [accessoriesPresent, setAccessoriesPresent] = useState(false); // all accessories included
-
   // Photos keyed by slot
   const [photoSlots, setPhotoSlots] = useState({});   // { slotKey: File }
   const [previews, setPreviews] = useState({});       // { slotKey: objectURL }
@@ -532,10 +526,6 @@ const SellIt = () => {
       fd.append('expected_title', title.trim());      // feeds the trained price model's text
       fd.append('mrp', mrp || '0');                    // original price → resale price anchor
       fd.append('geohash5', 'tbxx1');                  // demo location for the demand signal
-      // Seller declarations the grader factors in alongside the photos.
-      fd.append('functional', functional ? 'true' : 'false');
-      fd.append('box_present', boxPresent ? 'true' : 'false');
-      fd.append('accessories_present', accessoriesPresent ? 'true' : 'false');
 
       // Async grade: submit → job_id → poll. The web worker returns in <100ms;
       // the multi-second ML runs in a Celery worker, so the site never blocks.
@@ -551,35 +541,12 @@ const SellIt = () => {
           || 'AI could not grade these photos — please retake clear, well-lit angles and try again.');
         return;
       }
-      // Fold the seller's declarations into the AI's multi-angle grade to get the
-      // FINAL grade + completeness: a functional defect drops it to "For Parts" (E),
-      // a missing box / accessories lowers completeness.
-      let completeness = typeof data.completeness === 'number' ? data.completeness : 1.0;
-      if (!boxPresent) completeness -= 0.1;
-      if (!accessoriesPresent) completeness -= 0.1;
-      completeness = Math.max(0.3, Math.round(completeness * 100) / 100);
-      const finalGrade = functional ? data.grade : 'E';
-      const merged = {
-        ...data,
-        grade: finalGrade,
-        completeness,
-        functional,
-        box_present: boxPresent,
-        accessories_present: accessoriesPresent,
-      };
-      setGradeResult(merged);
+      setGradeResult(data);
       if (!conditionSummary && data.condition_summary) setConditionSummary(data.condition_summary);
-
-      // The trained model returns a resale price via route.price; the declarations
-      // then trim it — a For-Parts item is marked down hard, missing box/accessories
-      // shave a little off.
+      // The trained model (+ per-defect deductions) returns a resale price via route.price.
       const modelPrice = data?.route?.price;
       if (modelPrice && modelPrice > 0) {
-        let adj = modelPrice;
-        if (!functional) adj *= 0.4;
-        if (!boxPresent) adj *= 0.95;
-        if (!accessoriesPresent) adj *= 0.95;
-        const rounded = Math.max(1, Math.round(adj));
+        const rounded = Math.round(modelPrice);
         setSuggestedPrice(rounded);
         setPrice(String(rounded));                     // pre-fill; seller adjusts ±20%
       }
@@ -653,7 +620,7 @@ const SellIt = () => {
         }
       }
 
-      // The FINAL grade + completeness already fold in box / accessories / functional.
+      // Reuse the multi-image grade instead of re-grading one image.
       if (gradeResult?.grade) {
         formData.append('grade_override', gradeResult.grade);
         formData.append('completeness_override', String(gradeResult.completeness ?? 1.0));
@@ -670,23 +637,12 @@ const SellIt = () => {
 
       if (listing.id) {
         const inspectedBy = tier === 3 ? 'ai_spn' : tier === 2 ? 'ai_agent' : 'ai_only';
-        // Build the card summary from the AI notes + the seller's declarations so the
-        // Health Card reflects everything that shaped the grade & price.
-        const noteBits = [conditionSummary.trim() || (gradeResult?.condition_summary || '')].filter(Boolean);
-        noteBits.push(accessoriesPresent ? 'All original accessories included.' : 'Some accessories not included.');
-        noteBits.push(boxPresent ? 'Original box included.' : 'No original box.');
-        if (!functional) noteBits.push('Seller reports a functional defect — graded For Parts.');
         generateHealthCard({
           listing_id: listing.id,
-          grade_result: {
-            grade: gradeResult?.grade || listing.grade,
-            confidence: gradeResult?.confidence || 0.8,
-            defects: gradeResult?.defects || [],
-            completeness: gradeResult?.completeness ?? listing.completeness,
-            condition_summary: noteBits.join(' '),
-            functional: functional,
-            box_present: boxPresent,
-          },
+          grade_result: res.data.grade_result
+            || { grade: gradeResult?.grade || listing.grade, confidence: gradeResult?.confidence || 0.8,
+                 defects: gradeResult?.defects || [], completeness: listing.completeness,
+                 condition_summary: conditionSummary.trim() },
           route_result: rr || {},
           inspected_by: inspectedBy,
           battery_pct: batteryPct ? parseInt(batteryPct, 10) : undefined,
@@ -872,34 +828,6 @@ const SellIt = () => {
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Condition declaration — folded into the AI grade, price & Health Card */}
-              <div className="mb-4 rounded-lg border border-[#D5D9D9] bg-[#F7F8F8] p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Condition declaration</p>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={boxPresent}
-                      onChange={(e) => { setBoxPresent(e.target.checked); setGradeResult(null); }}
-                      className="w-4 h-4" style={{ accentColor: '#FF9900' }} />
-                    Original box
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={accessoriesPresent}
-                      onChange={(e) => { setAccessoriesPresent(e.target.checked); setGradeResult(null); }}
-                      className="w-4 h-4" style={{ accentColor: '#FF9900' }} />
-                    All accessories included
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={!functional}
-                      onChange={(e) => { setFunctional(!e.target.checked); setGradeResult(null); }}
-                      className="w-4 h-4" style={{ accentColor: '#dc2626' }} />
-                    Has a functional defect
-                  </label>
-                </div>
-                <p className="mt-2 text-[11px] text-gray-400">
-                  Fed into the AI's final grade and price — a functional defect drops it to "For Parts", and a missing box or accessories lowers the price.
-                </p>
               </div>
 
               <div className="flex items-center gap-3 mb-4">
