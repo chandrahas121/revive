@@ -16,7 +16,7 @@
 
 **Demo.** "Before buying, the shopper sees the item on their own photo with Virtual Try-On, and FitTwin recommends their exact size by comparing them to other shoppers with a similar body and size who bought that same item and kept it — so they order the right size the first time. The AI assistant answers fit questions instantly, and at checkout, bracketing and wardrobing get flagged — so repeat one-wear returners lose free returns."
 
-**Metric.** "The logic is simple: fit and size are the single biggest reason people return clothes online, and each return costs the retailer about twenty to thirty dollars just to process — that's Statista. Letting the shopper see the fit before they buy attacks that at the source. Virtual-fit providers report cutting online returns by roughly twenty to forty percent, so on a category where a quarter of orders come back, even part of that is real margin recovered."
+**Metric.** "Fit is the number-one reason clothes get returned online, and each return costs a retailer twenty to thirty dollars to process — that's Statista. Virtual try-on providers report cutting those returns twenty to forty percent — direct margin back on a category where a quarter of orders come back."
 
 ---
 

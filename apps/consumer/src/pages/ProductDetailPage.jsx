@@ -600,19 +600,6 @@ const ProductDetailPage = () => {
               </div>
             )}
 
-            {/* v2 second-life lifecycle — where this item is in its journey */}
-            {lc && (
-              <div className="mb-4">
-                <p className="text-xs font-bold text-[#0F1111] mb-1.5">Second-life journey</p>
-                <LifecycleTimeline
-                  lifecycle={lc}
-                  onAdvance={handleAdvanceStage}
-                  advancing={advancing}
-                  showAdvance
-                />
-              </div>
-            )}
-
             {/* Delivery / Returns / Ships from / Sold by */}
             <div className="border border-[#D5D9D9] rounded divide-y divide-[#D5D9D9] mb-5 text-sm">
               <div className="flex px-3 py-2.5 gap-3">
