@@ -504,7 +504,18 @@ def _aggregate_frame_results(frame_results: List[dict], source: str) -> dict:
     sev_rank = {"minor": 1, "moderate": 2, "severe": 3}
 
     grades = [r["grade"] for r in frame_results]
-    worst_grade = min(grades, key=lambda g: grade_order.get(g, 0))
+
+    # Worst-grade-wins — but PACKAGING (box / tag / label) must not drive the ITEM
+    # grade down: a scuffed or cracked old box on a like-new shoe is still a like-new
+    # shoe. Grade on the actual item angles; the packaging's condition is still shown
+    # in the defect map + condition summary, it just doesn't tank the grade.
+    def _is_packaging(r):
+        a = (r.get("angle") or "").lower() + " " + (r.get("angle_label") or "").lower()
+        return any(w in a for w in ("box", "tag", "packaging", "label"))
+
+    item_results = [r for r in frame_results if not _is_packaging(r)]
+    grade_pool = item_results or frame_results   # fall back if ONLY packaging photos
+    worst_grade = min((r["grade"] for r in grade_pool), key=lambda g: grade_order.get(g, 0))
 
     # Union of defects, de-duped by (type, angle) keeping the highest severity.
     by_key: Dict[tuple, dict] = {}
