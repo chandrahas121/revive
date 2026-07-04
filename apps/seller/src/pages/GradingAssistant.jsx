@@ -78,18 +78,16 @@ export default function GradingAssistant() {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setVideoFile(file);
     setVideoUrl(URL.createObjectURL(file));
-  };
-  const toggleAccessory = (a) =>
-    setAccessories((s) => (s.includes(a) ? s.filter((x) => x !== a) : [...s, a]));
-  // Simulated hardware barcode scan — animates, then fills an EAN-like code (editable).
-  const scanBarcode = () => {
-    if (scanning) return;
+    // Intake agent: read the barcode + ASIN off the label as the video plays (dummy OCR).
     setScanning(true);
     setTimeout(() => {
       setBarcode('890' + Math.floor(1000000000 + Math.random() * 8999999999));
+      setAsin(caseInfo?.sku || '');
       setScanning(false);
-    }, 1200);
+    }, 1400);
   };
+  const toggleAccessory = (a) =>
+    setAccessories((s) => (s.includes(a) ? s.filter((x) => x !== a) : [...s, a]));
 
   const price = caseInfo ? Number(caseInfo.mrp) || 999 : 999;
   // Functional status is inferred from the inspection video (no manual toggle):
@@ -273,17 +271,21 @@ export default function GradingAssistant() {
               })}
             </div>
 
-            <Cap>Step 3 · Scan the barcode / label</Cap>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-              <input value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Barcode / EAN / serial — scan or type" style={{ flex: 1, minWidth: 200, height: 40, border: '1px solid #888c8c', borderRadius: 8, padding: '0 12px', fontSize: 13, color: '#111', boxSizing: 'border-box' }} />
-              <button onClick={scanBarcode} disabled={scanning} style={{ height: 40, background: scanning ? '#eef1f2' : '#131a22', color: scanning ? '#8a8f8f' : '#fff', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '0 18px', border: 'none', cursor: scanning ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Cap>Step 3 · Barcode / label — read from your video</Cap>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+              <input value={barcode} onChange={(e) => setBarcode(e.target.value)}
+                placeholder={videoFile ? 'Reading label from video…' : 'Upload the inspection video above to read the barcode'}
+                style={{ flex: 1, minWidth: 200, height: 40, border: '1px solid #888c8c', borderRadius: 8, padding: '0 12px', fontSize: 13, color: '#111', boxSizing: 'border-box' }} />
+              <span style={{ height: 40, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 700, color: scanning ? '#8a8f8f' : (barcode ? '#107a45' : '#8a8f8f') }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={scanning ? { animation: 'spin 1s linear infinite' } : undefined}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14" /></svg>
-                {scanning ? 'Scanning…' : 'Scan barcode'}
-              </button>
+                {scanning ? 'Reading…' : (barcode ? 'Read from video' : 'Awaiting video')}
+              </span>
             </div>
 
-            <Cap>Step 4 · ASIN number</Cap>
-            <input value={asin} onChange={(e) => setAsin(e.target.value)} placeholder={`Enter the product ASIN (e.g. ${caseInfo.sku})`} style={{ width: '100%', height: 40, border: '1px solid #888c8c', borderRadius: 8, padding: '0 12px', fontSize: 13, color: '#111', boxSizing: 'border-box', marginBottom: 4 }} />
+            <Cap>Step 4 · ASIN — read from your video</Cap>
+            <input value={asin} onChange={(e) => setAsin(e.target.value)}
+              placeholder={scanning ? 'Reading ASIN from video…' : (videoFile ? 'ASIN' : `Auto-read from the video (e.g. ${caseInfo.sku})`)}
+              style={{ width: '100%', height: 40, border: '1px solid #888c8c', borderRadius: 8, padding: '0 12px', fontSize: 13, color: '#111', boxSizing: 'border-box', marginBottom: 4 }} />
           </>
         )}
 
