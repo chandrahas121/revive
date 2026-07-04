@@ -186,16 +186,38 @@ $env:DATABASE_URL = "sqlite:///C:/Users/dell/Desktop/amazon-hackon/backend/db.sq
 - **Consumer login** (http://localhost:5173/): `demo@revive.in` / `demo12345`.
 - **Fix required after the merge:** migration `core/0011_user_is_seller_user_store_name` was **unapplied** (User queries crashed with "no such column is_seller") — ran `manage.py migrate`. Also the seeded sellers had `is_seller=False` (seed predates the column) so seller-login (requires `is_seller=True`) rejected them — enabled `is_seller=True` + `store_name` on all `*.seller@revive.in`. Both logins verified → 200. If the DB is re-seeded, re-run these two steps (or add `is_seller=True` to the seed).
 
+## ARCA RE-VERIFICATION AFTER MONOREPO SPLIT (2026-07-04)
+Checked the whole ARCA returns flow post-restructure — **it is correct and fully wired.** Nothing in
+`ml/` or `core/seller_views.py` was touched by the split; the frontend moved to `apps/seller` and its
+imports now resolve via `@amazon-hackon/shared` (seller build 113 modules clean).
+- **Regression found + re-fixed:** the 5 `*.seller@revive.in` users were **`is_seller=False` again** in the
+  current `backend/db.sqlite3` (blocks the seller UI login that gates the entire ARCA flow via `RequireSeller`).
+  Re-applied `is_seller=True` + `store_name='<FIRST> RETAIL'` to all five; `authenticate()` + gate verified.
+  **This keeps regressing on re-seed — the seed script should set `is_seller=True` to end the whack-a-mole.**
+- **Decision engine** `ml/seller_decision.decide()` — 7/7 scenario matrix correct (sealed→RESTOCK_NEW·no-SAFE-T,
+  buyer-damaged→GRADE_RESELL+SAFE-T, defective→WARRANTY/SUPPLIER_WARRANTY·no-SAFE-T, wrong→materially_different,
+  seller-refunded/jewellery/past-15-day→ineligible).
+- **HTTP e2e (Django test client, sqlite override):** queue→7 real products ✓ · integrity gate **really rejected**
+  a cloth photo vs the Nike shoe (`match=False`, DINOv2 loaded — not a fail-open) ✓ · gate-bypass case
+  (`NIKE-DS13-BLU`) grade+decision returns fault/disposition/route/SAFE-T ✓ · evidence bundle SHA-256 (count/hash) ✓ ·
+  relist→live Listing + Health Card ✓ · seller login→200 (store AARAV RETAIL) ✓.
+- **Frontend SAFE-T loop intact:** `SellerUI` exposes `safetClaims`/`addSafetClaim`; `GradingAssistant.fileClaim()`
+  persists the drafted claim; `SellerReturns` SafetTab renders it under "⚡ Drafted just now". `ArcaDecision` +
+  `EvidenceBundle` panels present.
+- **Demo run note:** backend must start with the sqlite override (see DB gotcha above) AND the consumer app on
+  :5173 (the Nike demo image `shoe_downshifter13.webp` is served from `apps/consumer/public/`).
+
 ## HOW TO RUN (for the next agent / demo)
 Backend (Python 3.12 venv already created at `backend/.venv`):
 ```
 cd backend
 .venv/Scripts/python.exe manage.py runserver 8000   # (migrate + seed_demo already done once)
 ```
-Frontend (Node 24 installed):
+Frontend (Node 24, npm workspaces — `frontend/` no longer exists):
 ```
-cd frontend
-npm run dev    # http://localhost:5173  → Seller Central at /seller
+npm install                # once, at repo root
+npm run dev:consumer       # http://localhost:5173  (storefront)
+npm run dev:seller         # http://localhost:5174/seller  (Seller Central + ARCA)
 ```
 - If a new shell can't find node/python, refresh PATH: combine Machine + User PATH env vars (PowerShell:
   `$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")`).

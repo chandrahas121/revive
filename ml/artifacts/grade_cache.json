@@ -1332,5 +1332,91 @@
     "image_hash": "4433543682a329ee50c2f960",
     "n_dino_detections": 0,
     "from_cache": false
+  },
+  "4b97ff77d7f16affff7b8328_e33e5a": {
+    "grade": "A",
+    "confidence": 1.0,
+    "defects": [],
+    "completeness": 1.0,
+    "condition_summary": "The footwear in the image appears to be in mint condition with no visible defects.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 4378
+  },
+  "4b97ff77d7f16affff7b8328_ge33e5a": {
+    "listing_id": "1345dd1f-df33-4789-a31d-6729deeaea88",
+    "grade": "C",
+    "confidence": 0.65,
+    "defects": [],
+    "completeness": 0.428,
+    "condition_summary": "The footwear in the image appears to be in mint condition with no visible defects.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "",
+    "angle_label": "",
+    "latency_ms": 24071,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "4b97ff77d7f16affff7b8328",
+    "n_dino_detections": 0,
+    "from_cache": false
+  },
+  "7b56b87531298d394e8aac8a_e33e5a": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scuffs",
+        "severity": "minor",
+        "location": "toe-box",
+        "angle": "",
+        "angle_label": ""
+      }
+    ],
+    "completeness": 1.0,
+    "condition_summary": "The shoe shows light cosmetic wear with some minor scuffing on the toe-box, but remains in very good overall condition.",
+    "box_present": false,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 5299
+  },
+  "7b56b87531298d394e8aac8a_ge33e5a": {
+    "listing_id": "c36833e2-7fbf-4f0a-83b0-318806752e92",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "scuffs",
+        "severity": "minor",
+        "location": "toe-box",
+        "angle": "",
+        "angle_label": ""
+      }
+    ],
+    "completeness": 0.891,
+    "condition_summary": "The shoe shows light cosmetic wear with some minor scuffing on the toe-box, but remains in very good overall condition.",
+    "functional": true,
+    "box_present": false,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "",
+    "angle_label": "",
+    "latency_ms": 29270,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "7b56b87531298d394e8aac8a",
+    "n_dino_detections": 0,
+    "from_cache": false
   }
 }
