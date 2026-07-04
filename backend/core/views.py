@@ -198,14 +198,14 @@ class ListingListView(APIView):
 
         if category:
             qs = qs.filter(product__category__icontains=category)
-        if not source:
-            qs = qs.filter(source='new')
-        elif source == 'revive':
+        # "Shop Revive" tab = AI-graded second-life only.
+        if source == 'revive':
             qs = qs.filter(source__in=['p2p', 'return', 'warehouse'])
-        elif source == 'all':
-            pass
-        else:
-            qs = qs.filter(source=source)
+        elif source and source != 'all':
+            qs = qs.filter(source=source)     # e.g. 'new', 'renewed'
+        # else (source empty or 'all'): show EVERYTHING — New + second-life + Renewed.
+        # This makes the "All" tab and every search span all sources, so a freshly
+        # listed Revive item shows up under All and in search results.
         if grade:
             qs = qs.filter(grade=grade)
         if condition:
@@ -316,23 +316,38 @@ class ListingListView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        # Collect the cover + EVERY angle the seller captured, so the Health Card can
+        # show all of them (not just one photo). Cloud path: presigned URLs arrive as
+        # image_url (cover) + photos[] (angles). Local dev (no object storage): raw
+        # files arrive as image (cover) + images[] (angles). Handle both.
         image_bytes = None
         image_url = ''
-        image_file = request.FILES.get('image')
-        presigned_url = (request.data.get('image_url') or '').strip()
-        if presigned_url:
-            # Browser uploaded straight to object storage via a presigned POST — we
-            # never receive the bytes, just record the public URL. This keeps web
-            # workers free under an upload surge (see core/storage.py).
-            image_url = presigned_url
-        elif image_file:
-            image_bytes = image_file.read()
-            image_file.seek(0)
-            filename = f"listings/{uuid.uuid4().hex}_{image_file.name}"
-            path = default_storage.save(filename, image_file)
-            # Use storage backend's url() — works for both local (/media/...) and S3 (https://...)
-            raw_url = default_storage.url(path)
-            image_url = request.build_absolute_uri(raw_url)
+        listing_images = []
+
+        presigned_cover = (request.data.get('image_url') or '').strip()
+        if presigned_cover:
+            image_url = presigned_cover
+            listing_images.append({'url': image_url, 'label': 'Main'})
+        for u in (request.data.getlist('photos') if hasattr(request.data, 'getlist') else []):
+            if u:
+                listing_images.append({'url': u, 'label': 'Angle'})
+
+        upload_files = []
+        if request.FILES.get('image'):
+            upload_files.append(request.FILES['image'])
+        upload_files += request.FILES.getlist('images')
+        for f in upload_files:
+            fb = f.read()
+            f.seek(0)
+            if image_bytes is None:
+                image_bytes = fb   # grade the cover if we fall back to grade_image()
+            path = default_storage.save(f"listings/{uuid.uuid4().hex}_{f.name}", f)
+            url = request.build_absolute_uri(default_storage.url(path))
+            if not image_url:
+                image_url = url
+                listing_images.insert(0, {'url': url, 'label': 'Main'})
+            else:
+                listing_images.append({'url': url, 'label': 'Angle'})
 
         grade_result = {
             'grade': 'B',
@@ -392,15 +407,8 @@ class ListingListView(APIView):
             description=data.get('description', ''),
         )
 
-        # v2: persist the seller's uploaded angle shots on the listing for the Revive card
-        listing_images = []
-        if image_url:
-            listing_images.append({'url': image_url, 'label': 'Main'})
-        extra = request.data.getlist('photos') if hasattr(request.data, 'getlist') else []
-        for u in extra:
-            if u:
-                listing_images.append({'url': u, 'label': 'Angle'})
-
+        # listing_images (cover + all angle shots) was built above from either the
+        # presigned URLs or the uploaded files — persisted so the Revive card shows them.
         listing = Listing.objects.create(
             product=product,
             source=Listing.Source.P2P,

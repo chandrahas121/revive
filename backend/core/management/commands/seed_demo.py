@@ -286,6 +286,40 @@ def _upsert_iqoo_hero():
     return prod
 
 
+# ── Demo footwear with local product photos ──────────────────────────────────
+# Two recognisable shoes the presenter uses live: the Nike Downshifter 13 is the
+# item RETURNED (Feature 2), the Louis Philippe is the item LISTED (Feature 3).
+# Both use locally-supplied photos in apps/consumer/public so they look exactly right.
+def _upsert_local_footwear(asin, title, brand, mrp, image):
+    prod, _ = Product.objects.update_or_create(
+        asin=asin,
+        defaults=dict(
+            title=title, category="Footwear", brand=brand, mrp=Decimal(str(mrp)),
+            reference_image_url=image, images=[image],
+            description=f"{brand} — {title}. Brand-new, full manufacturer warranty.",
+            rating=4.3, rating_count=1840),
+    )
+    Listing.objects.update_or_create(
+        product=prod, source=Listing.Source.NEW,
+        defaults=dict(grade="", price=prod.mrp, completeness=1.0,
+                      condition_summary="", status=Listing.Status.LISTED,
+                      image_url=image, condition_label="New",
+                      seller=None, tier=0, disposition="", risk_tier=""),
+    )
+    return prod
+
+
+def _upsert_demo_shoes():
+    """Nike Downshifter 13 (returned) + Louis Philippe Oxford (listed)."""
+    nike = _upsert_local_footwear(
+        "NIKE-DOWNSHIFTER-13", "Nike Downshifter 13 Men's Road Running Shoes (Navy)",
+        "Nike", 4295, "/nike_downshifter_13.jpg")
+    lp = _upsert_local_footwear(
+        "LP-OXFORD-BLK", "Louis Philippe Men's Black Leather Oxford Formal Shoes",
+        "Louis Philippe", 5999, "/louis_philippe_shoes.jpg")
+    return [nike, lp]
+
+
 def _guarantee(tier):
     if tier == 3:
         return 90, "Amazon SPN"
@@ -508,7 +542,8 @@ class Command(BaseCommand):
             curated = upsert_demo_catalog()   # offline fallback: curated only
             real = []
         iqoo = _upsert_iqoo_hero()         # one recognisable hero phone with local photo
-        products = curated + real + [iqoo]
+        demo_shoes = _upsert_demo_shoes()  # Nike Downshifter 13 (returned) + Louis Philippe (listed)
+        products = curated + real + [iqoo] + demo_shoes
         self.stdout.write(f"  catalog: {len(curated)} curated + {len(real)} real + 1 hero "
                           f"= {len(products)} products")
 
@@ -631,7 +666,7 @@ class Command(BaseCommand):
             _pick("Laptop", "Inspiron"),
             _pick("Monitor", "BenQ"),
             _pick("Apparel", "T-Shirt"),
-            _pick("Footwear", "Air Max"),
+            _pick("Footwear", "Downshifter"),   # Nike Downshifter 13 — the Feature-2 return demo
         ]
         for prod in return_targets:
             if not prod:
