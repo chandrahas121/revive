@@ -113,13 +113,14 @@ const RufusChat = ({ listing }) => {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 bg-white rounded-full
-            pl-2 pr-4 py-2 text-[13px] font-semibold text-[#0f5c47] cursor-pointer
-            border border-[#cdeee3] shadow-md transition-shadow hover:shadow-lg hover:border-[#19c39c]"
-          aria-label="Ask Rufus about this product"
+          className="fixed bottom-6 right-6 z-[80] inline-flex items-center gap-2 bg-white rounded-full
+            pl-2.5 pr-5 py-2.5 text-[14px] font-bold text-[#0f5c47] cursor-pointer
+            border border-[#19c39c] shadow-[0_6px_20px_rgba(18,161,127,0.35)]
+            transition-all hover:shadow-[0_8px_26px_rgba(18,161,127,0.5)] hover:-translate-y-0.5"
+          aria-label="Ask Reva about this product"
         >
-          <RufusMark size={26} icon={14} />
-          Ask Rufus about this product
+          <RufusMark size={30} icon={16} />
+          Ask Reva about this product
         </button>
       )}
 
@@ -143,9 +144,9 @@ const RufusChat = ({ listing }) => {
             <RufusMark />
             <div className="leading-tight">
               <div className="text-[17px] font-extrabold tracking-tight text-[#16181d]">
-                Rufus <span className="text-[10px] font-semibold text-[#9aa6b2] tracking-wide">AI · beta</span>
+                Reva <span className="text-[10px] font-semibold text-[#9aa6b2] tracking-wide">AI · beta</span>
               </div>
-              <div className="text-[11px] text-[#9aa6b2]">Amazon shopping assistant</div>
+              <div className="text-[11px] text-[#9aa6b2]">Revive shopping assistant</div>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -183,7 +184,7 @@ const RufusChat = ({ listing }) => {
                   </div>
                   <div className="text-[19px] font-extrabold mb-1.5 text-[#16181d]">Have any questions about this product?</div>
                   <div className="text-[13px] text-[#565f6b] leading-relaxed max-w-[300px] mx-auto">
-                    Hi, I'm Rufus. Ask me anything about condition, sizing, value, or delivery.
+                    Hi, I'm Reva. Ask me anything about condition, sizing, value, or delivery.
                     Answers are AI-generated, so double-check the important bits.
                   </div>
                 </div>
@@ -221,7 +222,7 @@ const RufusChat = ({ listing }) => {
                     <div key={i} className="self-start max-w-[92%]">
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <RufusMark size={18} icon={10} />
-                        <span className="text-[11px] font-bold text-[#12805f]">Rufus</span>
+                        <span className="text-[11px] font-bold text-[#12805f]">Reva</span>
                         {m.grounded === false && (
                           <span className="text-[10px] text-[#9aa6b2]">· offline</span>
                         )}
@@ -269,7 +270,7 @@ const RufusChat = ({ listing }) => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder="Ask Rufus about this product"
+                placeholder="Ask Reva about this product"
                 className="flex-1 border-none outline-none text-[14px] py-1.5 bg-transparent min-w-0"
               />
               <button
@@ -284,7 +285,7 @@ const RufusChat = ({ listing }) => {
                 </svg>
               </button>
             </div>
-            <div className="text-[10px] text-[#9aa6b2] text-center mt-1.5">Rufus can make mistakes. Verify important details.</div>
+            <div className="text-[10px] text-[#9aa6b2] text-center mt-1.5">Reva can make mistakes. Verify important details.</div>
           </form>
         </div>
       )}
