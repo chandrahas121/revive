@@ -1,13 +1,13 @@
 # Junk / temp directories
 temp_clone/
-frontend/scratch/
+**/scratch/
 
 # Dead legacy files
-frontend/src/components/CheckoutProduct.js
-frontend/src/components/Order.js
-frontend/src/components/stitch/OpsDashboard.jsx
-frontend/src/components/stitch/*.html
-frontend/src/App.css
+apps/consumer/src/components/CheckoutProduct.js
+apps/consumer/src/components/Order.js
+apps/consumer/src/components/stitch/OpsDashboard.jsx
+apps/consumer/src/components/stitch/*.html
+apps/consumer/src/App.css
 
 # Environments — never commit actual secrets.
 # Ignore ALL .env files at any depth...
@@ -26,12 +26,13 @@ ENV/
 backend/media/
 backend/staticfiles/
 
-# Node / Frontend
+# Node / Frontend (monorepo: apps/* + packages/*)
 node_modules/
-frontend/node_modules/
-frontend/dist/
-frontend/.env
-frontend/.env.local
+**/node_modules/
+apps/*/dist/
+packages/*/dist/
+apps/*/.env
+apps/*/.env.local
 
 # Python
 __pycache__/

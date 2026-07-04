@@ -6,6 +6,11 @@ class User(AbstractUser):
     """Extended user — email is the login credential."""
     email = models.EmailField(unique=True)
     return_rate = models.FloatField(default=0.0)
+    # Seller Central — set for accounts registered through the seller portal.
+    # Consumer and seller sign-up flows are separate; is_seller gates the
+    # seller-only auth endpoints and the seller console.
+    is_seller = models.BooleanField(default=False)
+    store_name = models.CharField(max_length=120, blank=True, default='')
     geohash5 = models.CharField(max_length=10, blank=True, default='')
     # v2: live location capture (browser geolocation) → feeds local demand / "Near me"
     lat = models.FloatField(null=True, blank=True)

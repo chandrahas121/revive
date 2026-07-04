@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 from .models import Listing, Product, Order, Review
 from .serializers import (
-    RegisterSerializer, UserSerializer, ListingSerializer,
+    RegisterSerializer, SellerRegisterSerializer, UserSerializer, ListingSerializer,
     CreateListingSerializer, OrderSerializer, ReviewSerializer,
 )
 
@@ -118,6 +118,56 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        return Response(UserSerializer(request.user).data)
+
+
+# ── Seller Central auth ───────────────────────────────────────────────────────
+# Separate sign-up / sign-in flow for seller accounts. Shares the JWT cookie
+# infrastructure with the consumer auth, but registration flags is_seller=True
+# and login/me gate on it so consumer accounts can't reach the seller console.
+
+class SellerRegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = SellerRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        response = Response(
+            {'user': UserSerializer(user).data, 'message': 'Seller account created successfully.'},
+            status=status.HTTP_201_CREATED,
+        )
+        _set_auth_cookies(response, refresh)
+        return response
+
+
+class SellerLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        password = request.data.get('password', '')
+        user = authenticate(request, username=email, password=password)
+        if not user:
+            return Response({'error': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
+        if not user.is_seller:
+            return Response(
+                {'error': 'This account is not registered as a seller. Create a seller account to continue.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        refresh = RefreshToken.for_user(user)
+        response = Response({'user': UserSerializer(user).data})
+        _set_auth_cookies(response, refresh)
+        return response
+
+
+class SellerMeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_seller:
+            return Response({'error': 'Not a seller account.'}, status=status.HTTP_403_FORBIDDEN)
         return Response(UserSerializer(request.user).data)
 
 

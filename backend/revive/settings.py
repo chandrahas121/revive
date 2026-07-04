@@ -121,7 +121,11 @@ SIMPLE_JWT = {
 }
 
 # ─── CORS ───────────────────────────────────────────────────────────────────
-_cors_default = 'http://localhost:5173,http://127.0.0.1:5173'
+# 5173 = consumer app (apps/consumer), 5174 = seller app (apps/seller).
+_cors_default = (
+    'http://localhost:5173,http://127.0.0.1:5173,'
+    'http://localhost:5174,http://127.0.0.1:5174'
+)
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', _cors_default).split(',')
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', _cors_default).split(',')
 CORS_ALLOW_CREDENTIALS = True   # required for cookies to be sent cross-origin
