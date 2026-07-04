@@ -12,21 +12,21 @@
 
 ## Feature 1 — Return Prevention
 
-**Problem.** "Apparel is the most-returned category online, and the top reason is wrong size and fit. Shoppers also order several sizes meaning to send most back, and some wear an item once and return it — and none of that is stopped before it happens."
+**Problem.** "Apparel suffers the highest online return rates, driven by poor fit, "bracketing" (ordering multiple sizes), and "wardrobing" (returning after one wear). Currently, platforms lack proactive ways to prevent these behaviors."
 
-**Demo.** "Before buying, the shopper sees the item on their own photo with Virtual Try-On, and FitTwin recommends their exact size by comparing them to other shoppers with a similar body and size who bought that same item and kept it — so they order the right size the first time. The AI assistant answers fit questions instantly, and at checkout, bracketing and wardrobing get flagged — so repeat one-wear returners lose free returns."
+**Demo.** "Virtual Try-On lets shoppers see clothes on their own photos, while FitTwin recommends the exact size using purchase data from similar buyers. An AI assistant resolves fit queries instantly. If bracketing or wardrobing is detected at checkout, the system politely guides the customer to refer to the fit guide and double-check their recommended size."
 
-**Metric.** "Fit is the number-one reason clothes get returned online, and each return costs a retailer twenty to thirty dollars to process — that's Statista. Virtual try-on providers report cutting those returns twenty to forty percent — direct margin back on a category where a quarter of orders come back."
+**Metric.** "Processing a single apparel return costs $20–$30. This technology reduces return rates by up to 40%, protecting profit margins before the item ever leaves the warehouse."
 
 ---
 
 ## Feature 2 — The Return Flow
 
-**Problem.** "When a return can't be prevented, it bleeds money two ways. Fraud — one pickup agent can't know what to inspect on every different product, and he's rushed, so swapped, broken, or fake items slip through. And reverse logistics — shipping everything back to the seller even when it's perfectly resellable."
+**Problem.** "Unpreventable returns bleed money two ways. First is fraud — rushed pickup agents can't expertly authenticate every product, so fakes slip through. Second is reverse logistics — shipping perfectly resellable items all the way back"
 
-**Demo.** "I return these Nike Downshifter 13 shoes. At pickup, the agent scans them in the app — the AI grades the condition and verifies it's the genuine item, right at the doorstep, catching fraud before it enters the network. If it's resellable-as-new, Revive routes it by local demand to a nearby buyer, repackaged at a local kirana store, instead of a full trip back. If not, it goes to the seller to grade, resell, donate, or liquidate."
+**Demo.** "I return these Nike Downshifter 13 shoes. At pickup, the agent scans them — the AI grades the condition and verifies it's genuine, right at the doorstep. If it's a standard resellable as-is and in good condition, Revive routes it to a nearby buyer based on local demand calculated by ou physics engine, repackaged at a local kirana store under Amazon I have space. However, very high-value items  bypass local routing and go straight to the warehouse — doorstep AI can't check internal components, and those items have the margin to cover the trip back. If an item isn't resellable, it goes to the seller to grade, donate, or liquidate."
 
-**Metric.** "According to the National Retail Federation, return fraud costs retailers thirteen dollars seventy on every hundred returned — a hundred-and-one-billion-dollar problem a year. And because the trip back can cost up to two-thirds of an item's value, re-routing a resellable item locally removes that cost entirely."
+**Metric.** "The National Retail Federation reports that nearly fourteen percent of returns are fraudulent — a 101-billion-dollar annual problem. Even for legitimate returns, the trip back costs up to two-thirds of the item's value. Re-routing locally removes that cost entirely."
 
 ---
 
@@ -34,7 +34,7 @@
 
 **Problem.** "Usable goods sit idle because reselling is a hassle — you meet a stranger to hand over the item, schedules clash, and there's no way to prove its condition, so most people never bother."
 
-**Demo.** "On Revive I just list it. The AI grades it from the photos — factoring in cosmetic wear, a functionality test, and whether the original accessories are present — and from that grade it suggests a fair listing price and issues a Health Card: a tamper-proof, Amazon-backed condition report with a defect map and authenticity check. Revive handles the pickup, so no stranger meet-up, and the buyer gets an Amazon guarantee on exactly what they're getting."
+**Demo.** "On Revive I just list it. The AI grades it from the photos, suggests a fair price, and issues a Health Card — a tamper-proof, Amazon-backed report showing the grade, a defect map, an authenticity check, and condition notes. High-value items can even be refurbished by an Amazon SPN partner for a 90-day Health Card — an even greater trust premium. Revive handles the pickup, so no stranger meet-up, and the buyer sees exactly what they're getting."
 
 **Metric.** "The secondhand market is on track to hit three hundred and fifty billion dollars by 2028, according to ThredUp — but people only buy pre-owned they can trust. The Health Card is the trust, Revive is the convenience — and together that's what unlocks the market for an everyday seller."
 
@@ -42,11 +42,9 @@
 
 ## Feature 4 — Green Credits
 
-**Problem.** "Right now a genuine customer — one who never wardrobes or files a false return — is treated the same as a serial abuser. There's no reward for being honest, and no nudge toward the greener choice."
+**Problem.** "Today a genuine customer is treated the same as a serial abuser — no reward for being honest, and no nudge toward the greener choice."
 
-**Demo.** "Green Credits fix that. Customers earn them for being genuine — no fraud, no false returns — and for sustainable choices like buying renewed or reselling instead of trashing, all redeemable on Amazon."
-
-**Metric.** "This attacks the same hundred-and-one-billion-dollar fraud problem from the other side — rewarding honesty instead of only policing abuse. It also cuts waste: the NRF and Optoro put US returns at around twenty-four million tonnes of CO₂ a year. So Green Credits cut abuse, cut waste, and give honest customers a reason to come back."
+**Demo.** "Green Credits fix that. We build a Green Profile from your behaviour — keeping orders, buying renewed, reselling instead of trashing — which lifts you through four tiers: Seedling, Sprout, Grove, and Forest Guardian. The higher your tier, the more every credit is worth — all redeemable on Amazon."
 
 ---
 

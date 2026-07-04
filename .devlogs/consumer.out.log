@@ -1,0 +1,33 @@
+
+> amazon-hackon@0.0.0 dev:consumer
+> npm run dev -w @amazon-hackon/consumer
+
+
+> @amazon-hackon/consumer@0.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m362[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m6:22:09 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:22:13 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:22:20 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:22:33 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:22:45 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:23:06 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:38:33 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:38:49 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:39:02 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:40:06 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:40:20 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:40:35 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/SellIt.jsx, /src/index.css[22m
+[2m6:53:48 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m6:53:58 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m6:54:04 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m6:54:06 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m6:54:07 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m6:54:26 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m7:08:53 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stitch/RufusChat.jsx, /src/index.css[22m
+[2m7:14:37 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/ProductDetailPage.jsx, /src/index.css[22m
+[2m9:08:18 pm[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GradingResultPage.jsx, /src/index.css[22m
