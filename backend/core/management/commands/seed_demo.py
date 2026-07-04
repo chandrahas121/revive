@@ -502,10 +502,10 @@ class Command(BaseCommand):
         # storefront has phones/laptops/monitors/footwear/apparel — not just the hero.
         real_preview = upsert_real_catalog()
         if real_preview:
-            curated = upsert_demo_catalog(skip_categories=RENEWED_CATS)
+            curated = []              # real catalog present → REAL products only
             real = real_preview
         else:
-            curated = upsert_demo_catalog()   # all categories from curated (offline)
+            curated = upsert_demo_catalog()   # offline fallback: curated only
             real = []
         iqoo = _upsert_iqoo_hero()         # one recognisable hero phone with local photo
         products = curated + real + [iqoo]
