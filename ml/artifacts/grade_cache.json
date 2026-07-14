@@ -2316,5 +2316,56 @@
     "image_hash": "7b56b87531298d394e8aac8a",
     "n_dino_detections": 0,
     "from_cache": false
+  },
+  "7f3244e6cdbdc925cc4251c5_e33e5a": {
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "dent",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "",
+        "angle_label": ""
+      }
+    ],
+    "completeness": 0.9,
+    "condition_summary": "The shoe appears to be in very good condition with only a minor dent visible on the front-center.",
+    "box_present": null,
+    "functional": true,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "latency_ms": 6563
+  },
+  "7f3244e6cdbdc925cc4251c5_ge33e5a": {
+    "listing_id": "b2a70815-f8d4-4d68-8c9f-74a099298be0",
+    "grade": "B",
+    "confidence": 0.9,
+    "defects": [
+      {
+        "type": "dent",
+        "severity": "minor",
+        "location": "front-center",
+        "angle": "",
+        "angle_label": ""
+      }
+    ],
+    "completeness": 0.667,
+    "condition_summary": "The shoe appears to be in very good condition with only a minor dent visible on the front-center.",
+    "functional": true,
+    "box_present": null,
+    "tags_present": null,
+    "accessories_present": null,
+    "powers_on": null,
+    "seal_intact": null,
+    "angle": "",
+    "angle_label": "",
+    "latency_ms": 29219,
+    "model_version": "revive-grade-v1.0",
+    "image_hash": "7f3244e6cdbdc925cc4251c5",
+    "n_dino_detections": 0,
+    "from_cache": false
   }
 }

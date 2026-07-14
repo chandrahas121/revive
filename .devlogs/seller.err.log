@@ -1,7 +1,134 @@
-npm error Lifecycle script `dev` failed with error:
-npm error code 4294967295
-npm error path C:\Users\dell\Desktop\amazon-hackon\apps\seller
-npm error workspace @amazon-hackon/seller@0.0.0
-npm error location C:\Users\dell\Desktop\amazon-hackon\apps\seller
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vite
+[2m2:09:36 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\dell\Desktop\amazon-hackon\apps\seller\src\pages\GradingAssistant.jsx: Expected corresponding JSX closing tag for <div>. (535:10)
+
+[0m [90m 533 |[31m               )[33m;[31m
+ [90m 534 |[31m             })()}
+[31m[1m>[22m[31m[90m 535 |[31m           [33m<[31m[33m/[31m[33m>[31m
+ [90m     |[31m           [31m[1m^[22m[31m
+ [90m 536 |[31m         )}
+ [90m 537 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 538 |[31m     [33m<[31m[33m/[31m[33mShell[31m[33m>[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mC:/Users/dell/Desktop/amazon-hackon/apps/seller/src/pages/GradingAssistant.jsx[39m:535:10
+[33m  548|    warehouse: ['Warehouse damage', '#565959', '#eff1f1', '#d5d9d9'],
+  549|  };
+  550|  const DISPO_LABEL = { RESTOCK_NEW: 'Restock as New', GRADE_RESELL: 'Grade & Resell (used)', LIQUIDATE: 'Liquidate', WARRANTY: 'Supplier warranty', DISPOSE: 'Dispose' };
+     |                                                                                       ^
+  551|  const REFUND_LABEL = { full: 'Full refund', restocking_fee: 'Refund − restocking fee', withhold: 'Withhold refund', withhold_pending_amazon: 'Withhold — await Amazon refund' };
+  552|  const ROUTE_LABEL = { SAFE_T: 'SAFE-T claim', SUPPLIER_WARRANTY: 'Supplier warranty', A_TO_Z: 'A-to-z', NONE: 'No reimbursement' };[39m
+      at constructor (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:365:19)
+      at JSXParserMixin.raise (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:6616:19)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4734:14)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4710:32)
+      at JSXParserMixin.jsxParseElement (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4761:17)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4771:19)
+      at JSXParserMixin.parseExprSubscripts (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11098:23)
+      at JSXParserMixin.parseUpdate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11083:21)
+      at JSXParserMixin.parseMaybeUnary (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11063:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10916:61)
+      at JSXParserMixin.parseExprOps (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10921:23)
+      at JSXParserMixin.parseMaybeConditional (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10898:23)
+      at JSXParserMixin.parseMaybeAssign (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:39
+      at JSXParserMixin.allowInAnd (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12443:12)
+      at JSXParserMixin.parseMaybeAssignAllowIn (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:17)
+      at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12510:17)
+      at JSXParserMixin.parseParenAndDistinguishExpression (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11692:28)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11348:23)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4776:20)
+      at JSXParserMixin.parseExprSubscripts (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11098:23)
+      at JSXParserMixin.parseUpdate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11083:21)
+      at JSXParserMixin.parseMaybeUnary (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11063:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10916:61)
+      at JSXParserMixin.parseExprOpBaseRightExpr (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11003:34)
+      at JSXParserMixin.parseExprOpRightExpr (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10998:21)
+      at JSXParserMixin.parseExprOp (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10964:27)
+      at JSXParserMixin.parseExprOps (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10925:17)
+      at JSXParserMixin.parseMaybeConditional (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10898:23)
+      at JSXParserMixin.parseMaybeAssign (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10848:21)
+      at JSXParserMixin.parseExpressionBase (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10797:39
+      at JSXParserMixin.allowInAnd (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12443:12)
+      at JSXParserMixin.parseExpression (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10797:17)
+      at JSXParserMixin.jsxParseExpressionContainer (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4644:31)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4723:36)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4710:32)
+      at JSXParserMixin.jsxParseElement (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4761:17)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4771:19)
+      at JSXParserMixin.parseExprSubscripts (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11098:23)
+      at JSXParserMixin.parseUpdate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11083:21)
+      at JSXParserMixin.parseMaybeUnary (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11063:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10916:61)
+      at JSXParserMixin.parseExprOps (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10921:23)
+      at JSXParserMixin.parseMaybeConditional (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10898:23)
+      at JSXParserMixin.parseMaybeAssign (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:39
+      at JSXParserMixin.allowInAnd (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12443:12)
+      at JSXParserMixin.parseMaybeAssignAllowIn (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:17)
+      at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12510:17)
+[2m2:09:46 am[22m [31m[1m[vite][22m[39m [31mInternal server error: C:\Users\dell\Desktop\amazon-hackon\apps\seller\src\pages\GradingAssistant.jsx: Expected corresponding JSX closing tag for <div>. (535:10)
+
+[0m [90m 533 |[31m               )[33m;[31m
+ [90m 534 |[31m             })()}
+[31m[1m>[22m[31m[90m 535 |[31m           [33m<[31m[33m/[31m[33m>[31m
+ [90m     |[31m           [31m[1m^[22m[31m
+ [90m 536 |[31m         )}
+ [90m 537 |[31m       [33m<[31m[33m/[31m[33mdiv[31m[33m>[31m
+ [90m 538 |[31m     [33m<[31m[33m/[31m[33mShell[31m[33m>[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mC:/Users/dell/Desktop/amazon-hackon/apps/seller/src/pages/GradingAssistant.jsx[39m:535:10
+[33m  548|    warehouse: ['Warehouse damage', '#565959', '#eff1f1', '#d5d9d9'],
+  549|  };
+  550|  const DISPO_LABEL = { RESTOCK_NEW: 'Restock as New', GRADE_RESELL: 'Grade & Resell (used)', LIQUIDATE: 'Liquidate', WARRANTY: 'Supplier warranty', DISPOSE: 'Dispose' };
+     |                                                                                       ^
+  551|  const REFUND_LABEL = { full: 'Full refund', restocking_fee: 'Refund − restocking fee', withhold: 'Withhold refund', withhold_pending_amazon: 'Withhold — await Amazon refund' };
+  552|  const ROUTE_LABEL = { SAFE_T: 'SAFE-T claim', SUPPLIER_WARRANTY: 'Supplier warranty', A_TO_Z: 'A-to-z', NONE: 'No reimbursement' };[39m
+      at constructor (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:365:19)
+      at JSXParserMixin.raise (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:6616:19)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4734:14)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4710:32)
+      at JSXParserMixin.jsxParseElement (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4761:17)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4771:19)
+      at JSXParserMixin.parseExprSubscripts (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11098:23)
+      at JSXParserMixin.parseUpdate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11083:21)
+      at JSXParserMixin.parseMaybeUnary (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11063:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10916:61)
+      at JSXParserMixin.parseExprOps (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10921:23)
+      at JSXParserMixin.parseMaybeConditional (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10898:23)
+      at JSXParserMixin.parseMaybeAssign (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:39
+      at JSXParserMixin.allowInAnd (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12443:12)
+      at JSXParserMixin.parseMaybeAssignAllowIn (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:17)
+      at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12510:17)
+      at JSXParserMixin.parseParenAndDistinguishExpression (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11692:28)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11348:23)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4776:20)
+      at JSXParserMixin.parseExprSubscripts (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11098:23)
+      at JSXParserMixin.parseUpdate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11083:21)
+      at JSXParserMixin.parseMaybeUnary (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11063:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10916:61)
+      at JSXParserMixin.parseExprOpBaseRightExpr (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11003:34)
+      at JSXParserMixin.parseExprOpRightExpr (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10998:21)
+      at JSXParserMixin.parseExprOp (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10964:27)
+      at JSXParserMixin.parseExprOps (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10925:17)
+      at JSXParserMixin.parseMaybeConditional (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10898:23)
+      at JSXParserMixin.parseMaybeAssign (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10848:21)
+      at JSXParserMixin.parseExpressionBase (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10801:23)
+      at C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10797:39
+      at JSXParserMixin.allowInAnd (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12443:12)
+      at JSXParserMixin.parseExpression (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10797:17)
+      at JSXParserMixin.jsxParseExpressionContainer (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4644:31)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4723:36)
+      at JSXParserMixin.jsxParseElementAt (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4710:32)
+      at JSXParserMixin.jsxParseElement (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4761:17)
+      at JSXParserMixin.parseExprAtom (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:4771:19)
+      at JSXParserMixin.parseExprSubscripts (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11098:23)
+      at JSXParserMixin.parseUpdate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11083:21)
+      at JSXParserMixin.parseMaybeUnary (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:11063:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10916:61)
+      at JSXParserMixin.parseExprOps (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10921:23)
+      at JSXParserMixin.parseMaybeConditional (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10898:23)
+      at JSXParserMixin.parseMaybeAssign (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10848:21)
+      at C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:39
+      at JSXParserMixin.allowInAnd (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12443:12)
+      at JSXParserMixin.parseMaybeAssignAllowIn (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:10817:17)
+      at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\dell\Desktop\amazon-hackon\node_modules\@babel\parser\lib\index.js:12510:17)

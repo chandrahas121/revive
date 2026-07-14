@@ -188,7 +188,7 @@ class SellerRelistView(APIView):
 
 # Vite dev server serves frontend/public/ — so this URL resolves to the actual
 # Downshifter 13 photo both for the seller's display AND the integrity-gate reference.
-_NIKE_IMAGE_URL = 'http://localhost:5173/shoe_downshifter13.webp'
+_NIKE_IMAGE_URL = '/nike_downshifter_13.jpg'
 
 
 def _ensure_nike_product():
@@ -221,7 +221,7 @@ _QUEUE_SLOTS = [
      'expect': 'used', 'defect': False,
      'title_override': 'Nike Downshifter 13 (Blue, Running Shoe)',
      'sku_override': 'NIKE-DS13-BLU',
-     'image_override': 'http://localhost:5173/shoe_downshifter13.webp'},
+     'image_override': '/nike_downshifter_13.jpg'},
     {'caseId': 'c2', 'category': 'Footwear', 'reason': 'Too tight',             'note': 'Arrived · light sole wear',     'expect': 'used'},
     {'caseId': 'c3', 'category': 'Apparel',  'reason': 'Wrong size',            'note': 'Arrived · sealed, tags on',     'expect': 'sealed', 'sealed': True},
     {'caseId': 'c4', 'category': 'Footwear', 'reason': 'Item defective',        'note': 'Arrived · sole separation',     'expect': 'defect', 'defect': True},

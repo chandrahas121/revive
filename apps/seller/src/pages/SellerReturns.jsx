@@ -61,6 +61,10 @@ export default function SellerReturns() {
 const REQ_GRID = '170px 1fr 155px 200px 130px 90px 150px';
 function RequestsTab({ nav }) {
   const { reviewDecision, decideReview } = useSellerUI();
+  // Back each request row with a REAL catalog product (real image + title) instead
+  // of a coloured placeholder; the request-decision columns stay from reqRows.
+  const [cat, setCat] = useState([]);
+  useEffect(() => { getSellerQueue().then((r) => setCat(r.data.cases || [])).catch(() => {}); }, []);
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0', flexWrap: 'wrap' }}>
@@ -79,17 +83,22 @@ function RequestsTab({ nav }) {
         </div>
         {reqRows.map((r, i) => {
           const rd = r.reviewId ? reviewDecision[r.reviewId] : null;
+          const rc = cat.length ? cat[i % cat.length] : null;   // real catalog product
+          const refund = rc ? '₹' + Math.round(rc.mrp).toLocaleString('en-IN') : r.refund;
           return (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: REQ_GRID, gap: 12, padding: '14px 16px', borderBottom: '1px solid #eaeded', fontSize: 12.5, alignItems: 'center' }}>
               <div><div className="sc-teal">{r.orderId}</div><div style={{ color: '#565959', fontSize: 11.5, marginTop: 2 }}>{r.date}</div></div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <Thumb tint={r.tint} ink={r.ink} />
-                <div><div style={{ color: '#111' }}>{r.product}</div><div style={{ color: '#565959', fontSize: 11.5 }}>{r.asin}</div></div>
+                {rc ? <ProductImg src={rc.image} /> : <Thumb tint={r.tint} ink={r.ink} />}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>{rc ? rc.product : r.product}</div>
+                  <div style={{ color: '#565959', fontSize: 11.5 }}>{rc ? `${rc.sku} · ${rc.category}` : r.asin}</div>
+                </div>
               </div>
               <div style={{ color: '#111' }}>{r.reason}</div>
               <div><span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 12, background: r.aiBg, color: r.aiInk, lineHeight: 1.35 }}>{r.ai}</span></div>
               <div><span style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 12, background: r.statusBg, color: r.statusInk }}>{r.status}</span></div>
-              <div style={{ color: '#111', fontWeight: 700 }}>{r.refund}</div>
+              <div style={{ color: '#111', fontWeight: 700 }}>{refund}</div>
               <div>
                 {r.normalAction && <button style={{ background: '#fff', border: '1px solid #007185', color: '#007185', fontSize: 12, borderRadius: 16, padding: '5px 14px', cursor: 'pointer' }}>{r.action}</button>}
                 {r.needsReview && !rd && (
