@@ -48,9 +48,17 @@
 
 ---
 
+## Feature 5 — Seller Central (Returns Management)
+
+**Problem.** "A small seller drowns in returns — inspecting each one by hand, deciding what to do with it, and chasing Amazon for the reimbursements they're owed. Most just eat the loss."
+
+**Demo.** "In Seller Central, the seller hands the return to ARCA — our Autonomous Returns and Claims Agent — a pipeline of five specialist AIs that hand off in turn. They verify the item's identity and catch fraud, grade its condition, attribute fault and decide where it goes — restock, grade-and-resell, liquidate, or dispose — check SAFE-T eligibility and the deadline, and draft the reimbursement claim. Every step carries a tamper-proof evidence bundle, and one tap relists it with a Health Card."
+
+---
+
 **Close**
 
-"Seller-side return management — analytics and bulk disposition — is next. That's Amazon Revive: prevent the return, recover the value, reward the choice."
+"That's Amazon Revive: prevent the return, recover the value, reward the choice."
 
 ---
 
