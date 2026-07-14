@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/tryon/(.*)",
+      "destination": "https://tryon-api.onrender.com/api/tryon/$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "https://revive-api.onrender.com/api/$1"
+    }
+  ]
+}

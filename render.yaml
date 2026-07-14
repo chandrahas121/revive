@@ -1,0 +1,36 @@
+services:
+  # 1. Django Web Service (Bundled with Celery Worker)
+  - type: web
+    name: revive-api
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "bash start_django.sh"
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set manually in Render dashboard
+      - key: REDIS_URL
+        sync: false # Set manually in Render dashboard (e.g. redis://.../0)
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false # e.g. https://your-frontend.vercel.app
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+
+  # 2. Try-On FastAPI Web Service (Bundled with Celery Worker)
+  - type: web
+    name: tryon-api
+    env: python
+    plan: free
+    rootDir: services/tryon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "bash start_tryon.sh"
+    envVars:
+      - key: REDIS_URL
+        sync: false # Set manually in Render dashboard (e.g. redis://.../1)
+      - key: HF_TOKEN
+        sync: false # Set manually in Render dashboard
