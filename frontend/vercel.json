@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/tryon/(.*)",
-      "destination": "https://tryon-api.onrender.com/api/tryon/$1"
+      "destination": "https://tryon-api-94un.onrender.com/api/tryon/$1"
     },
     {
       "source": "/api/(.*)",
-      "destination": "https://revive-api.onrender.com/api/$1"
+      "destination": "https://revive-api-t024.onrender.com/api/$1"
     }
   ]
 }
