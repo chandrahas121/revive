@@ -8,6 +8,8 @@ services:
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "bash start_django.sh"
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: DATABASE_URL
         sync: false # Set manually in Render dashboard
       - key: REDIS_URL
@@ -42,6 +44,8 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "bash start_tryon.sh"
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: REDIS_URL
         sync: false # Set manually in Render dashboard (e.g. redis://.../1)
       - key: HF_TOKEN
