@@ -20,8 +20,20 @@ services:
         sync: false # e.g. https://your-frontend.vercel.app
       - key: CSRF_TRUSTED_ORIGINS
         sync: false
-
-  # 2. Try-On FastAPI Web Service (Bundled with Celery Worker)
+      - key: LLM_PROVIDER
+        value: "openrouter"
+      - key: OPENROUTER_API_KEY
+        sync: false # Set manually in Render dashboard
+      - key: OPENROUTER_MODEL
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false # Set manually in Render dashboard
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_S3_REGION_NAME
+        sync: false
   - type: web
     name: tryon-api
     env: python
