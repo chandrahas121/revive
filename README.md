@@ -13,6 +13,13 @@ question no e-commerce system answers today about a returned or unused item:
 It keeps products **inside the city** instead of shipping them ~600 km back to a warehouse,
 turning the most carbon-intensive step of returns into the one we eliminate.
 
+REVIVE now runs as **two surfaces over one decision engine**: the **consumer storefront**
+([`apps/consumer`](apps/consumer)) where people buy, return, and resell, and **Seller Central**
+([`apps/seller`](apps/seller)) where a small seller runs the whole return through an AI grading +
+**ARCA returns agent** (fault → disposition → refund/SAFE-T) and relists it in a couple of taps. The
+heavy work has been pulled out of the request path into a **local-first microservices** layer
+(presigned object storage, a standalone try-on service, async grading, and a Kafka-free event bus).
+
 - 🌐 **Live app:** https://amazon-hackon-mu.vercel.app/
 - 📦 **Repo:** https://github.com/chandrahas121/amazon-hackon
 
@@ -137,6 +144,28 @@ Benchmarked at roughly **64% cheaper and 4× faster** than a warehouse round-tri
   self-reinforcing loop: fewer returns feed more Revive inventory, and credits drive more Revive
   purchases.
 
+### ⑤ A **seller-side returns brain** — ARCA decides fault, disposition *and* money
+
+The consumer flow answers *"what is this and where does it go?"*. The seller — a small business
+taking ~200 returns/month — has a harder question: *"whose fault is this, do I resell it or claim it
+back, and am I owed a reimbursement?"* **ARCA** (the returns agent,
+[`ml/seller_decision.py`](ml/seller_decision.py)) is a two-track decision engine that runs inside
+**Seller Central** ([`apps/seller`](apps/seller)) the moment a return is inspected:
+
+- **Fault attribution** → `customer | fraud | carrier | defective | warehouse | none`.
+- **Disposition** (Track A · *where it goes*) wraps the same Disposition Gate but adds a **hard
+  functional gate** on resale and `LIQUIDATE / WARRANTY / DISPOSE` per fault (buyer-damaged →
+  liquidate; defective/hygiene/hazmat → dispose/warranty).
+- **Financial** (Track B · *the money*) → refund verdict, reimbursement route, and **SAFE-T
+  eligibility** (excluded categories, ₹25k cap, 15-day window, superficial-damage exclusion,
+  Amazon-issued-refund requirement, abuse-ratio suppression), with an **LLM-drafted claim narrative**.
+- Every captured angle is SHA-256'd into a tamper-evident **evidence bundle** (chained bundle hash)
+  that flows into both the Health Card ledger and the drafted SAFE-T claim.
+
+It's deterministic first (rules own SAFE-T eligibility) with an **optional LLM refine** that only
+enriches the rationale — never downgrades a fault. A confirmed decision relists the item straight to
+the consumer storefront ("View on storefront ↗"), routes it to warranty/liquidation, or disposes it.
+
 ---
 
 ## 3. End-to-End Workflow
@@ -177,6 +206,14 @@ The lifecycle state machine lives in [`backend/core/lifecycle.py`](backend/core/
 instantly — it progresses through a short, narratable track per disposition
 (*Pickup scheduled → Refurbishing → Certified & live → Sold* for Renewed;
 *Held locally → Live near you → Sold* for Revive).
+
+**Seller Central path.** A seller runs the same return through
+[`apps/seller`](apps/seller): *Returns received → Inspect a real product → capture guided angles +
+run the on-camera functional test (Works / Faulty) → **Grade with AI** (DINOv2 integrity gate → live
+A–F grade + defect heatmaps) → **ARCA decision** (fault → disposition + refund + SAFE-T) → tamper-evident
+evidence bundle → **Confirm & relist** (or route to warranty / liquidation / dispose)*. A relisted
+item appears on the consumer storefront under **Shop Revive**, with the graded evidence chained into
+its Health Card.
 
 ---
 
@@ -222,6 +259,15 @@ driving the home-grid badge, the product-page "What buyers say" card, the **chec
 and the FitTwin line. The panel runs **once at seed time** (cached by ASIN), so it's free at request
 time and fails open offline.
 
+### Ask Sage — grounded product Q&A
+A **conversational shopping assistant** on the product page ([`ml/rufus.py`](ml/rufus.py), served at
+`/api/rufus/`) — REVIVE's answer to Amazon's Rufus, but scoped to the item in front of the shopper. It
+answers questions grounded **only** in that product's real context (condition grade, price,
+description, review intel, and a sample of actual reviews) plus the prior turns of the chat, so it
+never hallucinates specs. It reuses the same LLM-provider abstraction as the review panel and **fails
+open** — with no API key it returns a deterministic, context-derived answer so the chat still works
+offline.
+
 ### Smart disposition + local routing
 The Disposition Gate + two-stage demand-gravity / EV router (see §2, §6) route each item to a nearby
 buyer instead of a long warehouse round-trip — cutting cost, speeding resale, and sharply lowering
@@ -232,46 +278,84 @@ Every item ships with a signed, tamper-evident record of grade + defect photos +
 ([`backend/trust/`](backend/trust/)), with a QR code and an append-only ledger. The buyer can see
 exactly what they're getting and verify it hasn't been faked.
 
-### Green Credits
+### Green Credits + Green Profile
 Keep an order instead of returning it → earn **Green Credits**, redeemable only in the Revive store
 ([`backend/green/credits.py`](backend/green/credits.py)). A pending earn is created at purchase and
 **vests** when the return window closes; initiating a return **cancels** it. Buyers only — sellers
-never earn.
+never earn. Rather than a flat "didn't return → fixed credits" rule, each earn now scales with the
+shopper's **Green Profile** ([`backend/green/profile.py`](backend/green/profile.py)) — a behaviour
+score mined from real activity (return discipline, second-life purchases, items resold) that maps to
+a **tier + earn multiplier**: the more genuinely circular the behaviour, the more each green action is
+worth. Only positive, customer-facing signals are exposed; the redesigned wallet page surfaces the
+tier, multiplier, and progress.
+
+### Seller Central + ARCA returns agent
+A full **Seller Central** experience ([`apps/seller`](apps/seller)) for the small seller (~200
+returns/month) that automates *inspect → grade → decide → relist*: a dashboard (sales/returns KPIs),
+inventory manager, MCF order form, and a **Manage Returns** console (return requests / returns
+received / SAFE-T claims). Its centrepiece is the **Grading Assistant**: the seller uploads the
+return's angle photos and runs the on-camera **functional test**, "Grade with AI" hits the real
+`/api/seller/grade/` engine (DINOv2 integrity gate against *that exact product* → live grade + defect
+heatmaps), and **ARCA** (§2⑤) returns the fault, disposition, refund verdict, and SAFE-T eligibility
+with a drafted claim. A tamper-evident **evidence bundle** (per-angle SHA-256 → chained bundle hash)
+backs both the Health Card ledger and the SAFE-T claim. Confirm → the item relists to the consumer
+storefront (the demo money-shot: **"View on storefront ↗"**), or routes to warranty/liquidation/dispose.
 
 ---
 
 ## 5. System Architecture
 
 ```
-                          ┌──────────────────────────────────────────┐
-   Browser (React SPA) ──►│  CloudFront CDN  +  Vercel (static SPA)   │
-                          └──────────────────────────────────────────┘
-                                          │  HTTPS (JWT cookie)
-                                          ▼
-                          ┌──────────────────────────────────────────┐
-                          │  Load balancer (nginx) → Django + DRF     │   ← stateless, horizontally
-                          │  (gunicorn, JWT auth, replicas)           │     scalable
-                          └──────────────────────────────────────────┘
-                              │            │              │
-              ┌───────────────┘            │              └────────────────┐
-              ▼                            ▼                               ▼
-   ┌────────────────────┐    ┌────────────────────────┐      ┌────────────────────────┐
-   │ PostgreSQL          │    │ Redis (Upstash)         │      │ Celery ML worker fleet  │
-   │ (Supabase)          │    │ • grade cache           │      │ • Grounding DINO        │
-   │ ACID orders/listings│    │ • demand index          │◄────►│ • DINOv2 / CLIP         │
-   │                     │    │ • Celery broker/result  │      │ • LLM caption (Haiku)   │
-   └────────────────────┘    │ • storefront read-cache │      │ • EV router / disposition│
-                             └────────────────────────┘      └────────────────────────┘
-                                          ▲                               │
-                                          │                  uploads ─────┘
-                          ┌──────────────────────────────────────────┐
-                          │  AWS S3 (images) → CloudFront             │
-                          └──────────────────────────────────────────┘
+        consumer app          seller app          ← two Vite SPAs, one API
+     (apps/consumer :5173) (apps/seller :5174)       (packages/shared client)
+                    │              │
+                    └──────┬───────┘  HTTPS (JWT cookie) · presigned uploads
+                           ▼
+                 ┌───────────────────────────┐
+                 │  nginx  (API gateway / LB) │  /api/tryon/ → tryon-service
+                 └───────────────────────────┘  /api/*      → Django core
+                       │                    │
+                       ▼                    ▼
+        ┌───────────────────────────┐   ┌────────────────────────────┐
+        │  Django + DRF core         │   │  tryon-service (FastAPI)    │  ← own micro-service,
+        │  (gunicorn, JWT, replicas) │   │  async job+poll, own worker │    own Redis DB / queue
+        │  catalog·returns·grade·auth│   └────────────────────────────┘
+        │  seller/ARCA · events.py   │
+        └───────────────────────────┘
+          │        │            │  return_graded  (Kafka-free event bus)
+          │        │            ▼
+          │        │   ┌───────────────────────────────────────────────┐
+          │        │   │ fan-out Celery tasks (parallel, non-blocking): │
+          │        │   │ health card · record local supply · notify     │
+          │        │   └───────────────────────────────────────────────┘
+          ▼        ▼
+┌──────────────┐ ┌────────────────────────┐      ┌────────────────────────┐
+│ PostgreSQL   │ │ Redis                   │      │ Celery ML worker fleet │
+│ (Supabase/   │ │ • grade cache           │◄────►│ • Grounding DINO       │
+│  local pg)   │ │ • demand index          │      │ • DINOv2 / CLIP        │
+│ ACID orders  │ │ • Celery broker/result  │      │ • LLM caption (Haiku)  │
+└──────────────┘ │ • storefront read-cache │      │ • EV router/disposition│
+                 └────────────────────────┘      └────────────────────────┘
+                           ▲                              │
+                           │             uploads ─────────┘
+        ┌──────────────────────────────────────────────────────┐
+        │  Object storage (presigned):                          │
+        │  local filesystem · MinIO (self-hosted S3) · AWS S3+CF │
+        └──────────────────────────────────────────────────────┘
 ```
 
-Key principle: **the heavy ML pipeline is fully decoupled from the request path.** The Django API
-pushes a job ticket to Redis and returns a `job_id` in O(1); background Celery workers do the GPU/CPU
-work, so the web server never blocks under upload spikes.
+Two principles run the show:
+
+1. **The heavy ML pipeline is fully decoupled from the request path.** The API pushes a job ticket to
+   Redis and returns a `job_id` in O(1); background Celery workers do the GPU/CPU work, and clients
+   upload straight to object storage via **presigned URLs** — so the web server never blocks under
+   upload spikes or streams heavy blobs. Try-on, the slowest/burstiest job (15–60 s GPU diffusion), is
+   split into its own **FastAPI micro-service** ([`services/tryon`](services/tryon)) behind the nginx
+   gateway, scaling on its own queue depth without touching catalog or checkout.
+2. **A Kafka-free event bus** ([`backend/core/events.py`](backend/core/events.py)) fans one domain
+   event out to many independent consumers. When a return is graded, `return_graded` fires **once** and
+   three Celery tasks run in parallel — generate the Health Card, record local supply (O(1)
+   `cache.incr`), and notify the outcome — none blocking the others, and seeding never triggers it.
 
 ---
 
@@ -336,37 +420,73 @@ boost. CLIP content carries cold-start refurb items that have no interaction his
 > nudge" is driven by the **review-mined heuristic** signal from §4 (review intelligence) plus
 > FitTwin, not by a predictive risk model.
 
+### 6.6 ARCA seller-returns decision engine — [`ml/seller_decision.py`](ml/seller_decision.py)
+```
+attribute_fault(reason, functional, substitution, …) → customer|fraud|carrier|defective|warehouse|none
+disposition_decision(grade, category, fault, functional) → RESTOCK_NEW|OPEN_BOX|USED_P2P|RENEWED_SPN
+                                                          |LIQUIDATE|WARRANTY|DISPOSE   (functional-gated)
+financial_decision(fault, value, refund_issued_by, days, category) → refund verdict + SAFE-T eligibility
+decide(...) = orchestrates the three; draft_claim_narrative() = LLM claim text (fail-open template)
+```
+- **Deterministic first, LLM-refined second.** Rules own SAFE-T eligibility (excluded categories,
+  ₹25k cap, 15-day window, superficial-damage exclusion, Amazon-issued-refund requirement, abuse-ratio
+  suppression); an optional OpenRouter/Anthropic pass only enriches the *rationale* and may escalate to
+  fraud — it never downgrades the deterministic fault. Fails open to a template when no key.
+- A **hard functional gate** blocks resale of anything that failed the on-camera Works/Faulty test,
+  routing it to WARRANTY or DISPOSE regardless of cosmetic grade.
+- Every captured angle is SHA-256'd into a chained **evidence bundle** ([`ml/llm.py`](ml/llm.py)
+  supplies the LLM helper) that anchors the Health Card ledger and the SAFE-T claim.
+
 ---
 
 ## 7. Tech Stack
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| **Frontend** | React 19 (Vite), Tailwind CSS, React Router 7, Axios | Fast, interactive SPA for Health Cards & Virtual Try-On |
+| **Frontend** | React 19 (Vite) **npm-workspace monorepo** — consumer + seller apps, `packages/shared` client, Tailwind CSS, React Router 7, Axios | Two SPAs (storefront + Seller Central) over one shared API client |
 | **Backend** | Django 4.2 + Django REST Framework, SimpleJWT | Robust ORM, rapid APIs, stateless JWT → effortless horizontal scaling |
-| **Async** | Celery + Redis | Decouples the GPU/CPU grading pipeline from the request path |
-| **Data / ML** | PyTorch, Grounding DINO, DINOv2, CLIP, LightGBM, Implicit ALS, Claude Haiku (LLM) | CV defect detection + fusion grading, price/recommendation models, LLM severity & review panels |
-| **Datastores** | PostgreSQL (Supabase), Redis (Upstash) | ACID for orders/payments; microsecond cache + demand index |
-| **Storage** | AWS S3 + CloudFront CDN | Infinitely scalable image storage; web servers never serve heavy blobs |
-| **Infra** | Docker, gunicorn, WhiteNoise, nginx, Vercel | Identical envs across nodes; static SPA on the edge |
+| **Micro-service** | FastAPI + Pydantic (`services/tryon`) | Splits the slow/bursty try-on job out of the monolith; scales on its own queue |
+| **Async / events** | Celery + Celery Beat + Redis; custom Django-signal event bus | Decouples GPU/CPU grading from the request path; scheduled index/panel rebuilds; one event → N consumers |
+| **Data / ML** | PyTorch, Grounding DINO, DINOv2, CLIP, LightGBM, Implicit ALS, Claude Haiku (LLM) | CV defect detection + fusion grading, price/recommendation models, LLM severity, review panels, Ask Sage & ARCA |
+| **Datastores** | PostgreSQL (Supabase / local pg), Redis (Upstash) | ACID for orders/payments; microsecond cache + demand index |
+| **Storage** | Presigned uploads → local filesystem · **MinIO** (self-hosted S3) · AWS S3 + CloudFront | One env-var swap across three modes; web servers never serve heavy blobs |
+| **Infra** | Docker Compose, gunicorn, WhiteNoise, nginx (API gateway), Vercel | Identical envs across nodes; local-first, lifts to free cloud by env vars |
 
 ---
 
 ## 8. Repository Layout
 
+The repo is an **npm-workspace monorepo** — two frontends, one shared client, the Django core, an
+extracted micro-service, and the importable ML engine.
+
 ```
 amazon-hackon/
-├── backend/                     # Django + DRF API
-│   ├── revive/                  # project: settings, urls, wsgi/asgi, celery
+├── apps/                        # frontend workspaces (Vite SPAs)
+│   ├── consumer/                # storefront (:5173) — Home, ProductDetail, Checkout,
+│   │   └── src/                 #   ReturnWizard, SellIt, Ask Sage, Credits wallet, Orders/Track…
+│   └── seller/                  # Seller Central (:5174) — dashboard, inventory, MCF,
+│       └── src/                 #   Manage Returns, GradingAssistant, ARCA decision + SAFE-T
+├── packages/
+│   └── shared/                  # shared api/client.js + categoryProfiles.js (@amazon-hackon/shared)
+│
+├── services/
+│   └── tryon/                   # standalone FastAPI micro-service (IDM-VTON, async job+poll,
+│       └── app/                 #   own Celery worker + Redis DB; nginx routes /api/tryon/ here
+│
+├── backend/                     # Django + DRF core (catalog · returns · grade · auth · seller)
+│   ├── revive/                  # project: settings, urls, wsgi/asgi, celery (+ Beat schedule)
 │   ├── core/                    # User, Product, Review, Listing, Order
 │   │   ├── lifecycle.py         # second-life state machine (source of truth)
-│   │   ├── urls/                # auth.py · listings.py · orders.py
+│   │   ├── events.py            # Kafka-free event bus (return_graded) → signals.py fan-out
+│   │   ├── storage.py           # presigned-upload helper (filesystem / MinIO / S3)
+│   │   ├── seller_views.py      # Seller Central endpoints (queue/grade/relist/dashboard)
+│   │   ├── urls/                # auth.py · listings.py · orders.py · seller.py
 │   │   └── management/commands/ # seed_demo, seed_fittwin, import/assign helpers
-│   ├── grade/                   # grading endpoints + Celery task (tasks.py) + try-on proxy
-│   ├── route/                   # EV routing + demand-gate endpoints
-│   ├── trust/                   # Product Health Card (hash, QR, ledger)
+│   ├── grade/                   # grading endpoints + Celery tasks (sync/async) + Ask Sage (RufusView)
+│   ├── route/                   # EV routing + demand-gate endpoints (+ Beat: rebuild_demand_index)
+│   ├── trust/                   # Product Health Card (hash, QR, ledger, services.py)
 │   ├── prevent/                 # FitTwin + checkout return-nudge (RiskView, fit_profile)
-│   └── green/                   # Green Credits (earn/vest/redeem/donate)
+│   └── green/                   # Green Credits + Green Profile (earn/vest/redeem/donate)
 │
 ├── ml/                          # the decision engine (importable by backend)
 │   ├── grade.py                 # CV+LLM fusion grading pipeline
@@ -377,22 +497,18 @@ amazon-hackon/
 │   ├── risk_tier.py             # value × fraud-risk tiering (Axis B, backend-only)
 │   ├── verify.py / instance_match.py / image_dedup.py   # integrity gates
 │   ├── review_insights.py       # multi-agent review panel → fit signal + summary
+│   ├── rufus.py                 # Ask Sage — grounded product-page assistant
+│   ├── seller_decision.py       # ARCA returns agent (fault · disposition · SAFE-T)
+│   ├── llm.py                   # central OpenRouter/Anthropic helper (llm_json/llm_text)
 │   ├── recommend.py             # hybrid recommender
 │   ├── fittwin/                 # body-profile size matching
 │   ├── inference/               # dino.py · clip_model.py loaders
 │   └── artifacts/               # trained models + caches (price, ALS, demand, grade cache)
 │
-├── frontend/                    # React (Vite) SPA
-│   └── src/
-│       ├── pages/               # Home, ProductDetail, Checkout, ReturnWizard, SellIt, …
-│       ├── components/          # Header, ProductFeed, LifecycleTimeline, …
-│       ├── utils/               # categoryProfiles.js · tier.js (mirror backend)
-│       └── context/             # Auth + Cart
-│
 ├── data/                        # dataset download + import + test scripts
-├── docker-compose.yml           # db + redis + 2× backend + nginx
-├── Dockerfile · nginx.conf · .env.example
-└── final_idea_v1/v2/v3.md       # design docs (v2/v3 are the canonical specs)
+├── docker-compose.yml           # db + redis + minio + backend + celery worker/beat + tryon + nginx
+├── Dockerfile · nginx.conf · package.json (workspaces) · .env.example
+└── prd/ · final_idea_v*.md      # design docs (v2/v3 are the canonical specs)
 ```
 
 ---
@@ -401,8 +517,9 @@ amazon-hackon/
 
 Core models in [`backend/core/models.py`](backend/core/models.py):
 
-- **User** (`AbstractUser`, email login) — `return_rate`, live `lat/lng` + `geohash5`, and FitTwin
-  fields (`height_in`, `weight_lb`, `bust_in`, `body_type`, `fit_size_profile`).
+- **User** (`AbstractUser`, email login) — `return_rate`, live `lat/lng` + `geohash5`, FitTwin
+  fields (`height_in`, `weight_lb`, `bust_in`, `body_type`, `fit_size_profile`), and seller fields
+  (`is_seller`, `store_name`) that gate the separate Seller Central auth.
 - **Product** — catalog reference (`asin`, `title`, `category`, `brand`, `mrp`,
   `reference_image_url`, real `rating`/`rating_count`), plus review-mined `fit_signal` and
   `review_summary` JSON.
@@ -414,7 +531,10 @@ Core models in [`backend/core/models.py`](backend/core/models.py):
 - **Order** — purchase record (standard + P2P), `size` (feeds `fit_size_profile`),
   `escrow_released`, `return_window_closes`.
 - **HealthCard** ([`backend/trust/models.py`](backend/trust/models.py)) — tamper-evident grade record
-  with `card_hash` (SHA-256), inspection type (AI / AI+agent / AI+SPN), QR + ledger.
+  with `card_hash` (SHA-256), inspection type (AI / AI+agent / AI+SPN), QR + append-only ledger
+  (seller-graded returns chain the ARCA `evidence_bundle_hash` into a `GRADED` ledger entry).
+- **Green Profile** ([`backend/green/profile.py`](backend/green/profile.py)) — the behaviour score +
+  tier + earn multiplier derived from return discipline / second-life purchases / items resold.
 
 ---
 
@@ -427,15 +547,21 @@ All under `/api/`. Auth is JWT via httpOnly cookies.
 | **Auth** | `POST /api/auth/register/` · `login/` · `logout/`, `GET /api/auth/me/` | Account + session |
 | **Listings** | `GET /api/listings/`, `GET /api/listings/<id>/` | Browse / detail |
 | | `GET /api/listings/mine/`, `POST /api/listings/<id>/manage/`, `POST /api/listings/<id>/advance/` | Seller management + lifecycle advance |
-| | `POST /api/returns/process/` | Run a return through grading + disposition |
+| | `POST /api/returns/process/` | Run a return through grading + disposition (emits `return_graded`) |
 | | `GET /api/catalog/suggest/` | Catalog autocomplete for Sell-It |
 | | `GET /api/recommend/` | Hybrid recommendations |
+| | `POST /api/uploads/presign/` | Presigned upload URL (images/video → filesystem / MinIO / S3) |
 | **Orders** | `GET·POST /api/orders/` | List / create orders |
 | **Grading** | `POST /api/grade/` | Synchronous grade |
 | | `POST /api/grade/route/` · `inspect/` | Grade + route (+ integrity gates) |
 | | `POST /api/grade/heatmap/` | Defect heatmap |
 | | `POST /api/grade/async/`, `GET /api/grade/status/<job_id>/` | Async (Celery) grade + poll |
-| **Try-On** | `POST /api/tryon/` | Virtual try-on |
+| | `POST /api/grade/inspect/async/` · `inspect/return/async/`, `GET /api/grade/inspect/status/<job_id>/` | Async SellIt / return inspect + poll |
+| **Ask Sage** | `POST /api/rufus/` | Grounded product-page conversational assistant |
+| **Seller Central** | `POST /api/seller/auth/register/` · `login/` · `logout/`, `GET /api/seller/auth/me/` | Seller session (separate from consumer auth) |
+| | `GET /api/seller/queue/`, `POST /api/seller/grade/` | Returns queue + AI grade → ARCA decision + evidence bundle |
+| | `POST /api/seller/relist/`, `GET /api/seller/dashboard/` | Relist to storefront + seller KPIs |
+| **Try-On** | `POST /api/tryon/`, `GET /api/tryon/status/<job_id>/` | Async virtual try-on (proxied to tryon-service) + poll |
 | **Routing** | `POST /api/route/`, `POST /api/route/gate/` | EV route + demand gate |
 | | `GET /api/route/heatmap/` · `local-demand/`, `POST /api/route/apply/<listing_id>/` | Demand data + apply route |
 | **Health Card** | `POST /api/card/generate/`, `GET /api/card/<listing_id>/` | Generate / fetch card |
@@ -469,18 +595,30 @@ The backend `requirements.txt` ships only the **lightweight** ML deps (numpy, sk
 OpenAI SDK) so the API runs without torch; install `ml/requirements.txt` to enable on-device CV
 grading.
 
-### Frontend
+### Frontends (npm-workspace monorepo)
+`npm install` **once at the repo root** installs both apps + the shared package, then run whichever
+surface you need:
 ```bash
-cd frontend
-npm install
-npm run dev          # http://localhost:5173
+npm install                 # once, at repo root (installs apps/* + packages/*)
+npm run dev:consumer        # storefront        → http://localhost:5173
+npm run dev:seller          # Seller Central    → http://localhost:5174/seller
+npm run build               # build both apps (or build:consumer / build:seller)
 ```
+> Demo logins: consumer `demo@revive.in` / `demo12345`; seller `aarav.seller@revive.in` /
+> `seller12345` (store AARAV RETAIL). Seller login is gated on `is_seller=True`.
 
-### Async grading (optional, production-like)
+### Async workers + micro-services (optional, production-like)
 ```bash
 # in backend/, with Redis running:
-celery -A revive worker -l info
+celery -A revive worker -l info          # grade / return-inspect / event fan-out tasks
+celery -A revive beat   -l info          # scheduled demand-index (6h) + review-panel (nightly) rebuilds
+
+# standalone try-on micro-service (own FastAPI app + worker):
+cd services/tryon && uvicorn app.main:app --port 8100
+celery -A app.celery_app worker -l info  # uses its own Redis DB (queue isolation)
 ```
+The whole stack (Postgres · Redis · **MinIO** · backend · Celery worker/beat · tryon-service · nginx
+gateway) also comes up with one `docker compose up --build` — see §14.
 
 ---
 
@@ -525,7 +663,9 @@ Copy `.env.example` → `.env`. Key settings (see [`backend/revive/settings.py`]
 | `BEDROCK_MODEL_ID` / `AWS_REGION` | Production Bedrock path (one-env-var swap) | — |
 | `USE_REDIS` / `REDIS_URL` | Demand index, grade cache, Celery broker | off → file/in-memory fallback |
 | `DATABASE_URL` | Postgres DSN; unset → SQLite for local dev | SQLite |
-| `AWS_STORAGE_BUCKET_NAME` / `AWS_S3_REGION_NAME` / `AWS_CLOUDFRONT_DOMAIN` | S3 + CDN image storage (active when bucket set) | local `media/` |
+| `AWS_STORAGE_BUCKET_NAME` / `AWS_S3_REGION_NAME` / `AWS_CLOUDFRONT_DOMAIN` | Object storage + CDN (bucket set → presigned uploads active) | local `media/` filesystem |
+| `AWS_S3_ENDPOINT_URL` / `AWS_S3_PUBLIC_ENDPOINT_URL` | Set → **MinIO / self-hosted S3** (internal + public endpoints); unset with a bucket → real AWS S3 | — (real AWS S3) |
+| `TRYON_SERVICE_URL` | Base URL of the standalone tryon-service (Django proxies to it) | in-process background-thread fallback |
 | `SECRET_KEY` / `DEBUG` / `ALLOWED_HOSTS` | Standard Django | dev defaults |
 | `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` | Cross-origin cookie auth | localhost |
 | `REVIVE_INSTANCE_THRESHOLD` | DINOv2 instance-match cutoff | `0.55` |
@@ -539,26 +679,31 @@ direct) — non-vision routes must not be used for grading.
 
 ## 14. Deployment & Scaling
 
-[`docker-compose.yml`](docker-compose.yml) brings up the full stack — **Postgres + Redis + 2× Django
-(behind nginx)** — modelling the production topology:
+[`docker-compose.yml`](docker-compose.yml) brings up the **full local-first stack** — **Postgres +
+Redis + MinIO + Django backend + Celery worker + Celery Beat + tryon-service + nginx gateway** —
+modelling the production topology on a laptop, and lifting to free cloud by env vars only:
 
 ```bash
-docker compose up --build       # nginx :80 → backend1/backend2 → db + redis
+docker compose up --build       # nginx :80 → backend + tryon-service; db · redis · minio behind
 ```
 
-REVIVE handles **100×–1000× growth** through three independent, decoupled scaling layers:
+REVIVE handles **100×–1000× growth** through four independent, decoupled scaling layers:
 
 1. **Stateless horizontal API scaling** — Django stores zero session state (JWT cookies); spin up
-   more identical containers behind the load balancer, any instance serves any user.
-2. **Decoupled ML worker fleet** — grading is queued via Celery + Redis. A spike of 100k uploads
-   drops 100k tickets into the queue without crashing the API; ML workers scale **1 → 500**
-   independently of frontend browsing.
-3. **Aggressive read caching + edge storage** — ~99% of e-commerce traffic is reads; storefront
-   listings and Health Cards are cached in Redis (60 s TTL), and all images live on S3 + CloudFront,
-   keeping the Django memory footprint tiny.
+   more identical containers behind the nginx gateway, any instance serves any user.
+2. **Decoupled ML worker fleet** — grading is queued via Celery + Redis, and clients upload straight
+   to object storage via **presigned URLs**. A spike of 100k uploads drops 100k tickets into the queue
+   without crashing the API; ML workers scale **1 → 500** independently of frontend browsing.
+3. **Split-out micro-services + event fan-out** — the slow/bursty **try-on service** runs and scales
+   on its own queue behind the gateway, and the `return_graded` **event bus** fans one write out to N
+   independent consumers, none blocking the request. Celery **Beat** pre-computes the demand index (6h)
+   and review panels (nightly) off the hot path.
+4. **Aggressive read caching + edge storage** — ~99% of e-commerce traffic is reads; storefront
+   listings and Health Cards are cached in Redis (60 s TTL), and all images live on object storage
+   (MinIO locally, S3 + CloudFront in cloud), keeping the Django memory footprint tiny.
 
-Live deployment: frontend on **Vercel**, images via **CloudFront**, datastores on **Supabase** +
-**Upstash**.
+Live deployment: frontends on **Vercel**, images via **CloudFront**, datastores on **Supabase** +
+**Upstash** — the identical code runs locally on MinIO + Postgres + Redis with only env vars changed.
 
 ---
 
